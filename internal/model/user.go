@@ -1,94 +1,93 @@
 package model
 
-import "go.mongodb.org/mongo-driver/mongo"
+import (
+	"context"
 
-const (
-	UserStatusNormal int = iota + 1
-	UserStatusClosed
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type User struct {
-	*Model
+	ID         primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
+	CreatedOn  int64              `json:"created_on"       bson:"created_on"`
+	ModifiedOn int64              `json:"modified_on"      bson:"modified_on"`
+	DeletedOn  int64              `json:"deleted_on"       bson:"deleted_on"`
+	IsDel      int                `json:"is_del"           bson:"is_del"`
+	Nickname   string             `json:"nickname"         bson:"nickname"`
+	Address    string             `json:"address"          bson:"address"`
+	Avatar     string             `json:"avatar"           bson:"avatar"`
+}
+
+type UserFormatted struct {
+	ID       string `json:"id"`
 	Nickname string `json:"nickname"`
-	Username string `json:"username"`
-	Phone    string `json:"phone"`
-	Password string `json:"password"`
-	Salt     string `json:"salt"`
-	Status   int    `json:"status"`
+	Address  string `json:"address"`
 	Avatar   string `json:"avatar"`
-	Balance  int64  `json:"balance"`
-	IsAdmin  bool   `json:"is_admin"`
 }
 
-type UserFormated struct {
-	ID       int64  `json:"id"`
-	Nickname string `json:"nickname"`
-	Username string `json:"username"`
-	Status   int    `json:"status"`
-	Avatar   string `json:"avatar"`
-	IsAdmin  bool   `json:"is_admin"`
-}
-
-func (u *User) Format() *UserFormated {
-	if u.Model != nil {
-		return &UserFormated{
-			ID:       u.ID,
-			Nickname: u.Nickname,
-			Username: u.Username,
-			Status:   u.Status,
-			Avatar:   u.Avatar,
-			IsAdmin:  u.IsAdmin,
-		}
+func (m *User) Format() *UserFormatted {
+	return &UserFormatted{
+		ID:       m.ID.Hex(),
+		Nickname: m.Nickname,
+		Address:  m.Address,
+		Avatar:   m.Avatar,
 	}
-
-	return nil
 }
 
-func (u *User) Get(db *mongo.Database) (*User, error) {
-	var user User
-	if u.Model != nil && u.Model.ID > 0 {
-		db = db.Where("id= ? AND is_del = ?", u.Model.ID, 0)
-	} else if u.Phone != "" {
-		db = db.Where("phone = ? AND is_del = ?", u.Phone, 0)
-	} else {
-		db = db.Where("username = ? AND is_del = ?", u.Username, 0)
-	}
+func (m *User) table() string {
+	return "user"
+}
 
-	err := db.First(&user).Error
+func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
+	var (
+		user User
+		res  *mongo.SingleResult
+	)
+	if !m.ID.IsZero() {
+		filter := bson.D{{"_id", m.ID}, {"is_del", 0}}
+		res = db.Collection(m.table()).FindOne(ctx, filter)
+	} else if m.Address != "" {
+		filter := bson.D{{"address", m.Address}, {"is_del", 0}}
+		res = db.Collection(m.table()).FindOne(ctx, filter)
+	}
+	err := res.Err()
 	if err != nil {
 		return &user, err
 	}
-
+	err = res.Decode(&user)
+	if err != nil {
+		return &user, err
+	}
 	return &user, nil
 }
 
-func (u *User) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*User, error) {
-	var users []*User
-	var err error
-	if offset >= 0 && limit > 0 {
-		db = db.Offset(offset).Limit(limit)
+func (m *User) List(ctx context.Context, db *mongo.Database, pipeline bson.A) (users []*User, err error) {
+	cur, err := db.Collection(m.table()).Aggregate(ctx, pipeline)
+	if err != nil {
+		return
 	}
-	for k, v := range *conditions {
-		if k == "ORDER" {
-			db = db.Order(v)
-		} else {
-			db = db.Where(k, v)
-		}
-	}
+	err = cur.All(ctx, &users)
+	return
+}
 
-	if err = db.Where("is_del = ?", 0).Find(&users).Error; err != nil {
+func (m *User) Create(ctx context.Context, db *mongo.Database) (*User, error) {
+	res, err := db.Collection(m.table()).InsertOne(ctx, &m)
+	if err != nil {
 		return nil, err
 	}
-
-	return users, nil
+	m.ID = res.InsertedID.(primitive.ObjectID)
+	return m, nil
 }
 
-func (u *User) Create(db *mongo.Database) (*User, error) {
-	err := db.Create(&u).Error
-
-	return u, err
-}
-
-func (u *User) Update(db *mongo.Database) error {
-	return db.Model(&User{}).Where("id = ? AND is_del = ?", u.Model.ID, 0).Save(u).Error
+func (m *User) Update(ctx context.Context, db *mongo.Database) error {
+	filter := bson.D{
+		{"$or", bson.A{
+			bson.M{"_id": m.ID},
+			bson.M{"address": m.Address},
+		},
+		},
+	}
+	res := db.Collection(m.table()).FindOneAndReplace(ctx, filter, &m)
+	return res.Err()
 }

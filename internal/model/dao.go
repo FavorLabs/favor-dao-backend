@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -43,7 +44,10 @@ func (m *Dao) Create(ctx context.Context, db *mongo.Database) (*Dao, error) {
 
 func (m *Dao) Delete(ctx context.Context, db *mongo.Database) error {
 	filter := bson.D{{"_id", m.ID}}
-	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
+	update := bson.D{{"$set", bson.D{
+		{"is_del", 1},
+		{"deleted_on", time.Now().Unix()},
+	}}}
 	res := db.Collection(m.table()).FindOneAndUpdate(ctx, filter, update)
 	if res.Err() != nil {
 		return res.Err()
