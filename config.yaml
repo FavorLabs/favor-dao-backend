@@ -1,0 +1,112 @@
+App:
+  AttachmentIncomeRate: 0.8
+  MaxCommentCount: 10
+  DefaultContextTimeout: 60
+  DefaultPageSize: 10
+  MaxPageSize: 100
+Server:
+  RunMode: debug
+  HttpIp: 0.0.0.0
+  HttpPort: 8008
+  ReadTimeout: 60
+  WriteTimeout: 60
+Features:
+  Default: [ "Base",  "Option", "Zinc", "LocalOSS", "LoggerFile" ]
+  Develop: [ "Base",  "BigCacheIndex", "Meili", "AliOSS", "LoggerMeili", "OSS:Retention" ]
+  Demo: [ "Base",  "Option", "Zinc", "MinIO", "LoggerZinc", "Migration" ]
+  Slim: [ "Base",  "LocalOSS", "LoggerFile", "OSS:TempDir" ]
+  Base: [ "Redis" ]
+  Option: [ "SimpleCacheIndex" ]
+CacheIndex:
+  MaxUpdateQPS: 100             # QPS of max add/remove/update Post, set range [10, 10000], default 100
+SimpleCacheIndex:
+  MaxIndexSize: 200
+  CheckTickDuration: 60
+  ExpireTickDuration: 300
+BigCacheIndex:
+  MaxIndexPage: 1024
+  Verbose: False
+  ExpireInSecond: 300
+Logger:
+  Level: debug #  panic|fatal|error|warn|info|debug|trace
+LoggerFile:
+  SavePath: data/logs
+  FileName: app
+  FileExt: .log
+LoggerZinc:
+  Host: zinc:4080
+  Index: dao-log
+  User: admin
+  Password: admin
+  Secure: False
+LoggerMeili:
+  Host: meili:7700
+  Index: dao-log
+  ApiKey: dao-meilisearch
+  Secure: False
+  MinWorker: 5               # Minimum background worker, set range [5, 100], default 5
+  MaxLogBuffer: 100          # Max log cache entries, set in the range [10, 10000], default 100
+TweetSearch:
+  MaxUpdateQPS: 100            # QPS of Max Add/Remove/Update Post, setting range [10, 10000], default 100
+  MinWorker: 10                # Minimum background update worker, set range [5, 1000], default 10
+Zinc:
+  Host: 127.0.0.1:4080
+  Index: dao-data
+  User: admin
+  Password: 123
+  Secure: False
+Meili:
+  Host: meili:7700
+  Index: dao-data
+  ApiKey: dao-meilisearch
+  Secure: False
+ObjectStorage:
+  RetainInDays: 2   # How many days of temporary object expiration time
+  TempDir: tmp      # Temporary object storage directory name
+AliOSS:
+  Endpoint:
+  AccessKeyID:
+  AccessKeySecret:
+  Bucket:
+  Domain:
+COS:
+  SecretID:
+  SecretKey:
+  Region: ap-shanghai
+  Bucket: demo-1888888888
+  Domain:
+HuaweiOBS:
+  AccessKey:
+  SecretKey:
+  Endpoint:
+  Bucket: dao
+  Domain:
+MinIO:
+  AccessKey:
+  SecretKey:
+  Secure: False
+  Endpoint: minio:9000
+  Bucket: dao
+  Domain: 127.0.0.1:9000
+S3:
+  AccessKey: "YOUR-ACCESSKEYID"
+  SecretKey: "YOUR-SECRETACCESSKEY"
+  Secure: True
+  Endpoint: s3.amazonaws.com
+  Bucket: dao
+  Domain:
+LocalOSS:
+  SavePath: data/oss
+  Secure: False
+  Bucket: dao
+  Domain: 127.0.0.1:8008
+MongoDB:
+  Username: root
+  Password: 12345678
+  Host: 127.0.0.1:27017
+  DBName: dao
+Redis:
+  Host: 127.0.0.1:6379
+  Password:
+  DB: 
+  
