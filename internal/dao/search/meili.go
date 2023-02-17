@@ -3,11 +3,11 @@ package search
 import (
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/meilisearch/meilisearch-go"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/json"
+	"github.com/Masterminds/semver/v3"
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,7 +52,7 @@ func (s *meiliTweetSearchServant) DeleteDocuments(identifiers []string) error {
 		logrus.Errorf("meiliTweetSearchServant.DeleteDocuments error: %v", err)
 		return err
 	}
-	logrus.Debugf("meiliTweetSearchServant.DeleteDocuments task: %+v", task.Details)
+	logrus.Debugf("meiliTweetSearchServant.DeleteDocuments task: %+v", task)
 	return nil
 }
 
@@ -167,6 +167,6 @@ func (s *meiliTweetSearchServant) postsFrom(resp *meilisearch.SearchResponse) (*
 
 	return &core.QueryResp{
 		Items: posts,
-		Total: resp.NbHits,
+		Total: resp.TotalHits,
 	}, nil
 }

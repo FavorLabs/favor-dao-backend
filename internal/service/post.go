@@ -7,13 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/model/rest"
 	"favor-dao-backend/pkg/errcode"
-	"favor-dao-backend/pkg/util"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,11 +32,11 @@ type PostTagsReq struct {
 }
 
 type PostCreationReq struct {
-	Contents        []*PostContentItem `json:"contents" binding:"required"`
-	Tags            []string           `json:"tags" binding:"required"`
-	Users           []string           `json:"users" binding:"required"`
-	AttachmentPrice int64              `json:"attachment_price"`
-	Visibility      model.PostVisibleT `json:"visibility"`
+	Contents   []*PostContentItem `json:"contents" binding:"required"`
+	Tags       []string           `json:"tags" binding:"required"`
+	Type       model.PostType     `json:"type"`
+	Users      []string           `json:"users" binding:"required"`
+	Visibility model.PostVisibleT `json:"visibility"`
 }
 
 type PostDelReq struct {
@@ -103,7 +102,7 @@ func tagsFrom(originTags []string) []string {
 
 // CreatePost 创建文章
 // TODO: 推文+推文内容需要在一个事务中添加，后续优化
-func CreatePost(c *gin.Context, userID int64, param PostCreationReq) (_ *model.PostFormated, err error) {
+func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model.PostFormated, err error) {
 	var mediaContents []string
 
 	defer func() {
@@ -116,15 +115,12 @@ func CreatePost(c *gin.Context, userID int64, param PostCreationReq) (_ *model.P
 		return
 	}
 
-	ip := c.ClientIP()
 	tags := tagsFrom(param.Tags)
 	post := &model.Post{
-		UserID:          userID,
-		Tags:            strings.Join(tags, ","),
-		IP:              ip,
-		IPLoc:           util.GetIPLoc(ip),
-		AttachmentPrice: param.AttachmentPrice,
-		Visibility:      param.Visibility,
+		Address:    address,
+		Tags:       strings.Join(tags, ","),
+		Visibility: param.Visibility,
+		Type:       param.Type,
 	}
 	post, err = ds.CreatePost(post)
 	if err != nil {
@@ -138,13 +134,9 @@ func CreatePost(c *gin.Context, userID int64, param PostCreationReq) (_ *model.P
 			continue
 		}
 
-		if item.Type == model.CONTENT_TYPE_ATTACHMENT && param.AttachmentPrice > 0 {
-			item.Type = model.CONTENT_TYPE_CHARGE_ATTACHMENT
-		}
-
 		postContent := &model.PostContent{
 			PostID:  post.ID,
-			UserID:  userID,
+			Address: address,
 			Content: item.Content,
 			Type:    item.Type,
 			Sort:    item.Sort,
@@ -155,33 +147,16 @@ func CreatePost(c *gin.Context, userID int64, param PostCreationReq) (_ *model.P
 	}
 
 	// 私密推文不创建标签与用户提醒
-	if post.Visibility != model.PostVisitPrivate {
+	if post.Visibility != model.PostVisitPrivate && post.Visibility != model.PostVisitDraft {
 		// 创建标签
 		for _, t := range tags {
 			tag := &model.Tag{
-				UserID: userID,
-				Tag:    t,
+				Address: address,
+				Tag:     t,
 			}
 			ds.CreateTag(tag)
 		}
 
-		// 创建用户消息提醒
-		for _, u := range param.Users {
-			user, err := ds.GetUserByUsername(u)
-			if err != nil || user.ID == userID {
-				continue
-			}
-
-			// 创建消息提醒
-			// TODO: 优化消息提醒处理机制
-			go ds.CreateMessage(&model.Message{
-				SenderUserID:   userID,
-				ReceiverUserID: user.ID,
-				Type:           model.MsgTypePost,
-				Brief:          "在新发布的泡泡动态中@了你",
-				PostID:         post.ID,
-			})
-		}
 	}
 
 	// 推送Search
@@ -203,7 +178,7 @@ func DeletePost(user *model.User, id int64) *errcode.Error {
 	if err != nil {
 		return errcode.GetPostFailed
 	}
-	if post.UserID != user.ID && !user.IsAdmin {
+	if post.Address != user.Address {
 		return errcode.NoPermission
 	}
 

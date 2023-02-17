@@ -1,10 +1,11 @@
 package model
 
 import (
-	"time"
-
+	"context"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Type, 1 title, 2 text paragraph, 3 picture address, 4 video address, 5 voice address, 6 link address, 7 attachment resource
@@ -18,8 +19,6 @@ const (
 	CONTENT_TYPE_VIDEO
 	CONTENT_TYPE_AUDIO
 	CONTENT_TYPE_LINK
-	CONTENT_TYPE_ATTACHMENT
-	CONTENT_TYPE_CHARGE_ATTACHMENT
 )
 
 var (
@@ -27,50 +26,75 @@ var (
 		CONTENT_TYPE_IMAGE,
 		CONTENT_TYPE_VIDEO,
 		CONTENT_TYPE_AUDIO,
-		CONTENT_TYPE_ATTACHMENT,
-		CONTENT_TYPE_CHARGE_ATTACHMENT,
 	}
 )
 
+type PostType int
+
+const (
+	SMS PostType = iota
+	VIDEO
+)
+
 type PostContent struct {
-	*Model
-	PostID  int64        `json:"post_id"`
-	UserID  int64        `json:"user_id"`
-	Content string       `json:"content"`
-	Type    PostContentT `json:"type"`
-	Sort    int64        `json:"sort"`
+	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
+	Address string             `json:"address"`
+	Content string             `json:"content"`
+	Type    PostContentT       `json:"type"`
+	Sort    int64              `json:"sort"`
 }
 
 type PostContentFormated struct {
-	ID      int64        `json:"id"`
-	PostID  int64        `json:"post_id"`
-	Content string       `json:"content"`
-	Type    PostContentT `json:"type"`
-	Sort    int64        `json:"sort"`
+	ID      primitive.ObjectID `json:"id"`
+	PostID  primitive.ObjectID `json:"post_id"`
+	Address string             `json:"address"`
+	Content string             `json:"content"`
+	Type    PostContentT       `json:"type"`
+	Sort    int64              `json:"sort"`
+}
+
+func (p *PostContent) table() string {
+	return "post_context"
 }
 
 func (p *PostContent) DeleteByPostId(db *mongo.Database, postId int64) error {
-	return db.Model(p).Where("post_id = ?", postId).Updates(map[string]interface{}{
-		"deleted_on": time.Now().Unix(),
-		"is_del":     1,
-	}).Error
+	filter := bson.D{{"_id", p.ID}}
+	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
+	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
 }
 
 func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId int64) (contents []string, err error) {
-	err = db.Model(p).Where("post_id = ? AND type IN ?", postId, mediaContentType).Select("content").Find(&contents).Error
-	return
+
+	filter := bson.D{{"_id", p.ID}, {"is_del", 0}, {"type", bson.D{{"$in", bson.A{CONTENT_TYPE_IMAGE, CONTENT_TYPE_VIDEO, CONTENT_TYPE_AUDIO}}}}}
+	cursor, err := db.Collection(p.table()).Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	for cursor.Next(context.TODO()) {
+		var post PostContent
+		if cursor.Decode(&post) != nil {
+			return nil, err
+		}
+		contents = append(contents, post.Content)
+	}
+	return contents, nil
 }
 
 func (p *PostContent) Create(db *mongo.Database) (*PostContent, error) {
-	err := db.Create(&p).Error
-
+	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+	if err != nil {
+		return nil, err
+	}
+	p.ID = res.InsertedID.(primitive.ObjectID)
 	return p, err
 }
 
 func (p *PostContent) Format() *PostContentFormated {
-	if p.Model == nil {
-		return nil
-	}
 	return &PostContentFormated{
 		ID:      p.ID,
 		PostID:  p.PostID,
@@ -81,41 +105,52 @@ func (p *PostContent) Format() *PostContentFormated {
 }
 
 func (p *PostContent) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*PostContent, error) {
-	var contents []*PostContent
-	var err error
-	if offset >= 0 && limit > 0 {
-		db = db.Offset(offset).Limit(limit)
+	var (
+		contents []*PostContent
+		err      error
+		cursor   *mongo.Cursor
+		query    bson.M
+	)
+	if !p.PostID.IsZero() {
+		query = bson.M{"post_id": p.PostID}
 	}
-	if p.PostID > 0 {
-		db = db.Where("id = ?", p.PostID)
-	}
-
+	finds := make([]*options.FindOptions, 0, 3)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
 	for k, v := range *conditions {
-		if k == "ORDER" {
-			db = db.Order(v)
+		if k != "ORDER" {
+			query = findQuery([]bson.M{query, v})
 		} else {
-			db = db.Where(k, v)
+			finds = append(finds, options.Find().SetSort(v))
 		}
 	}
-
-	if err = db.Where("is_del = ?", 0).Find(&contents).Error; err != nil {
+	if cursor, err = db.Collection(p.table()).Find(context.TODO(), query, finds...); err != nil {
 		return nil, err
 	}
-
+	for cursor.Next(context.TODO()) {
+		var content PostContent
+		if cursor.Decode(&content) != nil {
+			return nil, err
+		}
+		contents = append(contents, &content)
+	}
 	return contents, nil
 }
 
 func (p *PostContent) Get(db *mongo.Database) (*PostContent, error) {
 	var content PostContent
-	if p.Model != nil && p.ID > 0 {
-		db = db.Where("id = ? AND is_del = ?", p.ID, 0)
-	} else {
-		return nil, gorm.ErrRecordNotFound
+	if p.ID.IsZero() {
+		return nil, mongo.ErrNoDocuments
+	}
+	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
+	res := db.Collection(p.table()).FindOne(context.TODO(), filter)
+	if res.Err() != nil {
+		return nil, res.Err()
 	}
 
-	err := db.First(&content).Error
+	err := res.Decode(&content)
 	if err != nil {
-		return &content, err
+		return nil, err
 	}
 
 	return &content, nil

@@ -21,10 +21,8 @@ type TweetService interface {
 }
 
 type TweetManageService interface {
-	CreateAttachment(attachment *model.Attachment) (*model.Attachment, error)
 	CreatePost(post *model.Post) (*model.Post, error)
 	DeletePost(post *model.Post) ([]string, error)
-	LockPost(post *model.Post) error
 	StickPost(post *model.Post) error
 	VisiblePost(post *model.Post, visibility model.PostVisibleT) error
 	UpdatePost(post *model.Post) error
