@@ -8,13 +8,13 @@ import (
 
 type Tag struct {
 	*Model
-	UserID   int64  `json:"user_id"`
+	Address  string `json:"address"`
 	Tag      string `json:"tag"`
 	QuoteNum int64  `json:"quote_num"`
 }
 type TagFormated struct {
 	ID       int64         `json:"id"`
-	UserID   int64         `json:"user_id"`
+	Address  string        `json:"address"`
 	User     *UserFormated `json:"user"`
 	Tag      string        `json:"tag"`
 	QuoteNum int64         `json:"quote_num"`
@@ -27,7 +27,7 @@ func (t *Tag) Format() *TagFormated {
 
 	return &TagFormated{
 		ID:       t.ID,
-		UserID:   t.UserID,
+		Address:  t.Address,
 		User:     &UserFormated{},
 		Tag:      t.Tag,
 		QuoteNum: t.QuoteNum,

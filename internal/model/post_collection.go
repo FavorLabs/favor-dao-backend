@@ -1,102 +1,132 @@
 package model
 
 import (
-	"time"
-
+	"context"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type PostCollection struct {
-	*Model
-	Post   *Post `json:"-"`
-	PostID int64 `json:"post_id"`
-	UserID int64 `json:"user_id"`
+	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Post    *Post              `json:"post" bson:"post"`
+	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
+	Address string             `json:"address" bson:"address"`
+}
+
+func (p *PostCollection) table() string {
+	return "post_collection"
 }
 
 func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 	var star PostCollection
-	tn := db.NamingStrategy.TableName("PostCollection") + "."
+	var queries []bson.M
 
-	if p.Model != nil && p.ID > 0 {
-		db = db.Where(tn+"id = ? AND "+tn+"is_del = ?", p.ID, 0)
+	if !p.ID.IsZero() {
+		queries = append(queries, bson.M{"_id": p.ID, "is_del": 0})
 	}
-	if p.PostID > 0 {
-		db = db.Where(tn+"post_id = ?", p.PostID)
+	if !p.PostID.IsZero() {
+		queries = append(queries, bson.M{"post_id": p.PostID})
 	}
-	if p.UserID > 0 {
-		db = db.Where(tn+"user_id = ?", p.UserID)
+	if p.Address != "" {
+		queries = append(queries, bson.M{"address": p.Address})
+	}
+	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
+
+	pipeline := mongo.Pipeline{
+		{{"$match", findQuery(queries)}},
+		{{"$lookup", bson.M{
+			"from":         "post",
+			"localField":   "post_id",
+			"foreignField": "_id",
+		}}},
 	}
 
-	db = db.Joins("Post").Where("Post.visibility <> ?", PostVisitPrivate).Order("Post.id DESC")
-	err := db.First(&star).Error
+	ctx := context.TODO()
+	cursor, err := db.Collection(p.table()).Aggregate(ctx, pipeline)
 	if err != nil {
-		return &star, err
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	cursor.Next(ctx)
+	err = cursor.Decode(&star)
+	if err != nil {
+		return nil, err
 	}
 
 	return &star, nil
 }
 
 func (p *PostCollection) Create(db *mongo.Database) (*PostCollection, error) {
-	err := db.Omit("Post").Create(&p).Error
-
+	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+	if err != nil {
+		return nil, err
+	}
+	p.ID = res.InsertedID.(primitive.ObjectID)
 	return p, err
 }
 
 func (p *PostCollection) Delete(db *mongo.Database) error {
-	return db.Model(&PostCollection{}).Omit("Post").Where("id = ? AND is_del = ?", p.Model.ID, 0).Updates(map[string]interface{}{
-		"deleted_on": time.Now().Unix(),
-		"is_del":     1,
-	}).Error
+	filter := bson.D{{"_id", p.ID}}
+	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
+	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
 }
 
 func (p *PostCollection) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*PostCollection, error) {
-	var collections []*PostCollection
-	var err error
-	tn := db.NamingStrategy.TableName("PostCollection") + "."
+	var (
+		collections []*PostCollection
+		queries     []bson.M
+		query       bson.M
+		sort        bson.M
+		cursor      *mongo.Cursor
+		err         error
+	)
 
-	if offset >= 0 && limit > 0 {
-		db = db.Offset(offset).Limit(limit)
+	if p.Address != "" {
+		queries = append(queries, bson.M{"address": p.Address})
 	}
-	if p.UserID > 0 {
-		db = db.Where(tn+"user_id = ?", p.UserID)
-	}
+	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
 
 	for k, v := range *conditions {
-		if k == "ORDER" {
-			db = db.Order(v)
+		if k != "ORDER" {
+			queries = append(queries, v)
+			query = findQuery(queries)
 		} else {
-			db = db.Where(tn+k, v)
+			sort = v
 		}
 	}
 
-	db = db.Joins("Post").Where("Post.visibility <> ?", PostVisitPrivate).Order("Post.id DESC")
-	if err = db.Where(tn+"is_del = ?", 0).Find(&collections).Error; err != nil {
+	pipeline := mongo.Pipeline{
+		{{"$match", query}},
+		{{"$lookup", bson.M{
+			"from":         "post",
+			"localField":   "post_id",
+			"foreignField": "_id",
+		}}},
+		{{"$limit", limit}},
+		{{"$skip", offset}},
+		{{"$sort", sort}},
+	}
+
+	ctx := context.TODO()
+	cursor, err = db.Collection(p.table()).Aggregate(ctx, pipeline)
+	if err != nil {
 		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(context.TODO()) {
+		var collection PostCollection
+		if cursor.Decode(&collection) != nil {
+			return nil, err
+		}
+		collections = append(collections, &collection)
 	}
 
 	return collections, nil
-}
-
-func (p *PostCollection) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) {
-	var count int64
-	tn := db.NamingStrategy.TableName("PostCollection") + "."
-
-	if p.PostID > 0 {
-		db = db.Where(tn+"post_id = ?", p.PostID)
-	}
-	if p.UserID > 0 {
-		db = db.Where(tn+"user_id = ?", p.UserID)
-	}
-	for k, v := range *conditions {
-		if k != "ORDER" {
-			db = db.Where(tn+k, v)
-		}
-	}
-
-	db = db.Joins("Post").Where("Post.visibility <> ?", PostVisitPrivate)
-	if err := db.Model(p).Count(&count).Error; err != nil {
-		return 0, err
-	}
-
-	return count, nil
 }
