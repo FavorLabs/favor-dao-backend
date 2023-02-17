@@ -65,7 +65,8 @@ db.user.insertOne({
     "address": "0x000",
     "nickname": "",
     "is_del": 0,
-    "avatar": ""
+    "avatar": "",
+    "role": ""
 })
 
 db.tag.insertOne({

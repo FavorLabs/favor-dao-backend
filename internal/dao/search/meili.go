@@ -61,6 +61,8 @@ func (s *meiliTweetSearchServant) Search(user *model.User, q *core.QueryReq, off
 		resp, err = s.queryByContent(user, q, offset, limit)
 	} else if q.Type == core.SearchTypeTag && q.Query != "" {
 		resp, err = s.queryByTag(user, q, offset, limit)
+	} else if q.Type == core.SearchTypeAddress && q.Query != "" {
+		resp, err = s.queryByAddress(user, q, offset, limit)
 	} else {
 		resp, err = s.queryAny(user, offset, limit)
 	}
@@ -119,6 +121,26 @@ func (s *meiliTweetSearchServant) queryByTag(user *model.User, q *core.QueryReq,
 	return s.postsFrom(resp)
 }
 
+func (s *meiliTweetSearchServant) queryByAddress(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
+	request := &meilisearch.SearchRequest{
+		Offset: int64(offset),
+		Limit:  int64(limit),
+		Sort:   []string{"is_top:desc", "latest_replied_on:desc"},
+	}
+
+	filter := s.filterList(user)
+	request.Filter = filter
+	request.AttributesToRetrieve = []string{"address"}
+
+	// logrus.Debugf("meiliTweetSearchServant.queryByContent query:%s request%+v", q.Query, request)
+	resp, err := s.index.Search(q.Query, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.postsFrom(resp)
+}
+
 func (s *meiliTweetSearchServant) queryAny(user *model.User, offset, limit int) (*core.QueryResp, error) {
 	request := &meilisearch.SearchRequest{
 		Offset: int64(offset),
@@ -144,11 +166,7 @@ func (s *meiliTweetSearchServant) filterList(user *model.User) string {
 		return s.publicFilter
 	}
 
-	if user.IsAdmin {
-		return ""
-	}
-
-	return fmt.Sprintf("%s OR %s OR (%s%d)", s.publicFilter, s.friendFilter, s.privateFilter, user.ID)
+	return fmt.Sprintf("%s OR (%s%s)", s.publicFilter, s.privateFilter, user.Address)
 }
 
 func (s *meiliTweetSearchServant) postsFrom(resp *meilisearch.SearchResponse) (*core.QueryResp, error) {

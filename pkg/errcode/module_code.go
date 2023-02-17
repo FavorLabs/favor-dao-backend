@@ -57,4 +57,6 @@ var (
 	RechargeReqFail     = NewError(70001, "充值请求失败")
 	RechargeNotifyError = NewError(70002, "充值回调失败")
 	GetRechargeFailed   = NewError(70003, "充值详情获取失败")
+
+	CreateDaoFailed = NewError(80001, "DAO创建失败")
 )
