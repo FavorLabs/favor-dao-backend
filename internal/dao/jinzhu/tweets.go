@@ -126,14 +126,14 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormated) ([]*model.Po
 	return posts, nil
 }
 
-func (s *tweetHelpServant) getPostContentsByIDs(ids []int64) ([]*model.PostContent, error) {
+func (s *tweetHelpServant) getPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {
 	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
 		"post_id IN ?": ids,
 		"ORDER":        "sort ASC",
 	}, 0, 0)
 }
 
-func (s *tweetHelpServant) getUsersByIDs(ids []int64) ([]*model.User, error) {
+func (s *tweetHelpServant) getUsersByIDs(ids []primitive.ObjectID) ([]*model.User, error) {
 	user := &model.User{}
 
 	return user.List(s.db, &model.ConditionsT{
@@ -141,7 +141,7 @@ func (s *tweetHelpServant) getUsersByIDs(ids []int64) ([]*model.User, error) {
 	}, 0, 0)
 }
 
-func (s *tweetManageServant) CreatePostCollection(postID, userID int64) (*model.PostCollection, error) {
+func (s *tweetManageServant) CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
 	collection := &model.PostCollection{
 		PostID: postID,
 		UserID: userID,
@@ -215,7 +215,7 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 	return mediaContents, nil
 }
 
-func (s *tweetManageServant) deleteCommentByPostId(db *mongo.Database, postId int64) ([]string, error) {
+func (s *tweetManageServant) deleteCommentByPostId(db *mongo.Database, postId primitive.ObjectID) ([]string, error) {
 	comment := &model.Comment{}
 	commentContent := &model.CommentContent{}
 
@@ -306,7 +306,7 @@ func (s *tweetManageServant) UpdatePost(post *model.Post) error {
 	return nil
 }
 
-func (s *tweetManageServant) CreatePostStar(postID, userID int64) (*model.PostStar, error) {
+func (s *tweetManageServant) CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
 	star := &model.PostStar{
 		PostID: postID,
 		UserID: userID,
@@ -318,7 +318,7 @@ func (s *tweetManageServant) DeletePostStar(p *model.PostStar) error {
 	return p.Delete(s.db)
 }
 
-func (s *tweetServant) GetPostByID(id int64) (*model.Post, error) {
+func (s *tweetServant) GetPostByID(id primitive.ObjectID) (*model.Post, error) {
 	post := &model.Post{
 		Model: &model.Model{
 			ID: id,
@@ -335,7 +335,7 @@ func (s *tweetServant) GetPostCount(conditions *model.ConditionsT) (int64, error
 	return (&model.Post{}).Count(s.db, conditions)
 }
 
-func (s *tweetServant) GetUserPostStar(postID, userID int64) (*model.PostStar, error) {
+func (s *tweetServant) GetUserPostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
 	star := &model.PostStar{
 		PostID: postID,
 		UserID: userID,
@@ -343,7 +343,7 @@ func (s *tweetServant) GetUserPostStar(postID, userID int64) (*model.PostStar, e
 	return star.Get(s.db)
 }
 
-func (s *tweetServant) GetUserPostStars(userID int64, offset, limit int) ([]*model.PostStar, error) {
+func (s *tweetServant) GetUserPostStars(address string, offset, limit int) ([]*model.PostStar, error) {
 	star := &model.PostStar{
 		UserID: userID,
 	}
@@ -353,7 +353,7 @@ func (s *tweetServant) GetUserPostStars(userID int64, offset, limit int) ([]*mod
 	}, offset, limit)
 }
 
-func (s *tweetServant) GetUserPostStarCount(userID int64) (int64, error) {
+func (s *tweetServant) GetUserPostStarCount(address string) (int64, error) {
 	star := &model.PostStar{
 		UserID: userID,
 	}
@@ -390,31 +390,14 @@ func (s *tweetServant) GetUserPostCollections(address string, offset, limit int)
 	return pc, err
 }
 
-func (s *tweetServant) GetUserPostCollectionCount(userID int64) (int64, error) {
+func (s *tweetServant) GetUserPostCollectionCount(address string) (int64, error) {
 	collection := &model.PostCollection{
 		UserID: userID,
 	}
 	return collection.Count(s.db, &model.ConditionsT{})
 }
 
-func (s *tweetServant) GetUserWalletBills(userID int64, offset, limit int) ([]*model.WalletStatement, error) {
-	statement := &model.WalletStatement{
-		UserID: userID,
-	}
-
-	return statement.List(s.db, &model.ConditionsT{
-		"ORDER": "id DESC",
-	}, offset, limit)
-}
-
-func (s *tweetServant) GetUserWalletBillCount(userID int64) (int64, error) {
-	statement := &model.WalletStatement{
-		UserID: userID,
-	}
-	return statement.Count(s.db, &model.ConditionsT{})
-}
-
-func (s *tweetServant) GetPostAttatchmentBill(postID, userID int64) (*model.PostAttachmentBill, error) {
+func (s *tweetServant) GetPostAttatchmentBill(postID primitive.ObjectID, address string) (*model.PostAttachmentBill, error) {
 	bill := &model.PostAttachmentBill{
 		PostID: postID,
 		UserID: userID,
@@ -423,14 +406,14 @@ func (s *tweetServant) GetPostAttatchmentBill(postID, userID int64) (*model.Post
 	return bill.Get(s.db)
 }
 
-func (s *tweetServant) GetPostContentsByIDs(ids []int64) ([]*model.PostContent, error) {
+func (s *tweetServant) GetPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {
 	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
 		"post_id IN ?": ids,
 		"ORDER":        "sort ASC",
 	}, 0, 0)
 }
 
-func (s *tweetServant) GetPostContentByID(id int64) (*model.PostContent, error) {
+func (s *tweetServant) GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error) {
 	return (&model.PostContent{
 		Model: &model.Model{
 			ID: id,
