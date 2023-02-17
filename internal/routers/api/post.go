@@ -70,8 +70,9 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("UID")
-	post, err := service.CreatePost(c, userID.(int64), param)
+	// todo userid? address
+	address, _ := c.Get("Address")
+	post, err := service.CreatePost(c, address.(string), param)
 
 	if err != nil {
 		logrus.Errorf("service.CreatePost err: %v\n", err)

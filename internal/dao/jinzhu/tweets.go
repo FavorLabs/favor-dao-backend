@@ -1,6 +1,8 @@
 package jinzhu
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strings"
 	"time"
 
@@ -156,10 +158,6 @@ func (s *tweetManageServant) CreatePostContent(content *model.PostContent) (*mod
 	return content.Create(s.db)
 }
 
-func (s *tweetManageServant) CreateAttachment(attachment *model.Attachment) (*model.Attachment, error) {
-	return attachment.Create(s.db)
-}
-
 func (s *tweetManageServant) CreatePost(post *model.Post) (*model.Post, error) {
 	post.LatestRepliedOn = time.Now().Unix()
 	p, err := post.Create(s.db)
@@ -249,11 +247,6 @@ func (s *tweetManageServant) deleteCommentByPostId(db *mongo.Database, postId in
 	}
 
 	return mediaContents, nil
-}
-
-func (s *tweetManageServant) LockPost(post *model.Post) error {
-	post.IsLock = 1 - post.IsLock
-	return post.Update(s.db)
 }
 
 func (s *tweetManageServant) StickPost(post *model.Post) error {
@@ -367,22 +360,34 @@ func (s *tweetServant) GetUserPostStarCount(userID int64) (int64, error) {
 	return star.Count(s.db, &model.ConditionsT{})
 }
 
-func (s *tweetServant) GetUserPostCollection(postID, userID int64) (*model.PostCollection, error) {
+func (s *tweetServant) GetUserPostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
 	star := &model.PostCollection{
-		PostID: postID,
-		UserID: userID,
+		PostID:  postID,
+		Address: address,
 	}
-	return star.Get(s.db)
+	star, err := star.Get(s.db)
+	post := &model.Post{ID: postID}
+	post, err = post.Get(s.db)
+	star.Post = post
+	return star, err
 }
 
-func (s *tweetServant) GetUserPostCollections(userID int64, offset, limit int) ([]*model.PostCollection, error) {
+func (s *tweetServant) GetUserPostCollections(address string, offset, limit int) ([]*model.PostCollection, error) {
 	collection := &model.PostCollection{
-		UserID: userID,
+		Address: address,
 	}
 
-	return collection.List(s.db, &model.ConditionsT{
-		"ORDER": s.db.NamingStrategy.TableName("PostCollection") + ".id DESC",
+	pc, err := collection.List(s.db, &model.ConditionsT{
+		"ORDER": bson.M{"_id": -1},
 	}, offset, limit)
+
+	for _, p := range pc {
+		post := &model.Post{ID: p.PostID}
+		post, err = post.Get(s.db)
+		p.Post = post
+	}
+
+	return pc, err
 }
 
 func (s *tweetServant) GetUserPostCollectionCount(userID int64) (int64, error) {

@@ -1,188 +1,169 @@
 package model
 
 import (
-	"strings"
-	"time"
-
+	"context"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"strings"
 )
 
 // PostVisibleT Accessible type, 0 public, 1 private, 2 friends
 type PostVisibleT uint8
 
 const (
-	PostVisitPublic PostVisibleT = iota
+	PostVisitDraft PostVisibleT = iota
+	PostVisitPublic
 	PostVisitPrivate
-	PostVisitFriend
-	PostVisitInvalid
+	//PostVisitSecret
+	//PostVisitFriend
+	//PostVisitInvalid
 )
 
 type Post struct {
-	*Model
-	UserID          int64        `json:"user_id"`
-	CommentCount    int64        `json:"comment_count"`
-	CollectionCount int64        `json:"collection_count"`
-	UpvoteCount     int64        `json:"upvote_count"`
-	Visibility      PostVisibleT `json:"visibility"`
-	IsTop           int          `json:"is_top"`
-	IsEssence       int          `json:"is_essence"`
-	IsLock          int          `json:"is_lock"`
-	LatestRepliedOn int64        `json:"latest_replied_on"`
-	Tags            string       `json:"tags"`
-	AttachmentPrice int64        `json:"attachment_price"`
-	IP              string       `json:"ip"`
-	IPLoc           string       `json:"ip_loc"`
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Address         string             `json:"address" bson:"address"`
+	DaoId           primitive.ObjectID `json:"dao_id" bson:"dao_id"`
+	ViewCount       int64              `json:"view_count" bson:"view_count"`
+	CollectionCount int64              `json:"collection_count" bson:"collection_count"`
+	UpvoteCount     int64              `json:"upvote_count" bson:"upvote_count"`
+	Member          int                `json:"member" bson:"member"`
+	Visibility      PostVisibleT       `json:"visibility" bson:"visibility"`
+	IsTop           int                `json:"is_top" bson:"is_top"`
+	IsEssence       int                `json:"is_essence" bson:"is_essence"`
+	Tags            string             `json:"tags" bson:"tags"`
+	Type            PostType           `json:"type" bson:"type"`
 }
 
 type PostFormated struct {
-	ID              int64                  `json:"id"`
-	UserID          int64                  `json:"user_id"`
+	ID              primitive.ObjectID     `json:"id"`
+	DaoId           primitive.ObjectID     `json:"daoId"`
+	Address         string                 `json:"address"`
 	User            *UserFormated          `json:"user"`
 	Contents        []*PostContentFormated `json:"contents"`
-	CommentCount    int64                  `json:"comment_count"`
+	Member          int                    `json:"member"`
+	ViewCount       int64                  `json:"view_count"`
 	CollectionCount int64                  `json:"collection_count"`
 	UpvoteCount     int64                  `json:"upvote_count"`
 	Visibility      PostVisibleT           `json:"visibility"`
 	IsTop           int                    `json:"is_top"`
 	IsEssence       int                    `json:"is_essence"`
-	IsLock          int                    `json:"is_lock"`
-	LatestRepliedOn int64                  `json:"latest_replied_on"`
-	CreatedOn       int64                  `json:"created_on"`
-	ModifiedOn      int64                  `json:"modified_on"`
 	Tags            map[string]int8        `json:"tags"`
-	AttachmentPrice int64                  `json:"attachment_price"`
-	IPLoc           string                 `json:"ip_loc"`
+	Type            PostType               `json:"type"`
+}
+
+func (p *Post) table() string {
+	return "post"
 }
 
 func (p *Post) Format() *PostFormated {
-	if p.Model != nil {
-		tagsMap := map[string]int8{}
-		for _, tag := range strings.Split(p.Tags, ",") {
-			tagsMap[tag] = 1
-		}
-		return &PostFormated{
-			ID:              p.ID,
-			UserID:          p.UserID,
-			User:            &UserFormated{},
-			Contents:        []*PostContentFormated{},
-			CommentCount:    p.CommentCount,
-			CollectionCount: p.CollectionCount,
-			UpvoteCount:     p.UpvoteCount,
-			Visibility:      p.Visibility,
-			IsTop:           p.IsTop,
-			IsEssence:       p.IsEssence,
-			IsLock:          p.IsLock,
-			LatestRepliedOn: p.LatestRepliedOn,
-			CreatedOn:       p.CreatedOn,
-			ModifiedOn:      p.ModifiedOn,
-			AttachmentPrice: p.AttachmentPrice,
-			Tags:            tagsMap,
-			IPLoc:           p.IPLoc,
-		}
+	tagsMap := map[string]int8{}
+	for _, tag := range strings.Split(p.Tags, ",") {
+		tagsMap[tag] = 1
 	}
-
-	return nil
+	return &PostFormated{
+		ID:              p.ID,
+		DaoId:           p.DaoId,
+		Address:         p.Address,
+		User:            &UserFormated{},
+		Contents:        []*PostContentFormated{},
+		Member:          p.Member,
+		ViewCount:       p.ViewCount,
+		CollectionCount: p.CollectionCount,
+		UpvoteCount:     p.UpvoteCount,
+		Visibility:      p.Visibility,
+		IsTop:           p.IsTop,
+		IsEssence:       p.IsEssence,
+		Tags:            tagsMap,
+		Type:            p.Type,
+	}
 }
 
 func (p *Post) Create(db *mongo.Database) (*Post, error) {
-	err := db.Create(&p).Error
-
+	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+	if err != nil {
+		return nil, err
+	}
+	p.ID = res.InsertedID.(primitive.ObjectID)
 	return p, err
 }
 
-func (s *Post) Delete(db *mongo.Database) error {
-	return db.Model(s).Where("id = ?", s.Model.ID).Updates(map[string]interface{}{
-		"deleted_on": time.Now().Unix(),
-		"is_del":     1,
-	}).Error
+func (p *Post) Delete(db *mongo.Database) error {
+	filter := bson.D{{"_id", p.ID}}
+	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
+	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
 }
 
 func (p *Post) Get(db *mongo.Database) (*Post, error) {
+	if p.ID.IsZero() {
+		return nil, mongo.ErrNoDocuments
+	}
+	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
+	res := db.Collection(p.table()).FindOne(context.TODO(), filter)
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+
 	var post Post
-	if p.Model != nil && p.ID > 0 {
-		db = db.Where("id = ? AND is_del = ?", p.ID, 0)
-	} else {
-		return nil, gorm.ErrRecordNotFound
-	}
-
-	err := db.First(&post).Error
+	err := res.Decode(&post)
 	if err != nil {
-		return &post, err
+		return nil, err
 	}
-
 	return &post, nil
 }
 
 func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Post, error) {
-	var posts []*Post
-	var err error
-	if offset >= 0 && limit > 0 {
-		db = db.Offset(offset).Limit(limit)
+
+	var (
+		posts  []*Post
+		err    error
+		cursor *mongo.Cursor
+		query  bson.M
+	)
+	if p.Address != "" {
+		query = bson.M{"address": p.Address}
 	}
-	if p.UserID > 0 {
-		db = db.Where("user_id = ?", p.UserID)
-	}
+	finds := make([]*options.FindOptions, 0, 3)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
 	for k, v := range *conditions {
-		if k == "ORDER" {
-			db = db.Order(v)
+		if k != "ORDER" {
+			query = findQuery([]bson.M{query, v})
 		} else {
-			db = db.Where(k, v)
+			finds = append(finds, options.Find().SetSort(v))
 		}
 	}
-
-	if err = db.Where("is_del = ?", 0).Find(&posts).Error; err != nil {
+	if cursor, err = db.Collection(p.table()).Find(context.TODO(), query, finds...); err != nil {
 		return nil, err
 	}
-
-	return posts, nil
-}
-
-func (p *Post) Fetch(db *mongo.Database, predicates Predicates, offset, limit int) ([]*Post, error) {
-	var posts []*Post
-	var err error
-	if offset >= 0 && limit > 0 {
-		db = db.Offset(offset).Limit(limit)
-	}
-	if p.UserID > 0 {
-		db = db.Where("user_id = ?", p.UserID)
-	}
-	for query, args := range predicates {
-		if query == "ORDER" {
-			db = db.Order(args[0])
-		} else {
-			db = db.Where(query, args...)
+	for cursor.Next(context.TODO()) {
+		var post Post
+		if cursor.Decode(&post) != nil {
+			return nil, err
 		}
+		posts = append(posts, &post)
 	}
-
-	if err = db.Where("is_del = ?", 0).Find(&posts).Error; err != nil {
-		return nil, err
-	}
-
 	return posts, nil
-}
-
-func (p *Post) CountBy(db *mongo.Database, predicates Predicates) (count int64, err error) {
-	for query, args := range predicates {
-		if query != "ORDER" {
-			db = db.Where(query, args...)
-		}
-	}
-	err = db.Model(p).Count(&count).Error
-	return
 }
 
 func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) {
-	var count int64
-	if p.UserID > 0 {
-		db = db.Where("user_id = ?", p.UserID)
+
+	var query bson.M
+	if p.Address != "" {
+		query = bson.M{"address": p.Address}
 	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
-			db = db.Where(k, v)
+			query = findQuery([]bson.M{query, v})
 		}
 	}
-	if err := db.Model(p).Count(&count).Error; err != nil {
+	count, err := db.Collection(p.table()).CountDocuments(context.TODO(), query)
+	if err != nil {
 		return 0, err
 	}
 
@@ -190,7 +171,12 @@ func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error)
 }
 
 func (p *Post) Update(db *mongo.Database) error {
-	return db.Model(&Post{}).Where("id = ? AND is_del = ?", p.Model.ID, 0).Save(p).Error
+	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
+	update := bson.M{"$set": p}
+	if _, err := db.Collection(p.table()).UpdateMany(context.TODO(), filter, update); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p PostVisibleT) String() string {
@@ -199,10 +185,8 @@ func (p PostVisibleT) String() string {
 		return "public"
 	case PostVisitPrivate:
 		return "private"
-	case PostVisitFriend:
-		return "friend"
-	case PostVisitInvalid:
-		return "invalid"
+	case PostVisitDraft:
+		return "draft"
 	default:
 		return "unknow"
 	}

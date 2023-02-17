@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/oklog/ulid/v2"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func Login(c *gin.Context) {
@@ -159,11 +160,12 @@ func GetUserProfile(c *gin.Context) {
 
 func GetUserPosts(c *gin.Context) {
 	response := app.NewResponse(c)
-	username := c.Query("username")
+	address := c.Query("address")
 
-	user, err := service.GetUserByUsername(username)
+	// todo address !
+	user, err := service.GetUserByUsername(address)
 	if err != nil {
-		logrus.Errorf("service.GetUserByUsername err: %v\n", err)
+		logrus.Errorf("service.GetUserByAddress err: %v\n", err)
 		response.ToErrorResponse(errcode.NoExistUsername)
 		return
 	}
@@ -171,16 +173,13 @@ func GetUserPosts(c *gin.Context) {
 	visibilities := []model.PostVisibleT{model.PostVisitPublic}
 	if u, exists := c.Get("USER"); exists {
 		self := u.(*model.User)
-		if self.ID == user.ID || self.IsAdmin {
-			visibilities = append(visibilities, model.PostVisitPrivate, model.PostVisitFriend)
-		} else if service.IsFriend(user.ID, self.ID) {
-			visibilities = append(visibilities, model.PostVisitFriend)
+		if self.Address == user.Address {
+			visibilities = append(visibilities, model.PostVisitPrivate)
 		}
 	}
 	conditions := model.ConditionsT{
-		"user_id":         user.ID,
-		"visibility IN ?": visibilities,
-		"ORDER":           "latest_replied_on DESC",
+		"query": bson.M{"address": user.Address, "visibility": bson.M{"$in": visibilities}},
+		"ORDER": bson.M{"latest_replied_on": -1},
 	}
 
 	posts, err := service.GetPostList(&service.PostListReq{

@@ -41,8 +41,6 @@ func NewRouter() *gin.Engine {
 	{
 		noAuthApi.GET("/post", api.GetPost)
 
-		noAuthApi.GET("/post/comments", api.GetPostComments)
-
 		noAuthApi.GET("/tags", api.GetPostTags)
 
 		noAuthApi.GET("/user/profile", api.GetUserProfile)
@@ -91,14 +89,6 @@ func NewRouter() *gin.Engine {
 		privApi.POST("/post/stick", api.StickPost)
 
 		privApi.POST("/post/visibility", api.VisiblePost)
-
-		privApi.POST("/post/comment", api.CreatePostComment)
-
-		privApi.DELETE("/post/comment", api.DeletePostComment)
-
-		privApi.POST("/post/comment/reply", api.CreatePostCommentReply)
-
-		privApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
 	}
 
 	// default 404
