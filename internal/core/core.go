@@ -10,10 +10,5 @@ type DataService interface {
 
 	AttachmentCheckService
 
-	CommentService
-	CommentManageService
-
 	UserManageService
-
-	SecurityService
 }

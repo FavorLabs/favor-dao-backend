@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/pkg/json"
+	"github.com/go-resty/resty/v2"
 )
 
 type ZincClient struct {
@@ -70,7 +70,6 @@ type HitItem struct {
 	Source    interface{} `json:"_source"`
 }
 
-// NewClient 获取ZincClient新实例
 func NewClient(conf *conf.ZincSettingS) *ZincClient {
 	return &ZincClient{
 		ZincClientConfig: &ZincClientConfig{
@@ -81,7 +80,6 @@ func NewClient(conf *conf.ZincSettingS) *ZincClient {
 	}
 }
 
-// 创建索引
 func (c *ZincClient) CreateIndex(name string, p *ZincIndexProperty) bool {
 	data := &ZincIndex{
 		Name:        name,
@@ -99,7 +97,6 @@ func (c *ZincClient) CreateIndex(name string, p *ZincIndexProperty) bool {
 	return true
 }
 
-// 检查索引是否存在
 func (c *ZincClient) ExistIndex(name string) bool {
 	resp, err := c.request().Get("/api/index")
 
@@ -120,7 +117,6 @@ func (c *ZincClient) ExistIndex(name string) bool {
 	return false
 }
 
-// 新增/更新文档
 func (c *ZincClient) PutDoc(name string, id int64, doc interface{}) (bool, error) {
 	resp, err := c.request().SetBody(doc).Put(fmt.Sprintf("/api/%s/_doc/%d", name, id))
 
@@ -135,7 +131,6 @@ func (c *ZincClient) PutDoc(name string, id int64, doc interface{}) (bool, error
 	return true, nil
 }
 
-// 批量新增文档
 func (c *ZincClient) BulkPushDoc(docs []map[string]interface{}) (bool, error) {
 	dataStr := ""
 	for _, doc := range docs {
