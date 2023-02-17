@@ -5,18 +5,16 @@ import (
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
-	db  *mongo.Database
-	cs  core.CacheIndexService
+	ds  core.DataService
 	ts  core.TweetSearchService
 	oss core.ObjectStorageService
 )
 
 func Initialize() {
-	db, cs = dao.DataService()
+	ds = dao.DataService()
 	ts = dao.TweetSearchService()
 	oss = dao.ObjectStorageService()
 }
@@ -28,9 +26,7 @@ func persistMediaContents(contents []*PostContentItem) (items []string, err erro
 		switch item.Type {
 		case model.CONTENT_TYPE_IMAGE,
 			model.CONTENT_TYPE_VIDEO,
-			model.CONTENT_TYPE_AUDIO,
-			model.CONTENT_TYPE_ATTACHMENT,
-			model.CONTENT_TYPE_CHARGE_ATTACHMENT:
+			model.CONTENT_TYPE_AUDIO:
 			items = append(items, item.Content)
 			if err != nil {
 				continue

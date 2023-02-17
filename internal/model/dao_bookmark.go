@@ -89,7 +89,17 @@ func (m *DaoBookmark) GetList(ctx context.Context, db *mongo.Database, pipeline 
 	if err != nil {
 		return
 	}
-	err = cur.All(ctx, &list)
+	type tmp struct {
+		Dao *Dao `bson:"dao"`
+	}
+	var a []*tmp
+	err = cur.All(ctx, &a)
+	if err != nil {
+		return
+	}
+	for _, v := range a {
+		list = append(list, v.Dao.Format())
+	}
 	return
 }
 
