@@ -9,23 +9,23 @@ import (
 	"favor-dao-backend/internal/dao/search"
 	"favor-dao-backend/internal/dao/storage"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
 	ts  core.TweetSearchService
-	db  *mongo.Database
-	cs  core.CacheIndexService
+	ds  core.DataService
 	oss core.ObjectStorageService
 
 	onceTs, onceDs, onceOss sync.Once
 )
 
-func DataService() (*mongo.Database, core.CacheIndexService) {
+func DataService() core.DataService {
 	onceDs.Do(func() {
-		cs, db = jinzhu.NewDataService()
+		var v core.VersionInfo
+		ds, v = jinzhu.NewDataService()
+		logrus.Infof("use %s as data service with version %s", v.Name(), v.Version())
 	})
-	return db, cs
+	return ds
 }
 
 func ObjectStorageService() core.ObjectStorageService {

@@ -8,18 +8,30 @@ import (
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao/cache"
+	"favor-dao-backend/internal/dao/security"
 	"github.com/Masterminds/semver/v3"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
+	_ core.DataService = (*dataServant)(nil)
 	_ core.VersionInfo = (*dataServant)(nil)
 )
 
-type dataServant struct{}
+type dataServant struct {
+	core.IndexPostsService
+	core.TopicService
+	core.TweetService
+	core.TweetManageService
+	core.TweetHelpService
+	core.CommentService
+	core.CommentManageService
+	core.UserManageService
+	core.SecurityService
+	core.AttachmentCheckService
+}
 
-func NewDataService() (core.CacheIndexService, *mongo.Database) {
+func NewDataService() (core.DataService, core.VersionInfo) {
 	// initialize CacheIndex if needed
 	var (
 		c core.CacheIndexService
@@ -38,7 +50,18 @@ func NewDataService() (core.CacheIndexService, *mongo.Database) {
 	}
 	logrus.Infof("use %s as cache index service by version: %s", v.Name(), v.Version())
 
-	return c, db
+	ds := &dataServant{
+		IndexPostsService:      c,
+		TopicService:           newTopicService(db),
+		TweetService:           newTweetService(db),
+		TweetManageService:     newTweetManageService(db, c),
+		TweetHelpService:       newTweetHelpService(db),
+		CommentService:         newCommentService(db),
+		CommentManageService:   newCommentManageService(db),
+		UserManageService:      newUserManageService(db),
+		AttachmentCheckService: security.NewAttachmentCheckService(),
+	}
+	return ds, ds
 }
 
 func NewAuthorizationManageService() core.AuthorizationManageService {

@@ -53,10 +53,11 @@ func GetDaoBookmarkList(c *gin.Context, userAddress string, q *core.QueryReq, of
 			"from":         dao.Table(),
 			"localField":   "dao_id",
 			"foreignField": "_id",
-			"as":           "address,name,visibility,introduction",
+			"as":           "dao",
 		}}},
-		{{"$limit", limit}},
 		{{"$skip", offset}},
+		{{"$limit", limit}},
+		{{"$unwind", "$dao"}},
 		{{"$sort", bson.M{"_id": -1}}},
 	}
 	book := &model.DaoBookmark{Address: userAddress}
