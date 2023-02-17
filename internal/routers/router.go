@@ -37,8 +37,6 @@ func NewRouter() *gin.Engine {
 
 	r.POST("/auth/login", api.Login)
 
-	r.POST("/auth/register", api.Register)
-
 	noAuthApi := r.Group("/")
 	{
 		noAuthApi.GET("/post", api.GetPost)
@@ -50,24 +48,21 @@ func NewRouter() *gin.Engine {
 		noAuthApi.GET("/user/profile", api.GetUserProfile)
 	}
 
-	looseApi := r.Group("/").Use(middleware.JwtLoose())
+	looseApi := r.Group("/").Use(middleware.Session())
 	{
 		looseApi.GET("/posts", api.GetPostList)
 
 		looseApi.GET("/user/posts", api.GetUserPosts)
 	}
 
-	authApi := r.Group("/").Use(middleware.JWT())
-	privApi := r.Group("/").Use(middleware.JWT())
-	adminApi := r.Group("/").Use(middleware.JWT()).Use(middleware.Admin())
+	authApi := r.Group("/").Use(middleware.Session())
+	privApi := r.Group("/").Use(middleware.Session())
 	{
 		authApi.GET("/user/info", api.GetUserInfo)
 
 		authApi.GET("/user/collections", api.GetUserCollections)
 
 		authApi.GET("/user/stars", api.GetUserStars)
-
-		authApi.POST("/user/password", api.ChangeUserPassword)
 
 		authApi.POST("/user/nickname", api.ChangeNickname)
 
@@ -104,9 +99,6 @@ func NewRouter() *gin.Engine {
 		privApi.POST("/post/comment/reply", api.CreatePostCommentReply)
 
 		privApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
-
-		// Management - Banned/Unblocked Users
-		adminApi.POST("/admin/user/status", api.ChangeUserStatus)
 	}
 
 	// default 404

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
@@ -12,6 +14,8 @@ import (
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/util"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
@@ -33,6 +37,12 @@ type UserPhoneBindReq struct {
 type AuthRequest struct {
 	Username string `json:"username" form:"username" binding:"required"`
 	Password string `json:"password" form:"password" binding:"required"`
+}
+
+type AuthByWalletRequest struct {
+	Timestamp  int64  `json:"timestamp" binding:"required"`
+	WalletAddr string `json:"wallet_addr" binding:"required"`
+	Signature  string `json:"signature" binding:"required"`
 }
 
 type RegisterRequest struct {
@@ -91,6 +101,83 @@ func DoLogin(ctx *gin.Context, param *AuthRequest) (*model.User, error) {
 		_, err = conf.Redis.Incr(ctx, fmt.Sprintf("%s:%d", LOGIN_ERR_KEY, user.ID)).Result()
 		if err == nil {
 			conf.Redis.Expire(ctx, fmt.Sprintf("%s:%d", LOGIN_ERR_KEY, user.ID), time.Hour).Result()
+		}
+
+		return nil, errcode.UnauthorizedAuthFailed
+	}
+
+	return nil, errcode.UnauthorizedAuthNotExist
+}
+
+// DoLoginWallet 钱包登陆，如果用户不存在就注册
+func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, error) {
+	signature, err := hex.DecodeString(param.Signature)
+	if err != nil {
+		return nil, errcode.InvalidParams
+	}
+	walletBytes, err := hex.DecodeString(param.WalletAddr)
+	if err != nil {
+		return nil, errcode.InvalidParams
+	}
+
+	created := false
+
+	user, err := ds.GetUserByUsername(param.WalletAddr)
+	if err != nil {
+		//return nil, errcode.UnauthorizedAuthFailed
+		// if not exists
+		created = true
+	}
+
+	if created || (user.Model != nil && user.ID > 0) {
+		if errTimes, err := conf.Redis.Get(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result(); err == nil {
+			if convert.StrTo(errTimes).MustInt() >= MAX_LOGIN_ERR_TIMES {
+				return nil, errcode.TooManyLoginError
+			}
+		}
+
+		// check valid timestamp
+		if time.Now().After(time.Unix(param.Timestamp, 0).Add(time.Minute)) {
+			return nil, errcode.UnauthorizedTokenTimeout
+		}
+
+		// parse message
+		guessMessage := fmt.Sprintf("%s login FavorTube at %d", param.WalletAddr, param.Timestamp)
+		ethMessage := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(guessMessage), guessMessage))
+		pubkey, err := crypto.Ecrecover(crypto.Keccak256(ethMessage), signature)
+		if err == nil {
+			var signer common.Address
+			copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+			if bytes.Equal(walletBytes, signer.Bytes()) {
+				if created {
+					user := &model.User{
+						Nickname: param.WalletAddr[:10],
+						Username: param.WalletAddr,
+						Password: "",
+						Avatar:   GetRandomAvatar(),
+						Salt:     "",
+						Status:   model.UserStatusNormal,
+					}
+
+					user, err := ds.CreateUser(user)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					if user.Status == model.UserStatusClosed {
+						return nil, errcode.UserHasBeenBanned
+					}
+				}
+
+				// 清空登录计数
+				conf.Redis.Del(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr))
+				return user, nil
+			}
+		}
+		// 登录错误计数
+		_, err = conf.Redis.Incr(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result()
+		if err == nil {
+			conf.Redis.Expire(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr), time.Hour).Result()
 		}
 
 		return nil, errcode.UnauthorizedAuthFailed
