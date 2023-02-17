@@ -1,19 +1,23 @@
 package api
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
+	"encoding/json"
+	"fmt"
 	"unicode/utf8"
 
+	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
+	"github.com/oklog/ulid/v2"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func Login(c *gin.Context) {
-	param := service.AuthRequest{}
+	param := service.AuthByWalletRequest{}
 	response := app.NewResponse(c)
 	valid, errs := app.BindAndValid(c, &param)
 	if !valid {
@@ -22,66 +26,44 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	user, err := service.DoLogin(c, &param)
+	user, err := service.DoLoginWallet(c, &param)
 	if err != nil {
 		logrus.Errorf("service.DoLogin err: %v", err)
 		response.ToErrorResponse(err.(*errcode.Error))
 		return
 	}
 
-	token, err := app.GenerateToken(user)
+	token, err := app.GenerateToken()
 	if err != nil {
 		logrus.Errorf("app.GenerateToken err: %v", err)
 		response.ToErrorResponse(errcode.UnauthorizedTokenGenerate)
 		return
 	}
 
+	userInfo, _ := json.Marshal(app.UserInfo{
+		Nickname: user.Nickname,
+		Avatar:   user.Avatar,
+	})
+
+	if err := conf.Redis.Set(c, fmt.Sprintf("user_%s", param.WalletAddr), userInfo, 0).Err(); err != nil {
+		logrus.Errorf("conf.Redis.Set err: %v", err)
+		response.ToErrorResponse(errcode.UnauthorizedTokenError)
+		return
+	}
+
+	session, _ := json.Marshal(app.Session{
+		ID:           ulid.Make().String(),
+		FriendlyName: c.DefaultQuery("name", "UnknownDevice"),
+		WalletAddr:   param.WalletAddr,
+	})
+	if err := conf.Redis.Set(c, fmt.Sprintf("token_%s", token), session, 0).Err(); err != nil {
+		logrus.Errorf("conf.Redis.Set err: %v", err)
+		response.ToErrorResponse(errcode.UnauthorizedTokenError)
+		return
+	}
+
 	response.ToResponse(gin.H{
 		"token": token,
-	})
-}
-
-func Register(c *gin.Context) {
-
-	param := service.RegisterRequest{}
-	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
-
-	// check user
-	err := service.ValidUsername(param.Username)
-	if err != nil {
-		logrus.Errorf("service.Register err: %v", err)
-		response.ToErrorResponse(err.(*errcode.Error))
-		return
-	}
-
-	// check password
-	err = service.CheckPassword(param.Password)
-	if err != nil {
-		logrus.Errorf("service.Register err: %v", err)
-		response.ToErrorResponse(err.(*errcode.Error))
-		return
-	}
-
-	user, err := service.Register(
-		param.Username,
-		param.Password,
-	)
-
-	if err != nil {
-		logrus.Errorf("service.Register err: %v", err)
-		response.ToErrorResponse(errcode.UserRegisterFailed)
-		return
-	}
-
-	response.ToResponse(gin.H{
-		"id":       user.ID,
-		"username": user.Username,
 	})
 }
 
@@ -99,54 +81,13 @@ func GetUserInfo(c *gin.Context) {
 		response.ToErrorResponse(errcode.UnauthorizedAuthNotExist)
 		return
 	}
-	phone := ""
-	if user.Phone != "" && len(user.Phone) == 11 {
-		phone = user.Phone[0:3] + "****" + user.Phone[7:]
-	}
 
 	response.ToResponse(gin.H{
 		"id":       user.ID,
 		"nickname": user.Nickname,
-		"username": user.Username,
-		"status":   user.Status,
+		"address":  user.Address,
 		"avatar":   user.Avatar,
-		"balance":  user.Balance,
-		"phone":    phone,
-		"is_admin": user.IsAdmin,
 	})
-}
-
-func ChangeUserPassword(c *gin.Context) {
-	param := service.ChangePasswordReq{}
-	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
-
-	user := &model.User{}
-	if u, exists := c.Get("USER"); exists {
-		user = u.(*model.User)
-	}
-
-	err := service.CheckPassword(param.Password)
-	if err != nil {
-		logrus.Errorf("service.Register err: %v", err)
-		response.ToErrorResponse(err.(*errcode.Error))
-		return
-	}
-
-	if !service.ValidPassword(user.Password, param.OldPassword, user.Salt) {
-		response.ToErrorResponse(errcode.ErrorOldPassword)
-		return
-	}
-
-	user.Password, user.Salt = service.EncryptPasswordAndSalt(param.Password)
-	service.UpdateUserInfo(user)
-
-	response.ToResponse(nil)
 }
 
 func ChangeNickname(c *gin.Context) {
@@ -198,66 +139,6 @@ func ChangeAvatar(c *gin.Context) {
 	response.ToResponse(nil)
 }
 
-func BindUserPhone(c *gin.Context) {
-	param := service.UserPhoneBindReq{}
-	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
-
-	user := &model.User{}
-	if u, exists := c.Get("USER"); exists {
-		user = u.(*model.User)
-	}
-
-	if service.CheckPhoneExist(user.ID, param.Phone) {
-		response.ToErrorResponse(errcode.ExistedUserPhone)
-		return
-	}
-
-	if err := service.CheckPhoneCaptcha(param.Phone, param.Captcha); err != nil {
-		logrus.Errorf("service.CheckPhoneCaptcha err: %v\n", err)
-		response.ToErrorResponse(err)
-		return
-	}
-
-	user.Phone = param.Phone
-	service.UpdateUserInfo(user)
-
-	response.ToResponse(nil)
-}
-
-func ChangeUserStatus(c *gin.Context) {
-	param := service.ChangeUserStatusReq{}
-	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
-
-	if param.Status != model.UserStatusNormal && param.Status != model.UserStatusClosed {
-		response.ToErrorResponse(errcode.InvalidParams)
-		return
-	}
-
-	user, err := service.GetUserByID(param.ID)
-	if err != nil {
-		logrus.Errorf("service.GetUserByID err: %v\n", err)
-		response.ToErrorResponse(errcode.NoExistUsername)
-		return
-	}
-
-	user.Status = param.Status
-	service.UpdateUserInfo(user)
-
-	response.ToResponse(nil)
-}
-
 func GetUserProfile(c *gin.Context) {
 	response := app.NewResponse(c)
 	username := c.Query("username")
@@ -272,10 +153,8 @@ func GetUserProfile(c *gin.Context) {
 	response.ToResponse(gin.H{
 		"id":       user.ID,
 		"nickname": user.Nickname,
-		"username": user.Username,
-		"status":   user.Status,
+		"address":  user.Address,
 		"avatar":   user.Avatar,
-		"is_admin": user.IsAdmin,
 	})
 }
 

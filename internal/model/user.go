@@ -17,6 +17,7 @@ type User struct {
 	Nickname   string             `json:"nickname"         bson:"nickname"`
 	Address    string             `json:"address"          bson:"address"`
 	Avatar     string             `json:"avatar"           bson:"avatar"`
+	Role       string             `json:"role"             bson:"role"`
 }
 
 type UserFormatted struct {
@@ -24,6 +25,7 @@ type UserFormatted struct {
 	Nickname string `json:"nickname"`
 	Address  string `json:"address"`
 	Avatar   string `json:"avatar"`
+	Role     string `json:"role"`
 }
 
 func (m *User) Format() *UserFormatted {
@@ -32,6 +34,7 @@ func (m *User) Format() *UserFormatted {
 		Nickname: m.Nickname,
 		Address:  m.Address,
 		Avatar:   m.Avatar,
+		Role:     m.Role,
 	}
 }
 
