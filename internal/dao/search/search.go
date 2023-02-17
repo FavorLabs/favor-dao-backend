@@ -26,7 +26,7 @@ func NewMeiliTweetSearchService(ams core.AuthorizationManageService) (core.Tweet
 		})
 		searchableAttributes := []string{"content", "tags"}
 		sortableAttributes := []string{"is_top", "latest_replied_on"}
-		filterableAttributes := []string{"tags", "visibility", "user_id"}
+		filterableAttributes := []string{"tags", "address", "visibility"}
 
 		index := client.Index(s.Index)
 		index.UpdateSearchableAttributes(&searchableAttributes)
@@ -41,8 +41,7 @@ func NewMeiliTweetSearchService(ams core.AuthorizationManageService) (core.Tweet
 		client:        client,
 		index:         client.Index(s.Index),
 		publicFilter:  fmt.Sprintf("visibility=%d", model.PostVisitPublic),
-		privateFilter: fmt.Sprintf("visibility=%d AND user_id=", model.PostVisitPrivate),
-		friendFilter:  fmt.Sprintf("visibility=%d", model.PostVisitFriend),
+		privateFilter: fmt.Sprintf("visibility=%d AND address=", model.PostVisitPrivate),
 	}
 	return mts, mts
 }
@@ -56,8 +55,7 @@ func NewZincTweetSearchService(ams core.AuthorizationManageService) (core.TweetS
 		indexName:     s.Index,
 		client:        zinc.NewClient(s),
 		publicFilter:  fmt.Sprintf("visibility:%d", model.PostVisitPublic),
-		privateFilter: fmt.Sprintf("visibility:%d AND user_id:%%d", model.PostVisitPrivate),
-		friendFilter:  fmt.Sprintf("visibility:%d", model.PostVisitFriend),
+		privateFilter: fmt.Sprintf("visibility:%d AND address:%%s", model.PostVisitPrivate),
 	}
 	zts.createIndex()
 
@@ -83,7 +81,6 @@ func NewBridgeTweetSearchService(ts core.TweetSearchService) core.TweetSearchSer
 		numWorker = 1000
 	}
 	logrus.Debugf("use %d backend worker to update documents to search engine", numWorker)
-	// 启动文档更新器
 	for ; numWorker > 0; numWorker-- {
 		go bts.startUpdateDocs()
 	}

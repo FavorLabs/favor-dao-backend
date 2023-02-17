@@ -7,6 +7,7 @@ import (
 const (
 	SearchTypeDefault SearchType = "search"
 	SearchTypeTag     SearchType = "tag"
+	SearchTypeAddress SearchType = "address"
 )
 
 type SearchType string

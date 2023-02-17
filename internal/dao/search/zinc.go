@@ -71,6 +71,8 @@ func (s *zincTweetSearchServant) Search(user *model.User, q *core.QueryReq, offs
 		resp, err = s.queryByContent(user, q, offset, limit)
 	} else if q.Type == core.SearchTypeTag && q.Query != "" {
 		resp, err = s.queryByTag(user, q, offset, limit)
+	} else if q.Type == core.SearchTypeAddress && q.Query != "" {
+		resp, err = s.queryByAddress(user, q, offset, limit)
 	} else {
 		resp, err = s.queryAny(user, offset, limit)
 	}
@@ -106,6 +108,24 @@ func (s *zincTweetSearchServant) queryByTag(user *model.User, q *core.QueryReq, 
 		"search_type": "querystring",
 		"query": map[string]types.Any{
 			"term": "tags." + q.Query + ":1",
+		},
+		"sort_fields": []string{"-is_top", "-latest_replied_on"},
+		"from":        offset,
+		"max_results": limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.postsFrom(resp)
+}
+
+func (s *zincTweetSearchServant) queryByAddress(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
+	resp, err := s.client.ApiQuery(s.indexName, map[string]types.Any{
+		"search_type": "querystring",
+		"query": map[string]types.Any{
+			"match_phrase": map[string]types.Any{
+				"address": q.Query,
+			},
 		},
 		"sort_fields": []string{"-is_top", "-latest_replied_on"},
 		"from":        offset,
@@ -162,8 +182,8 @@ func (s *zincTweetSearchServant) createIndex() {
 			Store:    true,
 			Sortable: true,
 		},
-		"user_id": &zinc.ZincIndexPropertyT{
-			Type:  "numeric",
+		"address": &zinc.ZincIndexPropertyT{
+			Type:  "text",
 			Index: true,
 			Store: true,
 		},
@@ -217,19 +237,9 @@ func (s *zincTweetSearchServant) createIndex() {
 			Index: true,
 			Store: true,
 		},
-		"ip_loc": &zinc.ZincIndexPropertyT{
-			Type:  "keyword",
-			Index: true,
-			Store: true,
-		},
 		"latest_replied_on": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
 			Index:    true,
-			Sortable: true,
-			Store:    true,
-		},
-		"attachment_price": &zinc.ZincIndexPropertyT{
-			Type:     "numeric",
 			Sortable: true,
 			Store:    true,
 		},

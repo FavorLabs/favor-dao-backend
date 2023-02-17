@@ -1,25 +1,24 @@
 package service
 
 import (
-	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
-	ds                 core.DataService
-	ts                 core.TweetSearchService
-	oss                core.ObjectStorageService
-	DisablePhoneVerify bool
+	db  *mongo.Database
+	cs  core.CacheIndexService
+	ts  core.TweetSearchService
+	oss core.ObjectStorageService
 )
 
 func Initialize() {
-	ds = dao.DataService()
+	db, cs = dao.DataService()
 	ts = dao.TweetSearchService()
 	oss = dao.ObjectStorageService()
-	DisablePhoneVerify = !conf.CfgIf("Sms")
 }
 
 // persistMediaContents 获取媒体内容并持久化

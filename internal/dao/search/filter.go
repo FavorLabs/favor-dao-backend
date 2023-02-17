@@ -3,7 +3,6 @@ package search
 import (
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
-	"favor-dao-backend/pkg/types"
 )
 
 type tweetSearchFilter struct {
@@ -11,11 +10,6 @@ type tweetSearchFilter struct {
 }
 
 func (s *tweetSearchFilter) filterResp(user *model.User, resp *core.QueryResp) {
-	// Administrators do not filter
-	if user != nil && user.IsAdmin {
-		return
-	}
-
 	var item *model.PostFormated
 	items := resp.Items
 	latestIndex := len(items) - 1
@@ -31,14 +25,11 @@ func (s *tweetSearchFilter) filterResp(user *model.User, resp *core.QueryResp) {
 			}
 		}
 	} else {
-		var cutFriend, cutPrivate bool
-		friendFilter := s.ams.BeFriendFilter(user.ID)
-		friendFilter[user.ID] = types.Empty{}
+		var cutPrivate bool
 		for i := 0; i <= latestIndex; i++ {
 			item = items[i]
-			cutFriend = (item.Visibility == model.PostVisitFriend && !friendFilter.IsFriend(item.UserID))
-			cutPrivate = (item.Visibility == model.PostVisitPrivate && user.ID != item.UserID)
-			if cutFriend || cutPrivate {
+			cutPrivate = item.Visibility == model.PostVisitPrivate && user.Address != item.Address
+			if cutPrivate {
 				items[i] = items[latestIndex]
 				items = items[:latestIndex]
 				resp.Total--
