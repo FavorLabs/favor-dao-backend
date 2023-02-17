@@ -24,10 +24,7 @@ type dataServant struct {
 	core.TweetService
 	core.TweetManageService
 	core.TweetHelpService
-	core.CommentService
-	core.CommentManageService
 	core.UserManageService
-	core.SecurityService
 	core.AttachmentCheckService
 }
 
@@ -56,8 +53,6 @@ func NewDataService() (core.DataService, core.VersionInfo) {
 		TweetService:           newTweetService(db),
 		TweetManageService:     newTweetManageService(db, c),
 		TweetHelpService:       newTweetHelpService(db),
-		CommentService:         newCommentService(db),
-		CommentManageService:   newCommentManageService(db),
 		UserManageService:      newUserManageService(db),
 		AttachmentCheckService: security.NewAttachmentCheckService(),
 	}

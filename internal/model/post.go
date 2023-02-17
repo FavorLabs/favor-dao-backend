@@ -2,11 +2,12 @@ package model
 
 import (
 	"context"
+	"strings"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"strings"
 )
 
 // PostVisibleT Accessible type, 0 public, 1 private, 2 friends
@@ -16,9 +17,9 @@ const (
 	PostVisitDraft PostVisibleT = iota
 	PostVisitPublic
 	PostVisitPrivate
-	//PostVisitSecret
-	//PostVisitFriend
-	//PostVisitInvalid
+	// PostVisitSecret
+	// PostVisitFriend
+	// PostVisitInvalid
 )
 
 type Post struct {
@@ -40,7 +41,7 @@ type PostFormated struct {
 	ID              primitive.ObjectID     `json:"id"`
 	DaoId           primitive.ObjectID     `json:"daoId"`
 	Address         string                 `json:"address"`
-	User            *UserFormated          `json:"user"`
+	User            *UserFormatted         `json:"user"`
 	Contents        []*PostContentFormated `json:"contents"`
 	Member          int                    `json:"member"`
 	ViewCount       int64                  `json:"view_count"`
@@ -66,7 +67,7 @@ func (p *Post) Format() *PostFormated {
 		ID:              p.ID,
 		DaoId:           p.DaoId,
 		Address:         p.Address,
-		User:            &UserFormated{},
+		User:            &UserFormatted{},
 		Contents:        []*PostContentFormated{},
 		Member:          p.Member,
 		ViewCount:       p.ViewCount,
