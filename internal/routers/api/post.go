@@ -2,13 +2,13 @@ package api
 
 import (
 	"favor-dao-backend/internal/core"
-	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func GetPostList(c *gin.Context) {
@@ -46,10 +46,15 @@ func GetPostList(c *gin.Context) {
 }
 
 func GetPost(c *gin.Context) {
-	postID := convert.StrTo(c.Query("id")).MustInt64()
+	postID := convert.StrTo(c.Query("id")).String()
 	response := app.NewResponse(c)
-
-	postFormated, err := service.GetPost(postID)
+	postId, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		logrus.Errorf("service.GetPost err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
+	postFormated, err := service.GetPost(postId)
 
 	if err != nil {
 		logrus.Errorf("service.GetPost err: %v\n", err)
@@ -98,11 +103,16 @@ func DeletePost(c *gin.Context) {
 		response.ToErrorResponse(errcode.NoPermission)
 		return
 	}
-
-	err := service.DeletePost(user, param.ID)
+	postId, err := primitive.ObjectIDFromHex(param.ID)
 	if err != nil {
 		logrus.Errorf("service.DeletePost err: %v\n", err)
-		response.ToErrorResponse(err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
+	err1 := service.DeletePost(user, postId)
+	if err1 != nil {
+		logrus.Errorf("service.DeletePost err: %v\n", err1)
+		response.ToErrorResponse(err1)
 		return
 	}
 
@@ -110,12 +120,19 @@ func DeletePost(c *gin.Context) {
 }
 
 func GetPostStar(c *gin.Context) {
-	postID := convert.StrTo(c.Query("id")).MustInt64()
+	postID := convert.StrTo(c.Query("id")).String()
 	response := app.NewResponse(c)
 
 	userID, _ := c.Get("UID")
 
-	_, err := service.GetPostStar(postID, userID.(int64))
+	postId, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		logrus.Errorf("service.GetPostStar err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
+
+	_, err = service.GetPostStar(postId, userID.(string))
 	if err != nil {
 		response.ToResponse(gin.H{
 			"status": false,
@@ -140,12 +157,17 @@ func PostStar(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("UID")
-
+	postId, err := primitive.ObjectIDFromHex(param.ID)
+	if err != nil {
+		logrus.Errorf("service.PostStar err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
 	status := false
-	star, err := service.GetPostStar(param.ID, userID.(int64))
+	star, err := service.GetPostStar(postId, userID.(string))
 	if err != nil {
 		// 创建Star
-		_, err = service.CreatePostStar(param.ID, userID.(int64))
+		_, err = service.CreatePostStar(postId, userID.(string))
 		status = true
 	} else {
 		// 取消Star
@@ -163,12 +185,17 @@ func PostStar(c *gin.Context) {
 }
 
 func GetPostCollection(c *gin.Context) {
-	postID := convert.StrTo(c.Query("id")).MustInt64()
+	postID := convert.StrTo(c.Query("id")).String()
 	response := app.NewResponse(c)
 
 	userID, _ := c.Get("UID")
-
-	_, err := service.GetPostCollection(postID, userID.(int64))
+	postId, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		logrus.Errorf("service.GetPostCollection err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
+	_, err = service.GetPostCollection(postId, userID.(string))
 	if err != nil {
 		response.ToResponse(gin.H{
 			"status": false,
@@ -193,12 +220,17 @@ func PostCollection(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("UID")
-
+	postId, err := primitive.ObjectIDFromHex(param.ID)
+	if err != nil {
+		logrus.Errorf("service.PostCollection err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
 	status := false
-	collection, err := service.GetPostCollection(param.ID, userID.(int64))
+	collection, err := service.GetPostCollection(postId, userID.(string))
 	if err != nil {
 		// 创建collection
-		_, err = service.CreatePostCollection(param.ID, userID.(int64))
+		_, err = service.CreatePostCollection(postId, userID.(string))
 		status = true
 	} else {
 		// 取消Star
@@ -215,42 +247,6 @@ func PostCollection(c *gin.Context) {
 	})
 }
 
-func LockPost(c *gin.Context) {
-	param := service.PostLockReq{}
-	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
-
-	user, _ := c.Get("USER")
-
-	// 获取Post
-	postFormated, err := service.GetPost(param.ID)
-	if err != nil {
-		logrus.Errorf("service.GetPost err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostFailed)
-		return
-	}
-
-	if postFormated.UserID != user.(*model.User).ID && !user.(*model.User).IsAdmin {
-		response.ToErrorResponse(errcode.NoPermission)
-		return
-	}
-	err = service.LockPost(param.ID)
-	if err != nil {
-		logrus.Errorf("service.LockPost err: %v\n", err)
-		response.ToErrorResponse(errcode.LockPostFailed)
-		return
-	}
-
-	response.ToResponse(gin.H{
-		"lock_status": 1 - postFormated.IsLock,
-	})
-}
-
 func StickPost(c *gin.Context) {
 	param := service.PostStickReq{}
 	response := app.NewResponse(c)
@@ -261,21 +257,26 @@ func StickPost(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("USER")
-
+	//user, _ := c.Get("USER")
+	postId, err := primitive.ObjectIDFromHex(param.ID)
+	if err != nil {
+		logrus.Errorf("service.StickPost err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
 	// 获取Post
-	postFormated, err := service.GetPost(param.ID)
+	postFormated, err := service.GetPost(postId)
 	if err != nil {
 		logrus.Errorf("service.GetPost err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
 
-	if !user.(*model.User).IsAdmin {
-		response.ToErrorResponse(errcode.NoPermission)
-		return
-	}
-	err = service.StickPost(param.ID)
+	//if !user.(*model.User).IsAdmin {
+	//	response.ToErrorResponse(errcode.NoPermission)
+	//	return
+	//}
+	err = service.StickPost(postId)
 	if err != nil {
 		logrus.Errorf("service.StickPost err: %v\n", err)
 		response.ToErrorResponse(errcode.LockPostFailed)
@@ -296,9 +297,14 @@ func VisiblePost(c *gin.Context) {
 		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
 		return
 	}
-
+	postId, err := primitive.ObjectIDFromHex(param.ID)
+	if err != nil {
+		logrus.Errorf("service.VisiblePost err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
 	user, _ := userFrom(c)
-	if err := service.VisiblePost(user, param.ID, param.Visibility); err != nil {
+	if err := service.VisiblePost(user, postId, param.Visibility); err != nil {
 		logrus.Errorf("service.VisiblePost err: %v\n", err)
 		response.ToErrorResponse(err)
 		return
