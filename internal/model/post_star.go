@@ -39,7 +39,9 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 			"from":         "post",
 			"localField":   "post_id",
 			"foreignField": "_id",
+			"as":           "post",
 		}}},
+		{{"$unwind", "$post"}},
 	}
 
 	ctx := context.TODO()

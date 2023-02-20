@@ -39,7 +39,9 @@ func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 			"from":         "post",
 			"localField":   "post_id",
 			"foreignField": "_id",
+			"as":           "post",
 		}}},
+		{{"$unwind", "$post"}},
 	}
 
 	ctx := context.TODO()
