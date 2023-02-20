@@ -1,12 +1,17 @@
 package core
 
-import "favor-dao-backend/internal/model"
+import (
+	"favor-dao-backend/internal/model"
+)
 
 type DaoManageService interface {
-	GetUserByAddress(address string) (*model.User, error)
-	GetUsersByAddresses(addresses []string) ([]*model.User, error)
-	GetUsersByKeyword(keyword string) ([]*model.User, error)
-	CreateUser(user *model.User) (*model.User, error)
-	UpdateUser(user *model.User) error
-	IsFriend(userAddress, friendAddress string) bool
+	GetDaoByKeyword(keyword string) ([]*model.Dao, error)
+	GetDao(dao *model.Dao) (*model.Dao, error)
+	CreateDao(dao *model.Dao) (*model.Dao, error)
+	UpdateDao(dao *model.Dao) error
+	DaoBookmarkCount(address string) int64
+	GetDaoBookmarkList(userAddress string, q *QueryReq, offset, limit int) (list []*model.DaoFormatted)
+	GetDaoBookmarkByAddressAndDaoID(myAddress string, daoId string) (*model.DaoBookmark, error)
+	CreateDaoFollow(myAddress string, daoID string) (*model.DaoBookmark, error)
+	DeleteDaoFollow(d *model.DaoBookmark) error
 }

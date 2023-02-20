@@ -24,6 +24,9 @@ func (m *DaoBookmark) Table() string {
 }
 
 func (m *DaoBookmark) Create(ctx context.Context, db *mongo.Database) (*DaoBookmark, error) {
+	now := time.Now().Unix()
+	m.CreatedOn = now
+	m.ModifiedOn = now
 	res, err := db.Collection(m.Table()).InsertOne(ctx, &m)
 	if err != nil {
 		return nil, err
@@ -52,6 +55,27 @@ func (m *DaoBookmark) Update(ctx context.Context, db *mongo.Database) error {
 		return res.Err()
 	}
 	return nil
+}
+
+func (m *DaoBookmark) GetByAddress(ctx context.Context, db *mongo.Database, address string, daoId string) (*DaoBookmark, error) {
+	id, err := primitive.ObjectIDFromHex(daoId)
+	if err != nil {
+		return nil, err
+	}
+	var filter bson.M
+	filter["dao_id"] = id
+	filter["address"] = address
+	filter["is_del"] = 0
+	res := db.Collection(m.Table()).FindOne(ctx, filter)
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	var dao DaoBookmark
+	err = res.Decode(&dao)
+	if err != nil {
+		return nil, err
+	}
+	return &dao, nil
 }
 
 func (m *DaoBookmark) Get(ctx context.Context, db *mongo.Database) (*DaoBookmark, error) {

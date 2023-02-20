@@ -2,11 +2,13 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // DaoVisibleT Accessible type, 0 public, 1 private
@@ -102,8 +104,17 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	return &dao, nil
 }
 
-func (m *Dao) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*Dao, err error) {
-	cur, err := db.Collection(m.Table()).Find(ctx, filter)
+func (m *Dao) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword string, offset, limit int) (list []*Dao, err error) {
+	var filter bson.M
+	if keyword != "" {
+		filter = bson.M{
+			"name": fmt.Sprintf("/%s/", keyword),
+		}
+	}
+	finds := make([]*options.FindOptions, 0, 2)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	cur, err := db.Collection(m.Table()).Find(ctx, filter, finds...)
 	if err != nil {
 		return
 	}
