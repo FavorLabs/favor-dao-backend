@@ -123,7 +123,7 @@ func GetPostStar(c *gin.Context) {
 	postID := convert.StrTo(c.Query("id")).String()
 	response := app.NewResponse(c)
 
-	userID, _ := c.Get("UID")
+	userID, _ := c.Get("address")
 
 	postId, err := primitive.ObjectIDFromHex(postID)
 	if err != nil {
@@ -156,7 +156,7 @@ func PostStar(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("UID")
+	userID, _ := c.Get("address")
 	postId, err := primitive.ObjectIDFromHex(param.ID)
 	if err != nil {
 		logrus.Errorf("service.PostStar err: %v\n", err)
@@ -188,7 +188,7 @@ func GetPostCollection(c *gin.Context) {
 	postID := convert.StrTo(c.Query("id")).String()
 	response := app.NewResponse(c)
 
-	userID, _ := c.Get("UID")
+	userID, _ := c.Get("address")
 	postId, err := primitive.ObjectIDFromHex(postID)
 	if err != nil {
 		logrus.Errorf("service.GetPostCollection err: %v\n", err)
@@ -219,7 +219,7 @@ func PostCollection(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("UID")
+	userID, _ := c.Get("address")
 	postId, err := primitive.ObjectIDFromHex(param.ID)
 	if err != nil {
 		logrus.Errorf("service.PostCollection err: %v\n", err)
@@ -257,7 +257,7 @@ func StickPost(c *gin.Context) {
 		return
 	}
 
-	//user, _ := c.Get("USER")
+	// user, _ := c.Get("USER")
 	postId, err := primitive.ObjectIDFromHex(param.ID)
 	if err != nil {
 		logrus.Errorf("service.StickPost err: %v\n", err)
@@ -272,10 +272,10 @@ func StickPost(c *gin.Context) {
 		return
 	}
 
-	//if !user.(*model.User).IsAdmin {
+	// if !user.(*model.User).IsAdmin {
 	//	response.ToErrorResponse(errcode.NoPermission)
 	//	return
-	//}
+	// }
 	err = service.StickPost(postId)
 	if err != nil {
 		logrus.Errorf("service.StickPost err: %v\n", err)

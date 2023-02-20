@@ -1,4 +1,4 @@
-use dao
+use dao;
 
 db.createCollection("dao");
 db.createCollection("dao_bookmark");
@@ -62,8 +62,8 @@ db.post.insertOne({
 })
 
 db.user.insertOne({
-    "address": "0x000",
-    "nickname": "",
+    "address": "0x123456789",
+    "nickname": "test-A",
     "is_del": 0,
     "avatar": "",
     "role": ""

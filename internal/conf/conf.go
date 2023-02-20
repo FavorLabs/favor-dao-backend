@@ -23,13 +23,6 @@ var (
 	TweetSearchSetting      *TweetSearchS
 	ZincSetting             *ZincSettingS
 	MeiliSetting            *MeiliSettingS
-	ObjectStorage           *ObjectStorageS
-	AliOSSSetting           *AliOSSSettingS
-	COSSetting              *COSSettingS
-	HuaweiOBSSetting        *HuaweiOBSSettingS
-	MinIOSetting            *MinIOSettingS
-	S3Setting               *S3SettingS
-	LocalOSSSetting         *LocalOSSSettingS
 )
 
 func setupSetting(suite []string, noDefault bool) error {
@@ -56,18 +49,11 @@ func setupSetting(suite []string, noDefault bool) error {
 		"LoggerZinc":       &loggerZincSetting,
 		"LoggerMeili":      &loggerMeiliSetting,
 		"Database":         &DatabaseSetting,
-		"Mongo":            &MongoDBSetting,
+		"MongoDB":          &MongoDBSetting,
 		"TweetSearch":      &TweetSearchSetting,
 		"Zinc":             &ZincSetting,
 		"Meili":            &MeiliSetting,
 		"Redis":            &redisSetting,
-		"ObjectStorage":    &ObjectStorage,
-		"AliOSS":           &AliOSSSetting,
-		"COS":              &COSSetting,
-		"HuaweiOBS":        &HuaweiOBSSetting,
-		"MinIO":            &MinIOSetting,
-		"LocalOSS":         &LocalOSSSetting,
-		"S3":               &S3Setting,
 	}
 	if err = setting.Unmarshal(objects); err != nil {
 		return err
@@ -98,37 +84,6 @@ func Cfg(key string) (string, bool) {
 }
 
 // CfgIf check expression is true. if expression just have a string like
-// `Sms` is mean `Sms` whether define in suite feature settings. expression like
-// `Sms = SmsJuhe` is mean whether `Sms` define in suite feature settings and value
-// is `SmsJuhe``
 func CfgIf(expression string) bool {
 	return features.CfgIf(expression)
-}
-
-func GetOssDomain() string {
-	uri := "https://"
-	if CfgIf("AliOSS") {
-		return uri + AliOSSSetting.Domain + "/"
-	} else if CfgIf("COS") {
-		return uri + COSSetting.Domain + "/"
-	} else if CfgIf("HuaweiOBS") {
-		return uri + HuaweiOBSSetting.Domain + "/"
-	} else if CfgIf("MinIO") {
-		if !MinIOSetting.Secure {
-			uri = "http://"
-		}
-		return uri + MinIOSetting.Domain + "/" + MinIOSetting.Bucket + "/"
-	} else if CfgIf("S3") {
-		if !S3Setting.Secure {
-			uri = "http://"
-		}
-		// TODO: will not work well need test in real world
-		return uri + S3Setting.Domain + "/" + S3Setting.Bucket + "/"
-	} else if CfgIf("LocalOSS") {
-		if !LocalOSSSetting.Secure {
-			uri = "http://"
-		}
-		return uri + LocalOSSSetting.Domain + "/oss/" + LocalOSSSetting.Bucket + "/"
-	}
-	return uri + AliOSSSetting.Domain + "/"
 }
