@@ -104,6 +104,24 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	return &dao, nil
 }
 
+func (m *Dao) GetListByAddress(ctx context.Context, db *mongo.Database) (list []*DaoFormatted, err error) {
+	filter := bson.M{"address": m.Address, "is_del": 0}
+	cur, err := db.Collection(m.Table()).Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	var dao []*Dao
+	err = cur.All(ctx, &dao)
+	if err != nil {
+		return nil, err
+	}
+	list = []*DaoFormatted{}
+	for _, v := range dao {
+		list = append(list, v.Format())
+	}
+	return list, nil
+}
+
 func (m *Dao) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword string, offset, limit int) (list []*Dao, err error) {
 	var filter bson.M
 	if keyword != "" {
