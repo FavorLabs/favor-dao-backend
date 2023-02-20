@@ -58,8 +58,8 @@ func (p *PostContent) table() string {
 	return "post_context"
 }
 
-func (p *PostContent) DeleteByPostId(db *mongo.Database, postId int64) error {
-	filter := bson.D{{"_id", p.ID}}
+func (p *PostContent) DeleteByPostId(db *mongo.Database, postId primitive.ObjectID) error {
+	filter := bson.D{{"post_id", postId}}
 	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
 	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
 	if res.Err() != nil {
@@ -68,9 +68,12 @@ func (p *PostContent) DeleteByPostId(db *mongo.Database, postId int64) error {
 	return nil
 }
 
-func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId int64) (contents []string, err error) {
+func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId primitive.ObjectID) (contents []string, err error) {
 
-	filter := bson.D{{"_id", p.ID}, {"is_del", 0}, {"type", bson.D{{"$in", bson.A{CONTENT_TYPE_IMAGE, CONTENT_TYPE_VIDEO, CONTENT_TYPE_AUDIO}}}}}
+	filter := bson.D{
+		{"is_del", 0},
+		{"post_id", postId},
+		{"type", bson.D{{"$in", bson.A{CONTENT_TYPE_IMAGE, CONTENT_TYPE_VIDEO, CONTENT_TYPE_AUDIO}}}}}
 	cursor, err := db.Collection(p.table()).Find(context.TODO(), filter)
 	if err != nil {
 		return nil, err

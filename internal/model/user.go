@@ -67,13 +67,34 @@ func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
 	return &user, nil
 }
 
-func (m *User) List(ctx context.Context, db *mongo.Database, addresses []string) (users []*User, err error) {
-	cur, err := db.Collection(m.Table()).Find(ctx, bson.M{"address": bson.M{"$in": addresses}})
-	if err != nil {
-		return
+func (m *User) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*User, error) {
+	var (
+		users  []*User
+		err    error
+		cursor *mongo.Cursor
+		query  bson.M
+	)
+	finds := make([]*options.FindOptions, 0, 3)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	for k, v := range *conditions {
+		if k != "ORDER" {
+			query = findQuery([]bson.M{query, v})
+		} else {
+			finds = append(finds, options.Find().SetSort(v))
+		}
 	}
-	err = cur.All(ctx, &users)
-	return
+	if cursor, err = db.Collection(m.Table()).Find(context.TODO(), query, finds...); err != nil {
+		return nil, err
+	}
+	for cursor.Next(context.TODO()) {
+		var user User
+		if cursor.Decode(&user) != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, nil
 }
 
 func (m *User) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword string, offset, limit int) (users []*User, err error) {

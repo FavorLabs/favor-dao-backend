@@ -1,14 +1,15 @@
 package jinzhu
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"strings"
-	"time"
-
+	"context"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"strings"
 )
 
 var (
@@ -51,11 +52,11 @@ func newTweetHelpService(db *mongo.Database) core.TweetHelpService {
 
 // MergePosts post data integration
 func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormated, error) {
-	postIds := make([]int64, 0, len(posts))
-	userIds := make([]int64, 0, len(posts))
+	postIds := make([]primitive.ObjectID, 0, len(posts))
+	addresses := make([]string, 0, len(posts))
 	for _, post := range posts {
 		postIds = append(postIds, post.ID)
-		userIds = append(userIds, post.UserID)
+		addresses = append(addresses, post.Address)
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -63,17 +64,17 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormate
 		return nil, err
 	}
 
-	users, err := s.getUsersByIDs(userIds)
+	users, err := s.getUsersByAddress(addresses)
 	if err != nil {
 		return nil, err
 	}
 
-	userMap := make(map[int64]*model.UserFormated, len(users))
+	userMap := make(map[string]*model.UserFormatted, len(users))
 	for _, user := range users {
-		userMap[user.ID] = user.Format()
+		userMap[user.Address] = user.Format()
 	}
 
-	contentMap := make(map[int64][]*model.PostContentFormated, len(postContents))
+	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormated, len(postContents))
 	for _, content := range postContents {
 		contentMap[content.PostID] = append(contentMap[content.PostID], content.Format())
 	}
@@ -82,7 +83,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormate
 	postsFormated := make([]*model.PostFormated, 0, len(posts))
 	for _, post := range posts {
 		postFormated := post.Format()
-		postFormated.User = userMap[post.UserID]
+		postFormated.User = userMap[post.Address]
 		postFormated.Contents = contentMap[post.ID]
 		postsFormated = append(postsFormated, postFormated)
 	}
@@ -91,11 +92,11 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormate
 
 // RevampPosts post data shaping repair
 func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormated) ([]*model.PostFormated, error) {
-	postIds := make([]int64, 0, len(posts))
-	userIds := make([]int64, 0, len(posts))
+	postIds := make([]primitive.ObjectID, 0, len(posts))
+	addresses := make([]string, 0, len(posts))
 	for _, post := range posts {
 		postIds = append(postIds, post.ID)
-		userIds = append(userIds, post.UserID)
+		addresses = append(addresses, post.Address)
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -103,24 +104,24 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormated) ([]*model.Po
 		return nil, err
 	}
 
-	users, err := s.getUsersByIDs(userIds)
+	users, err := s.getUsersByAddress(addresses)
 	if err != nil {
 		return nil, err
 	}
 
-	userMap := make(map[int64]*model.UserFormated, len(users))
+	userMap := make(map[string]*model.UserFormatted, len(users))
 	for _, user := range users {
-		userMap[user.ID] = user.Format()
+		userMap[user.Address] = user.Format()
 	}
 
-	contentMap := make(map[int64][]*model.PostContentFormated, len(postContents))
+	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormated, len(postContents))
 	for _, content := range postContents {
 		contentMap[content.PostID] = append(contentMap[content.PostID], content.Format())
 	}
 
 	// data integration
 	for _, post := range posts {
-		post.User = userMap[post.UserID]
+		post.User = userMap[post.Address]
 		post.Contents = contentMap[post.ID]
 	}
 	return posts, nil
@@ -128,23 +129,22 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormated) ([]*model.Po
 
 func (s *tweetHelpServant) getPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {
 	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
-		"post_id IN ?": ids,
-		"ORDER":        "sort ASC",
+		"query": bson.M{"post_id": bson.M{"$in": ids}},
+		"ORDER": bson.M{"sort": 1},
 	}, 0, 0)
 }
 
-func (s *tweetHelpServant) getUsersByIDs(ids []primitive.ObjectID) ([]*model.User, error) {
+func (s *tweetHelpServant) getUsersByAddress(addresses []string) ([]*model.User, error) {
 	user := &model.User{}
-
 	return user.List(s.db, &model.ConditionsT{
-		"id IN ?": ids,
+		"query": bson.M{"address": bson.M{"$in": addresses}},
 	}, 0, 0)
 }
 
 func (s *tweetManageServant) CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
 	collection := &model.PostCollection{
-		PostID: postID,
-		UserID: userID,
+		PostID:  postID,
+		Address: address,
 	}
 
 	return collection.Create(s.db)
@@ -159,7 +159,6 @@ func (s *tweetManageServant) CreatePostContent(content *model.PostContent) (*mod
 }
 
 func (s *tweetManageServant) CreatePost(post *model.Post) (*model.Post, error) {
-	post.LatestRepliedOn = time.Now().Unix()
 	p, err := post.Create(s.db)
 	if err != nil {
 		return nil, err
@@ -173,79 +172,44 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 
 	postId := post.ID
 	postContent := &model.PostContent{}
-	err := s.db.Transaction(
-		func(tx *mongo.Database) error {
-			if contents, err := postContent.MediaContentsByPostId(tx, postId); err == nil {
+	session, err := s.db.Client().StartSession()
+	if err != nil {
+		return nil, err
+	}
+	wc := writeconcern.New(writeconcern.WMajority())
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	defer session.EndSession(context.TODO())
+	_, err = session.WithTransaction(context.TODO(),
+		func(ctx mongo.SessionContext) (interface{}, error) {
+			if contents, err := postContent.MediaContentsByPostId(s.db, postId); err == nil {
 				mediaContents = contents
 			} else {
-				return err
+				return nil, err
 			}
 
 			// delete post
-			if err := post.Delete(tx); err != nil {
-				return err
+			if err := post.Delete(s.db); err != nil {
+				return nil, err
 			}
 
 			// delete post content
-			if err := postContent.DeleteByPostId(tx, postId); err != nil {
-				return err
-			}
-
-			// delete post comment
-			if contents, err := s.deleteCommentByPostId(tx, postId); err == nil {
-				mediaContents = append(mediaContents, contents...)
-			} else {
-				return err
+			if err := postContent.DeleteByPostId(s.db, postId); err != nil {
+				return nil, err
 			}
 
 			if tags := strings.Split(post.Tags, ","); len(tags) > 0 {
 				// Delete tag, handle errors loosely, no rollback with errors
-				deleteTags(tx, tags)
+				deleteTags(s.db, tags)
 			}
 
-			return nil
-		},
-	)
+			return nil, nil
+		}, txnOptions)
 
 	if err != nil {
 		return nil, err
 	}
 
 	s.cacheIndex.SendAction(core.IdxActDeletePost, post)
-	return mediaContents, nil
-}
-
-func (s *tweetManageServant) deleteCommentByPostId(db *mongo.Database, postId primitive.ObjectID) ([]string, error) {
-	comment := &model.Comment{}
-	commentContent := &model.CommentContent{}
-
-	// Get all comment ids for a tweet
-	commentIds, err := comment.CommentIdsByPostId(db, postId)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get media content for reviews
-	mediaContents, err := commentContent.MediaContentsByCommentId(db, commentIds)
-	if err != nil {
-		return nil, err
-	}
-
-	// delete comment
-	if err = comment.DeleteByPostId(db, postId); err != nil {
-		return nil, err
-	}
-
-	// delete comment content
-	if err = commentContent.DeleteByCommentIds(db, commentIds); err != nil {
-		return nil, err
-	}
-
-	// Delete comments of comments
-	if err = (&model.CommentReply{}).DeleteByCommentIds(db, commentIds); err != nil {
-		return nil, err
-	}
-
 	return mediaContents, nil
 }
 
@@ -271,29 +235,41 @@ func (s *tweetManageServant) VisiblePost(post *model.Post, visibility model.Post
 		// TODO: Do users of top tweets have the right to set them to private? Follow up
 		post.IsTop = 0
 	}
-	db := s.db.Begin()
-	err := post.Update(db)
+
+	session, err := s.db.Client().StartSession()
 	if err != nil {
-		db.Rollback()
+		return err
+	}
+	wc := writeconcern.New(writeconcern.WMajority())
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	defer session.EndSession(context.TODO())
+
+	_, err = session.WithTransaction(context.TODO(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		err := post.Update(s.db)
+		if err != nil {
+			return nil, err
+		}
+		// tag processing
+		tags := strings.Split(post.Tags, ",")
+		for _, t := range tags {
+			tag := &model.Tag{
+				Tag: t,
+			}
+			// TODO: Temporary leniency does not deal with errors, here perhaps there can be optimization, the subsequent refinement
+			if oldVisibility == model.PostVisitPrivate {
+				// You need to recreate the tag only when you go from private to non-private
+				createTag(s.db, tag)
+			} else if visibility == model.PostVisitPrivate {
+				// You need to delete the tag only when you go from non-private to private
+				deleteTag(s.db, tag)
+			}
+		}
+		return nil, err
+	}, txnOptions)
+	if err != nil {
 		return err
 	}
 
-	// tag processing
-	tags := strings.Split(post.Tags, ",")
-	for _, t := range tags {
-		tag := &model.Tag{
-			Tag: t,
-		}
-		// TODO: Temporary leniency does not deal with errors, here perhaps there can be optimization, the subsequent refinement
-		if oldVisibility == model.PostVisitPrivate {
-			// You need to recreate the tag only when you go from private to non-private
-			createTag(db, tag)
-		} else if visibility == model.PostVisitPrivate {
-			// You need to delete the tag only when you go from non-private to private
-			deleteTag(db, tag)
-		}
-	}
-	db.Commit()
 	s.cacheIndex.SendAction(core.IdxActVisiblePost, post)
 	return nil
 }
@@ -308,8 +284,8 @@ func (s *tweetManageServant) UpdatePost(post *model.Post) error {
 
 func (s *tweetManageServant) CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
 	star := &model.PostStar{
-		PostID: postID,
-		UserID: userID,
+		PostID:  postID,
+		Address: address,
 	}
 	return star.Create(s.db)
 }
@@ -320,9 +296,7 @@ func (s *tweetManageServant) DeletePostStar(p *model.PostStar) error {
 
 func (s *tweetServant) GetPostByID(id primitive.ObjectID) (*model.Post, error) {
 	post := &model.Post{
-		Model: &model.Model{
-			ID: id,
-		},
+		ID: id,
 	}
 	return post.Get(s.db)
 }
@@ -337,25 +311,25 @@ func (s *tweetServant) GetPostCount(conditions *model.ConditionsT) (int64, error
 
 func (s *tweetServant) GetUserPostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
 	star := &model.PostStar{
-		PostID: postID,
-		UserID: userID,
+		PostID:  postID,
+		Address: address,
 	}
 	return star.Get(s.db)
 }
 
 func (s *tweetServant) GetUserPostStars(address string, offset, limit int) ([]*model.PostStar, error) {
 	star := &model.PostStar{
-		UserID: userID,
+		Address: address,
 	}
 
 	return star.List(s.db, &model.ConditionsT{
-		"ORDER": s.db.NamingStrategy.TableName("PostStar") + ".id DESC",
+		"ORDER": bson.M{"_id": -1},
 	}, offset, limit)
 }
 
 func (s *tweetServant) GetUserPostStarCount(address string) (int64, error) {
 	star := &model.PostStar{
-		UserID: userID,
+		Address: address,
 	}
 	return star.Count(s.db, &model.ConditionsT{})
 }
@@ -392,15 +366,15 @@ func (s *tweetServant) GetUserPostCollections(address string, offset, limit int)
 
 func (s *tweetServant) GetUserPostCollectionCount(address string) (int64, error) {
 	collection := &model.PostCollection{
-		UserID: userID,
+		Address: address,
 	}
 	return collection.Count(s.db, &model.ConditionsT{})
 }
 
 func (s *tweetServant) GetPostAttatchmentBill(postID primitive.ObjectID, address string) (*model.PostAttachmentBill, error) {
 	bill := &model.PostAttachmentBill{
-		PostID: postID,
-		UserID: userID,
+		PostID:  postID,
+		Address: address,
 	}
 
 	return bill.Get(s.db)
@@ -408,15 +382,13 @@ func (s *tweetServant) GetPostAttatchmentBill(postID primitive.ObjectID, address
 
 func (s *tweetServant) GetPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {
 	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
-		"post_id IN ?": ids,
-		"ORDER":        "sort ASC",
+		"query": bson.M{"post_id": bson.M{"$in": ids}},
+		"ORDER": bson.M{"sort": 1},
 	}, 0, 0)
 }
 
 func (s *tweetServant) GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error) {
 	return (&model.PostContent{
-		Model: &model.Model{
-			ID: id,
-		},
+		ID: id,
 	}).Get(s.db)
 }

@@ -1,6 +1,7 @@
 package jinzhu
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -37,15 +38,15 @@ func (s *topicServant) GetTags(conditions *model.ConditionsT, offset, limit int)
 func (s *topicServant) GetTagsByKeyword(keyword string) ([]*model.Tag, error) {
 	tag := &model.Tag{}
 
-	keyword = "%" + strings.Trim(keyword, " ") + "%"
-	if keyword == "%%" {
+	keyword = strings.Trim(keyword, " ")
+	if keyword == "" {
 		return tag.List(s.db, &model.ConditionsT{
-			"ORDER": "quote_num DESC",
+			"ORDER": bson.M{"quote_num": -1},
 		}, 0, 6)
 	} else {
 		return tag.List(s.db, &model.ConditionsT{
-			"tag LIKE ?": keyword,
-			"ORDER":      "quote_num DESC",
+			"query": bson.M{"tag": bson.D{{"$all", bson.A{keyword}}}},
+			"ORDER": bson.M{"quote_num": -1},
 		}, 0, 6)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -95,9 +94,9 @@ func (s *bigCacheIndexServant) setPosts(entry *postsEntry) {
 }
 
 func (s *bigCacheIndexServant) keyFrom(user *model.User, offset int, limit int) string {
-	var userId int64 = -1
+	var userId = ""
 	if user != nil {
-		userId = user.ID
+		userId = user.Address
 	}
 	return fmt.Sprintf("index:%d:%d:%d", userId, offset, limit)
 }
@@ -132,7 +131,7 @@ func (s *bigCacheIndexServant) handleIndexAction(action *core.IndexAction) {
 	switch act {
 	case core.IdxActCreatePost, core.IdxActDeletePost:
 		if post.Visibility == model.PostVisitPrivate {
-			s.deleteCacheByUserId(post.UserID)
+			s.deleteCacheByAddress(post.Address)
 			return
 		}
 	}
@@ -144,23 +143,22 @@ func (s *bigCacheIndexServant) handleIndexAction(action *core.IndexAction) {
 		s.lastCacheResetTime = time.Now()
 		logrus.Debugf("bigCacheIndexServant.handleIndexAction reset cache by %s", action.Act)
 	} else {
-		s.deleteCacheByUserId(post.UserID)
+		s.deleteCacheByAddress(post.Address)
 	}
 }
 
-func (s *bigCacheIndexServant) deleteCacheByUserId(id int64) {
+func (s *bigCacheIndexServant) deleteCacheByAddress(address string) {
 	var keys []string
-	userId := strconv.FormatInt(id, 10)
 
 	for it := s.cache.Iterator(); it.SetNext(); {
 		entry, err := it.Value()
 		if err != nil {
-			logrus.Debugf("bigCacheIndexServant.deleteCacheByUserId usrId: %s err:%s", userId, err)
+			logrus.Debugf("bigCacheIndexServant.deleteCacheByUserId usrId: %s err:%s", address, err)
 			return
 		}
 		key := entry.Key()
 		keyParts := strings.Split(key, ":")
-		if len(keyParts) > 2 && keyParts[0] == "index" && keyParts[1] == userId {
+		if len(keyParts) > 2 && keyParts[0] == "index" && keyParts[1] == address {
 			keys = append(keys, key)
 		}
 	}
@@ -169,7 +167,7 @@ func (s *bigCacheIndexServant) deleteCacheByUserId(id int64) {
 		s.cache.Delete(k)
 	}
 	s.lastCacheResetTime = time.Now()
-	logrus.Debugf("bigCacheIndexServant.deleteCacheByUserId userId:%d", id)
+	logrus.Debugf("bigCacheIndexServant.deleteCacheByUserId userId:%d", address)
 }
 
 func (s *bigCacheIndexServant) Name() string {
