@@ -2,8 +2,13 @@ package service
 
 import (
 	"bytes"
-	"encoding/hex"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 
 	"favor-dao-backend/internal/conf"
@@ -58,11 +63,11 @@ const MAX_LOGIN_ERR_TIMES = 10
 
 // DoLoginWallet Wallet login, register if user does not exist
 func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, error) {
-	signature, err := hex.DecodeString(param.Signature)
+	signature, err := hexutil.Decode(param.Signature)
 	if err != nil {
 		return nil, errcode.InvalidParams
 	}
-	walletBytes, err := hex.DecodeString(param.WalletAddr)
+	walletBytes, err := hexutil.Decode(param.WalletAddr)
 	if err != nil {
 		return nil, errcode.InvalidParams
 	}
@@ -71,7 +76,9 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 
 	user, err := ds.GetUserByAddress(param.WalletAddr)
 	if err != nil {
-		// return nil, errcode.UnauthorizedAuthFailed
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errcode.ServerError
+		}
 		// if not exists
 		created = true
 	}
@@ -91,19 +98,24 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		// parse message
 		guessMessage := fmt.Sprintf("%s login FavorTube at %d", param.WalletAddr, param.Timestamp)
 		ethMessage := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(guessMessage), guessMessage))
-		pubkey, err := crypto.Ecrecover(crypto.Keccak256(ethMessage), signature)
+		// Convert to btcec input format with 'recovery id' v at the beginning.
+		btcsig := make([]byte, 65)
+		btcsig[0] = signature[64]
+		copy(btcsig[1:], signature)
+		rawKey, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, crypto.Keccak256(ethMessage))
+		pubkey := (*ecdsa.PublicKey)(rawKey)
+		pubBytes := elliptic.Marshal(btcec.S256(), pubkey.X, pubkey.Y)
+		//pubkey, err := crypto.Ecrecover(crypto.Keccak256(ethMessage), signature)
 		if err == nil {
 			var signer common.Address
-			copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+			copy(signer[:], crypto.Keccak256(pubBytes[1:])[12:])
 			if bytes.Equal(walletBytes, signer.Bytes()) {
 				if created {
-					user := &model.User{
+					user, err = ds.CreateUser(&model.User{
 						Nickname: param.WalletAddr[:10],
 						Address:  param.WalletAddr,
 						Avatar:   GetRandomAvatar(),
-					}
-
-					user, err := ds.CreateUser(user)
+					})
 					if err != nil {
 						return nil, err
 					}
@@ -117,7 +129,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		// Clear Login Err Count
 		_, err = conf.Redis.Incr(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result()
 		if err == nil {
-			conf.Redis.Expire(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr), time.Hour).Result()
+			_ = conf.Redis.Expire(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr), time.Hour).Err()
 		}
 
 		return nil, errcode.UnauthorizedAuthFailed
