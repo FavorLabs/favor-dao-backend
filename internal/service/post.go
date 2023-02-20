@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"math"
 	"strings"
 	"time"
@@ -40,28 +42,28 @@ type PostCreationReq struct {
 }
 
 type PostDelReq struct {
-	ID int64 `json:"id" binding:"required"`
+	ID string `json:"id" binding:"required"`
 }
 
 type PostLockReq struct {
-	ID int64 `json:"id" binding:"required"`
+	ID string `json:"id" binding:"required"`
 }
 
 type PostStickReq struct {
-	ID int64 `json:"id" binding:"required"`
+	ID string `json:"id" binding:"required"`
 }
 
 type PostVisibilityReq struct {
-	ID         int64              `json:"id" binding:"required"`
+	ID         string             `json:"id" binding:"required"`
 	Visibility model.PostVisibleT `json:"visibility"`
 }
 
 type PostStarReq struct {
-	ID int64 `json:"id" binding:"required"`
+	ID string `json:"id" binding:"required"`
 }
 
 type PostCollectionReq struct {
-	ID int64 `json:"id" binding:"required"`
+	ID string `json:"id" binding:"required"`
 }
 
 type PostContentItem struct {
@@ -72,13 +74,6 @@ type PostContentItem struct {
 
 // Check 检查PostContentItem属性
 func (p *PostContentItem) Check() error {
-	// 检查附件是否是本站资源
-	if p.Type == model.CONTENT_TYPE_IMAGE || p.Type == model.CONTENT_TYPE_VIDEO || p.Type == model.
-		CONTENT_TYPE_ATTACHMENT {
-		if err := ds.CheckAttachment(p.Content); err != nil {
-			return err
-		}
-	}
 	// 检查链接是否合法
 	if p.Type == model.CONTENT_TYPE_LINK {
 		if strings.Index(p.Content, "http://") != 0 && strings.Index(p.Content, "https://") != 0 {
@@ -169,7 +164,7 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	return formatedPosts[0], nil
 }
 
-func DeletePost(user *model.User, id int64) *errcode.Error {
+func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
 	if user == nil {
 		return errcode.NoPermission
 	}
@@ -212,19 +207,7 @@ func deleteOssObjects(mediaContents []string) {
 	}
 }
 
-func LockPost(id int64) error {
-	post, _ := ds.GetPostByID(id)
-
-	err := ds.LockPost(post)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func StickPost(id int64) error {
+func StickPost(id primitive.ObjectID) error {
 	post, _ := ds.GetPostByID(id)
 
 	err := ds.StickPost(post)
@@ -236,18 +219,11 @@ func StickPost(id int64) error {
 	return nil
 }
 
-func VisiblePost(user *model.User, postId int64, visibility model.PostVisibleT) *errcode.Error {
-	if visibility >= model.PostVisitInvalid {
-		return errcode.InvalidParams
-	}
+func VisiblePost(user *model.User, postId primitive.ObjectID, visibility model.PostVisibleT) *errcode.Error {
 
 	post, err := ds.GetPostByID(postId)
 	if err != nil {
 		return errcode.GetPostFailed
-	}
-
-	if err := checkPermision(user, post.UserID); err != nil {
-		return err
 	}
 
 	if err = ds.VisiblePost(post, visibility); err != nil {
@@ -262,11 +238,11 @@ func VisiblePost(user *model.User, postId int64, visibility model.PostVisibleT) 
 	return nil
 }
 
-func GetPostStar(postID, userID int64) (*model.PostStar, error) {
-	return ds.GetUserPostStar(postID, userID)
+func GetPostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
+	return ds.GetUserPostStar(postID, address)
 }
 
-func CreatePostStar(postID, userID int64) (*model.PostStar, error) {
+func CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
 	// 加载Post
 	post, err := ds.GetPostByID(postID)
 	if err != nil {
@@ -278,7 +254,7 @@ func CreatePostStar(postID, userID int64) (*model.PostStar, error) {
 		return nil, errors.New("no permision")
 	}
 
-	star, err := ds.CreatePostStar(postID, userID)
+	star, err := ds.CreatePostStar(postID, address)
 	if err != nil {
 		return nil, err
 	}
@@ -319,11 +295,11 @@ func DeletePostStar(star *model.PostStar) error {
 	return nil
 }
 
-func GetPostCollection(postID, userID int64) (*model.PostCollection, error) {
-	return ds.GetUserPostCollection(postID, userID)
+func GetPostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
+	return ds.GetUserPostCollection(postID, address)
 }
 
-func CreatePostCollection(postID, userID int64) (*model.PostCollection, error) {
+func CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
 	// 加载Post
 	post, err := ds.GetPostByID(postID)
 	if err != nil {
@@ -335,7 +311,7 @@ func CreatePostCollection(postID, userID int64) (*model.PostCollection, error) {
 		return nil, errors.New("no permision")
 	}
 
-	collection, err := ds.CreatePostCollection(postID, userID)
+	collection, err := ds.CreatePostCollection(postID, address)
 	if err != nil {
 		return nil, err
 	}
@@ -376,19 +352,19 @@ func DeletePostCollection(collection *model.PostCollection) error {
 	return nil
 }
 
-func GetPost(id int64) (*model.PostFormated, error) {
+func GetPost(id primitive.ObjectID) (*model.PostFormated, error) {
 	post, err := ds.GetPostByID(id)
 
 	if err != nil {
 		return nil, err
 	}
 
-	postContents, err := ds.GetPostContentsByIDs([]int64{post.ID})
+	postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := ds.GetUsersByIDs([]int64{post.UserID})
+	users, err := ds.GetUsersByAddresses([]string{post.Address})
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +382,7 @@ func GetPost(id int64) (*model.PostFormated, error) {
 	return postFormated, nil
 }
 
-func GetPostContentByID(id int64) (*model.PostContent, error) {
+func GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error) {
 	return ds.GetPostContentByID(id)
 }
 
@@ -450,10 +426,10 @@ func GetPostListFromSearchByQuery(user *model.User, query string, offset, limit 
 
 func PushPostToSearch(post *model.Post) {
 	postFormated := post.Format()
-	postFormated.User = &model.UserFormated{
-		ID: post.UserID,
+	postFormated.User = &model.UserFormatted{
+		ID: post.Address,
 	}
-	contents, _ := ds.GetPostContentsByIDs([]int64{post.ID})
+	contents, _ := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
 	for _, content := range contents {
 		postFormated.Contents = append(postFormated.Contents, content.Format())
 	}
@@ -472,21 +448,15 @@ func PushPostToSearch(post *model.Post) {
 	}
 
 	data := core.DocItems{{
-		"id":                post.ID,
-		"user_id":           post.UserID,
-		"comment_count":     post.CommentCount,
-		"collection_count":  post.CollectionCount,
-		"upvote_count":      post.UpvoteCount,
-		"visibility":        post.Visibility,
-		"is_top":            post.IsTop,
-		"is_essence":        post.IsEssence,
-		"content":           contentFormated,
-		"tags":              tagMaps,
-		"ip_loc":            post.IPLoc,
-		"latest_replied_on": post.LatestRepliedOn,
-		"attachment_price":  post.AttachmentPrice,
-		"created_on":        post.CreatedOn,
-		"modified_on":       post.ModifiedOn,
+		"id":               post.ID,
+		"address":          post.Address,
+		"collection_count": post.CollectionCount,
+		"upvote_count":     post.UpvoteCount,
+		"visibility":       post.Visibility,
+		"is_top":           post.IsTop,
+		"is_essence":       post.IsEssence,
+		"content":          contentFormated,
+		"tags":             tagMaps,
 	}}
 
 	ts.AddDocuments(data, fmt.Sprintf("%d", post.ID))
@@ -500,7 +470,7 @@ func PushPostsToSearch(c *gin.Context) {
 	if ok, _ := conf.Redis.SetNX(c, "JOB_PUSH_TO_SEARCH", 1, time.Hour).Result(); ok {
 		splitNum := 1000
 		totalRows, _ := GetPostCount(&model.ConditionsT{
-			"visibility IN ?": []model.PostVisibleT{model.PostVisitPublic, model.PostVisitFriend},
+			"query": bson.M{"visibility": bson.D{{"$in", model.PostVisitPublic}}},
 		})
 
 		pages := math.Ceil(float64(totalRows) / float64(splitNum))
@@ -523,21 +493,15 @@ func PushPostsToSearch(c *gin.Context) {
 				}
 
 				docs := core.DocItems{{
-					"id":                post.ID,
-					"user_id":           post.User.ID,
-					"comment_count":     post.CommentCount,
-					"collection_count":  post.CollectionCount,
-					"upvote_count":      post.UpvoteCount,
-					"visibility":        post.Visibility,
-					"is_top":            post.IsTop,
-					"is_essence":        post.IsEssence,
-					"content":           contentFormated,
-					"tags":              post.Tags,
-					"ip_loc":            post.IPLoc,
-					"latest_replied_on": post.LatestRepliedOn,
-					"attachment_price":  post.AttachmentPrice,
-					"created_on":        post.CreatedOn,
-					"modified_on":       post.ModifiedOn,
+					"id":               post.ID,
+					"user_id":          post.User.ID,
+					"collection_count": post.CollectionCount,
+					"upvote_count":     post.UpvoteCount,
+					"visibility":       post.Visibility,
+					"is_top":           post.IsTop,
+					"is_essence":       post.IsEssence,
+					"content":          contentFormated,
+					"tags":             post.Tags,
 				}}
 				ts.AddDocuments(docs, fmt.Sprintf("%d", post.ID))
 			}
@@ -547,7 +511,7 @@ func PushPostsToSearch(c *gin.Context) {
 	}
 }
 
-func GetPostTags(param *PostTagsReq) ([]*model.TagFormated, error) {
+func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 	num := param.Num
 	if num > conf.AppSetting.MaxPageSize {
 		num = conf.AppSetting.MaxPageSize
@@ -557,13 +521,13 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormated, error) {
 	if param.Type == TagTypeHot {
 		// 热门标签
 		conditions = &model.ConditionsT{
-			"ORDER": "quote_num DESC",
+			"ORDER": bson.M{"quote_num": -1},
 		}
 	}
 	if param.Type == TagTypeNew {
 		// 热门标签
 		conditions = &model.ConditionsT{
-			"ORDER": "id DESC",
+			"ORDER": bson.M{"id": -1},
 		}
 	}
 
@@ -573,18 +537,18 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormated, error) {
 	}
 
 	// 获取创建者User IDs
-	userIds := []int64{}
+	userIds := []string{}
 	for _, tag := range tags {
-		userIds = append(userIds, tag.UserID)
+		userIds = append(userIds, tag.Address)
 	}
 
-	users, _ := ds.GetUsersByIDs(userIds)
+	users, _ := ds.GetUsersByAddresses(userIds)
 
-	tagsFormated := []*model.TagFormated{}
+	var tagsFormated []*model.TagFormatted
 	for _, tag := range tags {
 		tagFormated := tag.Format()
 		for _, user := range users {
-			if user.ID == tagFormated.UserID {
+			if user.Address == tagFormated.Address {
 				tagFormated.User = user.Format()
 			}
 		}
@@ -594,8 +558,8 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormated, error) {
 	return tagsFormated, nil
 }
 
-func CheckPostAttachmentIsPaid(postID, userID int64) bool {
-	bill, err := ds.GetPostAttatchmentBill(postID, userID)
+func CheckPostAttachmentIsPaid(postID primitive.ObjectID, address string) bool {
+	bill, err := ds.GetPostAttatchmentBill(postID, address)
 
-	return err == nil && bill.Model != nil && bill.ID > 0
+	return err == nil && !bill.ID.IsZero()
 }
