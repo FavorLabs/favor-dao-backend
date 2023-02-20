@@ -1,6 +1,7 @@
 package jinzhu
 
 import (
+	"context"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -22,74 +23,39 @@ func newUserManageService(db *mongo.Database) core.UserManageService {
 	}
 }
 
-func (s *userManageServant) GetUserByID(id int64) (*model.User, error) {
+func (s *userManageServant) GetUserByAddress(address string) (*model.User, error) {
 	user := &model.User{
-		Model: &model.Model{
-			ID: id,
-		},
+		Address: address,
 	}
-	return user.Get(s.db)
+	return user.Get(context.TODO(), s.db)
 }
 
-func (s *userManageServant) GetUserByUsername(username string) (*model.User, error) {
-	user := &model.User{
-		Username: username,
-	}
-	return user.Get(s.db)
-}
-
-func (s *userManageServant) GetUserByPhone(phone string) (*model.User, error) {
-	user := &model.User{
-		Phone: phone,
-	}
-	return user.Get(s.db)
-}
-
-func (s *userManageServant) GetUsersByIDs(ids []int64) ([]*model.User, error) {
+func (s *userManageServant) GetUsersByAddresses(addresses []string) ([]*model.User, error) {
 	user := &model.User{}
-	return user.List(s.db, &model.ConditionsT{
-		"id IN ?": ids,
-	}, 0, 0)
+	return user.List(context.TODO(), s.db, addresses)
 }
 
 func (s *userManageServant) GetUsersByKeyword(keyword string) ([]*model.User, error) {
 	user := &model.User{}
-	keyword = strings.Trim(keyword, " ") + "%"
-	if keyword == "%" {
-		return user.List(s.db, &model.ConditionsT{
-			"ORDER": "id ASC",
-		}, 0, 6)
-	} else {
-		return user.List(s.db, &model.ConditionsT{
-			"username LIKE ?": keyword,
-		}, 0, 6)
-	}
+	keyword = strings.Trim(keyword, " ")
+	return user.FindListByKeyword(context.TODO(), s.db, keyword, 0, 6)
 }
 
 func (s *userManageServant) GetTagsByKeyword(keyword string) ([]*model.Tag, error) {
 	tag := &model.Tag{}
-	keyword = "%" + strings.Trim(keyword, " ") + "%"
-	if keyword == "%%" {
-		return tag.List(s.db, &model.ConditionsT{
-			"ORDER": "quote_num DESC",
-		}, 0, 6)
-	} else {
-		return tag.List(s.db, &model.ConditionsT{
-			"tag LIKE ?": keyword,
-			"ORDER":      "quote_num DESC",
-		}, 0, 6)
-	}
+	keyword = strings.Trim(keyword, " ")
+	return tag.FindListByKeyword(context.TODO(), s.db, keyword, 0, 6)
 }
 
 func (s *userManageServant) CreateUser(user *model.User) (*model.User, error) {
-	return user.Create(s.db)
+	return user.Create(context.TODO(), s.db)
 }
 
 func (s *userManageServant) UpdateUser(user *model.User) error {
-	return user.Update(s.db)
+	return user.Update(context.TODO(), s.db)
 }
 
-func (s *userManageServant) IsFriend(userId int64, friendId int64) bool {
+func (s *userManageServant) IsFriend(userAddress string, friendAddress string) bool {
 	// just true now
 	return true
 }

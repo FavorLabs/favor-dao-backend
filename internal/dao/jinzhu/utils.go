@@ -1,20 +1,22 @@
 package jinzhu
 
 import (
+	"context"
+
 	"favor-dao-backend/internal/model"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func createTag(db *mongo.Database, tag *model.Tag) (*model.Tag, error) {
-	t, err := tag.Get(db)
+	t, err := tag.Get(context.TODO(), db)
 	if err != nil {
 		tag.QuoteNum = 1
-		return tag.Create(db)
+		return tag.Create(context.TODO(), db)
 	}
 
 	// update
 	t.QuoteNum++
-	err = t.Update(db)
+	err = t.Update(context.TODO(), db)
 
 	if err != nil {
 		return nil, err
@@ -24,16 +26,16 @@ func createTag(db *mongo.Database, tag *model.Tag) (*model.Tag, error) {
 }
 
 func deleteTag(db *mongo.Database, tag *model.Tag) error {
-	tag, err := tag.Get(db)
+	tag, err := tag.Get(context.TODO(), db)
 	if err != nil {
 		return err
 	}
 	tag.QuoteNum--
-	return tag.Update(db)
+	return tag.Update(context.TODO(), db)
 }
 
 func deleteTags(db *mongo.Database, tags []string) error {
-	allTags, err := (&model.Tag{}).TagsFrom(db, tags)
+	allTags, err := (&model.Tag{}).TagsFrom(context.TODO(), db, tags)
 	if err != nil {
 		return err
 	}
@@ -43,17 +45,9 @@ func deleteTags(db *mongo.Database, tags []string) error {
 			tag.QuoteNum = 0
 		}
 		// Handle errors leniently, update tag records as much as possible, and record only the last error
-		if e := tag.Update(db); e != nil {
+		if e := tag.Update(context.TODO(), db); e != nil {
 			err = e
 		}
 	}
 	return err
-}
-
-// Get a list of users based on IDs
-func getUsersByIDs(db *mongo.Database, ids []int64) ([]*model.User, error) {
-	user := &model.User{}
-	return user.List(db, &model.ConditionsT{
-		"id IN ?": ids,
-	}, 0, 0)
 }

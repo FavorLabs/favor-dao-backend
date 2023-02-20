@@ -2,10 +2,12 @@ package model
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type User struct {
@@ -38,7 +40,7 @@ func (m *User) Format() *UserFormatted {
 	}
 }
 
-func (m *User) table() string {
+func (m *User) Table() string {
 	return "user"
 }
 
@@ -49,10 +51,10 @@ func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
 	)
 	if !m.ID.IsZero() {
 		filter := bson.D{{"_id", m.ID}, {"is_del", 0}}
-		res = db.Collection(m.table()).FindOne(ctx, filter)
+		res = db.Collection(m.Table()).FindOne(ctx, filter)
 	} else if m.Address != "" {
 		filter := bson.D{{"address", m.Address}, {"is_del", 0}}
-		res = db.Collection(m.table()).FindOne(ctx, filter)
+		res = db.Collection(m.Table()).FindOne(ctx, filter)
 	}
 	err := res.Err()
 	if err != nil {
@@ -65,8 +67,27 @@ func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
 	return &user, nil
 }
 
-func (m *User) List(ctx context.Context, db *mongo.Database, pipeline bson.A) (users []*User, err error) {
-	cur, err := db.Collection(m.table()).Aggregate(ctx, pipeline)
+func (m *User) List(ctx context.Context, db *mongo.Database, addresses []string) (users []*User, err error) {
+	cur, err := db.Collection(m.Table()).Find(ctx, bson.M{"address": bson.M{"$in": addresses}})
+	if err != nil {
+		return
+	}
+	err = cur.All(ctx, &users)
+	return
+}
+
+func (m *User) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword string, offset, limit int) (users []*User, err error) {
+	var filter bson.M
+	if keyword != "" {
+		filter = bson.M{
+			"nickname": fmt.Sprintf("/%s/", keyword),
+		}
+	}
+	finds := make([]*options.FindOptions, 0, 3)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	finds = append(finds, options.Find().SetSort(bson.M{"address": 1}))
+	cur, err := db.Collection(m.Table()).Find(ctx, filter, finds...)
 	if err != nil {
 		return
 	}
@@ -75,7 +96,7 @@ func (m *User) List(ctx context.Context, db *mongo.Database, pipeline bson.A) (u
 }
 
 func (m *User) Create(ctx context.Context, db *mongo.Database) (*User, error) {
-	res, err := db.Collection(m.table()).InsertOne(ctx, &m)
+	res, err := db.Collection(m.Table()).InsertOne(ctx, &m)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +112,6 @@ func (m *User) Update(ctx context.Context, db *mongo.Database) error {
 		},
 		},
 	}
-	res := db.Collection(m.table()).FindOneAndReplace(ctx, filter, &m)
+	res := db.Collection(m.Table()).FindOneAndReplace(ctx, filter, &m)
 	return res.Err()
 }

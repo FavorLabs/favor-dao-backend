@@ -9,10 +9,8 @@ import (
 	"time"
 
 	"favor-dao-backend/internal/conf"
-	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
-	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/debug"
 	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/util"
@@ -25,25 +23,11 @@ import (
 //go:embed assets/comic.ttf
 var comic []byte
 
-const MAX_PHONE_CAPTCHA = 10
-
 func Version(c *gin.Context) {
 	response := app.NewResponse(c)
 	response.ToResponse(gin.H{
 		"BuildInfo": debug.ReadBuildInfo(),
 	})
-}
-
-func SyncSearchIndex(c *gin.Context) {
-	response := app.NewResponse(c)
-
-	user, _ := c.Get("USER")
-
-	if user.(*model.User).IsAdmin {
-		go service.PushPostsToSearch(c)
-	}
-
-	response.ToResponse(nil)
 }
 
 func GetCaptcha(c *gin.Context) {
@@ -63,8 +47,7 @@ func GetCaptcha(c *gin.Context) {
 
 	key := util.EncodeMD5(uuid.Must(uuid.NewV4()).String())
 
-	// 五分钟有效期
-	conf.Redis.SetEX(c, "PaoPaoCaptcha:"+key, password, time.Minute*5)
+	conf.Redis.SetEX(c, "DaoCaptcha:"+key, password, time.Minute*5)
 
 	response := app.NewResponse(c)
 	response.ToResponse(gin.H{
@@ -84,24 +67,11 @@ func PostCaptcha(c *gin.Context) {
 	}
 
 	// Verify image verification code
-	if res, err := conf.Redis.Get(c.Request.Context(), "PaoPaoCaptcha:"+param.ImgCaptchaID).Result(); err != nil || res != param.ImgCaptcha {
+	if res, err := conf.Redis.Get(c.Request.Context(), "DaoCaptcha:"+param.ImgCaptchaID).Result(); err != nil || res != param.ImgCaptcha {
 		response.ToErrorResponse(errcode.ErrorCaptchaPassword)
 		return
 	}
-	conf.Redis.Del(c.Request.Context(), "PaoPaoCaptcha:"+param.ImgCaptchaID).Result()
-
-	// Today's frequency limit
-	if res, _ := conf.Redis.Get(c.Request.Context(), "PaoPaoSmsCaptcha:"+param.Phone).Result(); convert.StrTo(res).MustInt() >= MAX_PHONE_CAPTCHA {
-		response.ToErrorResponse(errcode.TooManyPhoneCaptchaSend)
-		return
-	}
-
-	err := service.SendPhoneCaptcha(c, param.Phone)
-	if err != nil {
-		logrus.Errorf("app.SendPhoneCaptcha errs: %v", errs)
-		response.ToErrorResponse(errcode.GetPhoneCaptchaError)
-		return
-	}
+	conf.Redis.Del(c.Request.Context(), "DaoCaptcha:"+param.ImgCaptchaID).Result()
 
 	response.ToResponse(nil)
 }

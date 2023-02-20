@@ -8,7 +8,6 @@ import (
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao/cache"
-	"favor-dao-backend/internal/dao/security"
 	"github.com/Masterminds/semver/v3"
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +24,7 @@ type dataServant struct {
 	core.TweetManageService
 	core.TweetHelpService
 	core.UserManageService
-	core.AttachmentCheckService
+	core.DaoManageService
 }
 
 func NewDataService() (core.DataService, core.VersionInfo) {
@@ -48,13 +47,13 @@ func NewDataService() (core.DataService, core.VersionInfo) {
 	logrus.Infof("use %s as cache index service by version: %s", v.Name(), v.Version())
 
 	ds := &dataServant{
-		IndexPostsService:      c,
-		TopicService:           newTopicService(db),
-		TweetService:           newTweetService(db),
-		TweetManageService:     newTweetManageService(db, c),
-		TweetHelpService:       newTweetHelpService(db),
-		UserManageService:      newUserManageService(db),
-		AttachmentCheckService: security.NewAttachmentCheckService(),
+		IndexPostsService:  c,
+		TopicService:       newTopicService(db),
+		TweetService:       newTweetService(db),
+		TweetManageService: newTweetManageService(db, c),
+		TweetHelpService:   newTweetHelpService(db),
+		UserManageService:  newUserManageService(db),
+		DaoManageService:   newDaoManageService(db),
 	}
 	return ds, ds
 }

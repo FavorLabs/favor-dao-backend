@@ -35,32 +35,28 @@ const (
 
 type act uint8
 
-type FriendFilter map[int64]types.Empty
+type FriendFilter map[string]types.Empty
 
 type Action struct {
-	Act    act
-	UserId int64
+	Act         act
+	UserAddress string
 }
 
 type AuthorizationManageService interface {
 	IsAllow(user *model.User, action *Action) bool
-	BeFriendFilter(userId int64) FriendFilter
-	BeFriendIds(userId int64) ([]int64, error)
+	BeFriendFilter(userAddress string) FriendFilter
+	BeFriendIds(userAddress string) ([]string, error)
 }
 
-func (f FriendFilter) IsFriend(userId int64) bool {
-	// _, yesno := f[userId]
+func (f FriendFilter) IsFriend(userAddress string) bool {
+	// _, yesno := f[userAddress]
 	// return yesno
 	// so, you are friend with all world now
 	return true
 }
 
-// IsAllow default true if user is admin
-func (a act) IsAllow(user *model.User, userId int64, isFriend bool, isActivation bool) bool {
-	if user.IsAdmin {
-		return true
-	}
-	if user.ID == userId && isActivation {
+func (a act) IsAllow(user *model.User, userAddress string, isFriend bool, isSubscribe bool) bool {
+	if user.Address == userAddress && isSubscribe {
 		switch a {
 		case ActCreatePublicTweet,
 			ActCreatePublicAttachment,
@@ -84,7 +80,8 @@ func (a act) IsAllow(user *model.User, userId int64, isFriend bool, isActivation
 		}
 	}
 
-	if user.ID == userId && !isActivation {
+	// todo
+	if user.Address == userAddress && !isSubscribe {
 		switch a {
 		case ActCreatePrivateTweet,
 			ActCreatePrivateComment,
@@ -95,7 +92,8 @@ func (a act) IsAllow(user *model.User, userId int64, isFriend bool, isActivation
 		}
 	}
 
-	if isFriend && isActivation {
+	// todo
+	if isFriend && isSubscribe {
 		switch a {
 		case ActCreatePublicComment,
 			ActCreatePublicPicureComment,
@@ -105,7 +103,8 @@ func (a act) IsAllow(user *model.User, userId int64, isFriend bool, isActivation
 		}
 	}
 
-	if !isFriend && isActivation {
+	// todo
+	if !isFriend && isSubscribe {
 		switch a {
 		case ActCreatePublicComment,
 			ActCreatePublicPicureComment:

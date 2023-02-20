@@ -2,11 +2,13 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Tag struct {
@@ -92,8 +94,18 @@ func (m *Tag) Delete(ctx context.Context, db *mongo.Database) error {
 	return nil
 }
 
-func (m *Tag) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*Tag, err error) {
-	cur, err := db.Collection(m.Table()).Find(ctx, filter)
+func (m *Tag) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword string, offset, limit int) (list []*Tag, err error) {
+	var filter bson.M
+	if keyword != "" {
+		filter = bson.M{
+			"tags": fmt.Sprintf("/%s/", keyword),
+		}
+	}
+	finds := make([]*options.FindOptions, 0, 3)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	finds = append(finds, options.Find().SetSort(bson.M{"quote_num": 1}))
+	cur, err := db.Collection(m.Table()).Find(ctx, filter, finds...)
 	if err != nil {
 		return
 	}
