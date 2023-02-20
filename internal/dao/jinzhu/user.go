@@ -2,6 +2,7 @@ package jinzhu
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -32,7 +33,9 @@ func (s *userManageServant) GetUserByAddress(address string) (*model.User, error
 
 func (s *userManageServant) GetUsersByAddresses(addresses []string) ([]*model.User, error) {
 	user := &model.User{}
-	return user.List(context.TODO(), s.db, addresses)
+	return user.List(s.db, &model.ConditionsT{
+		"query": bson.M{"address": bson.M{"$in": addresses}},
+	}, 0, 0)
 }
 
 func (s *userManageServant) GetUsersByKeyword(keyword string) ([]*model.User, error) {

@@ -107,7 +107,9 @@ func (p *PostCollection) List(db *mongo.Database, conditions *ConditionsT, offse
 			"from":         "post",
 			"localField":   "post_id",
 			"foreignField": "_id",
+			"as":           "post",
 		}}},
+		{{"$unwind", "$post"}},
 		{{"$limit", limit}},
 		{{"$skip", offset}},
 		{{"$sort", sort}},
@@ -129,4 +131,46 @@ func (p *PostCollection) List(db *mongo.Database, conditions *ConditionsT, offse
 	}
 
 	return collections, nil
+}
+
+func (p *PostCollection) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) {
+	var (
+		queries []bson.M
+		query   bson.M
+		cursor  *mongo.Cursor
+		err     error
+	)
+
+	if p.Address != "" {
+		queries = append(queries, bson.M{"address": p.Address})
+	}
+	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
+
+	for k, v := range *conditions {
+		if k != "ORDER" {
+			queries = append(queries, v)
+			query = findQuery(queries)
+		}
+	}
+
+	pipeline := mongo.Pipeline{
+		{{"$match", query}},
+		{{"$lookup", bson.M{
+			"from":         "post",
+			"localField":   "post_id",
+			"foreignField": "_id",
+			"as":           "post",
+		}}},
+		{{"$unwind", "$post"}},
+		{{"$count", "counted_documents"}},
+	}
+
+	ctx := context.TODO()
+	cursor, err = db.Collection(p.table()).Aggregate(ctx, pipeline)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close(ctx)
+
+	return 0, nil
 }
