@@ -71,8 +71,8 @@ func GetUserInfo(c *gin.Context) {
 	param := service.AuthRequest{}
 	response := app.NewResponse(c)
 
-	if username, exists := c.Get("USERNAME"); exists {
-		param.Username = username.(string)
+	if username, exists := c.Get("address"); exists {
+		param.UserAddress = username.(string)
 	}
 
 	user, err := service.GetUserInfo(&param)
@@ -141,12 +141,12 @@ func ChangeAvatar(c *gin.Context) {
 
 func GetUserProfile(c *gin.Context) {
 	response := app.NewResponse(c)
-	username := c.Query("username")
+	address := c.Query("address")
 
-	user, err := service.GetUserByUsername(username)
+	user, err := service.GetUserByAddress(address)
 	if err != nil {
-		logrus.Errorf("service.GetUserByUsername err: %v\n", err)
-		response.ToErrorResponse(errcode.NoExistUsername)
+		logrus.Errorf("service.GetUserByAddress err: %v\n", err)
+		response.ToErrorResponse(errcode.NoExistUserAddress)
 		return
 	}
 
@@ -163,10 +163,10 @@ func GetUserPosts(c *gin.Context) {
 	address := c.Query("address")
 
 	// todo address !
-	user, err := service.GetUserByUsername(address)
+	user, err := service.GetUserByAddress(address)
 	if err != nil {
 		logrus.Errorf("service.GetUserByAddress err: %v\n", err)
-		response.ToErrorResponse(errcode.NoExistUsername)
+		response.ToErrorResponse(errcode.NoExistUserAddress)
 		return
 	}
 
@@ -200,8 +200,8 @@ func GetUserPosts(c *gin.Context) {
 func GetUserCollections(c *gin.Context) {
 	response := app.NewResponse(c)
 
-	userID, _ := c.Get("UID")
-	posts, totalRows, err := service.GetUserCollections(userID.(int64), (app.GetPage(c)-1)*app.GetPageSize(c), app.GetPageSize(c))
+	address, _ := c.Get("address")
+	posts, totalRows, err := service.GetUserCollections(address.(string), (app.GetPage(c)-1)*app.GetPageSize(c), app.GetPageSize(c))
 
 	if err != nil {
 		logrus.Errorf("service.GetUserCollections err: %v\n", err)
@@ -215,8 +215,8 @@ func GetUserCollections(c *gin.Context) {
 func GetUserStars(c *gin.Context) {
 	response := app.NewResponse(c)
 
-	userID, _ := c.Get("UID")
-	posts, totalRows, err := service.GetUserStars(userID.(int64), (app.GetPage(c)-1)*app.GetPageSize(c), app.GetPageSize(c))
+	address, _ := c.Get("address")
+	posts, totalRows, err := service.GetUserStars(address.(string), (app.GetPage(c)-1)*app.GetPageSize(c), app.GetPageSize(c))
 	if err != nil {
 		logrus.Errorf("service.GetUserStars err: %v\n", err)
 		response.ToErrorResponse(errcode.GetCollectionsFailed)
@@ -260,12 +260,4 @@ func userFrom(c *gin.Context) (*model.User, bool) {
 		return user, ok
 	}
 	return nil, false
-}
-
-func userIdFrom(c *gin.Context) (int64, bool) {
-	if u, exists := c.Get("UID"); exists {
-		uid, ok := u.(int64)
-		return uid, ok
-	}
-	return -1, false
 }

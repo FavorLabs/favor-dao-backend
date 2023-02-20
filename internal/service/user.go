@@ -4,39 +4,25 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"regexp"
-	"strings"
 	"time"
-	"unicode/utf8"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
-	"favor-dao-backend/pkg/util"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
-	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
 )
 
-const MAX_CAPTCHA_TIMES = 2
-
 type PhoneCaptchaReq struct {
-	Phone        string `json:"phone" form:"phone" binding:"required"`
 	ImgCaptcha   string `json:"img_captcha" form:"img_captcha" binding:"required"`
 	ImgCaptchaID string `json:"img_captcha_id" form:"img_captcha_id" binding:"required"`
 }
 
-type UserPhoneBindReq struct {
-	Phone   string `json:"phone" form:"phone" binding:"required"`
-	Captcha string `json:"captcha" form:"captcha" binding:"required"`
-}
-
 type AuthRequest struct {
-	Username string `json:"username" form:"username" binding:"required"`
-	Password string `json:"password" form:"password" binding:"required"`
+	UserAddress string `json:"user_address" form:"user_address" binding:"required"`
 }
 
 type AuthByWalletRequest struct {
@@ -68,48 +54,10 @@ type ChangeUserStatusReq struct {
 	Status int   `json:"status" form:"status" binding:"required"`
 }
 
-const LOGIN_ERR_KEY = "PaoPaoUserLoginErr"
+const LOGIN_ERR_KEY = "DaoUserLoginErr"
 const MAX_LOGIN_ERR_TIMES = 10
 
-// DoLogin 用户认证
-func DoLogin(ctx *gin.Context, param *AuthRequest) (*model.User, error) {
-	user, err := ds.GetUserByUsername(param.Username)
-	if err != nil {
-		return nil, errcode.UnauthorizedAuthNotExist
-	}
-
-	if user.Model != nil && user.ID > 0 {
-		if errTimes, err := conf.Redis.Get(ctx, fmt.Sprintf("%s:%d", LOGIN_ERR_KEY, user.ID)).Result(); err == nil {
-			if convert.StrTo(errTimes).MustInt() >= MAX_LOGIN_ERR_TIMES {
-				return nil, errcode.TooManyLoginError
-			}
-		}
-
-		// 对比密码是否正确
-		if ValidPassword(user.Password, param.Password, user.Salt) {
-
-			if user.Status == model.UserStatusClosed {
-				return nil, errcode.UserHasBeenBanned
-			}
-
-			// 清空登录计数
-			conf.Redis.Del(ctx, fmt.Sprintf("%s:%d", LOGIN_ERR_KEY, user.ID))
-			return user, nil
-		}
-
-		// 登录错误计数
-		_, err = conf.Redis.Incr(ctx, fmt.Sprintf("%s:%d", LOGIN_ERR_KEY, user.ID)).Result()
-		if err == nil {
-			conf.Redis.Expire(ctx, fmt.Sprintf("%s:%d", LOGIN_ERR_KEY, user.ID), time.Hour).Result()
-		}
-
-		return nil, errcode.UnauthorizedAuthFailed
-	}
-
-	return nil, errcode.UnauthorizedAuthNotExist
-}
-
-// DoLoginWallet 钱包登陆，如果用户不存在就注册
+// DoLoginWallet Wallet login, register if user does not exist
 func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, error) {
 	signature, err := hex.DecodeString(param.Signature)
 	if err != nil {
@@ -122,14 +70,14 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 
 	created := false
 
-	user, err := ds.GetUserByUsername(param.WalletAddr)
+	user, err := ds.GetUserByAddress(param.WalletAddr)
 	if err != nil {
-		//return nil, errcode.UnauthorizedAuthFailed
+		// return nil, errcode.UnauthorizedAuthFailed
 		// if not exists
 		created = true
 	}
 
-	if created || (user.Model != nil && user.ID > 0) {
+	if created || !user.ID.IsZero() {
 		if errTimes, err := conf.Redis.Get(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result(); err == nil {
 			if convert.StrTo(errTimes).MustInt() >= MAX_LOGIN_ERR_TIMES {
 				return nil, errcode.TooManyLoginError
@@ -152,29 +100,22 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 				if created {
 					user := &model.User{
 						Nickname: param.WalletAddr[:10],
-						Username: param.WalletAddr,
-						Password: "",
+						Address:  param.WalletAddr,
 						Avatar:   GetRandomAvatar(),
-						Salt:     "",
-						Status:   model.UserStatusNormal,
 					}
 
 					user, err := ds.CreateUser(user)
 					if err != nil {
 						return nil, err
 					}
-				} else {
-					if user.Status == model.UserStatusClosed {
-						return nil, errcode.UserHasBeenBanned
-					}
 				}
 
-				// 清空登录计数
+				// Clear Login Count
 				conf.Redis.Del(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr))
 				return user, nil
 			}
 		}
-		// 登录错误计数
+		// Clear Login Err Count
 		_, err = conf.Redis.Incr(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result()
 		if err == nil {
 			conf.Redis.Expire(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr), time.Hour).Result()
@@ -186,168 +127,24 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 	return nil, errcode.UnauthorizedAuthNotExist
 }
 
-// ValidPassword 检查密码是否一致
-func ValidPassword(dbPassword, password, salt string) bool {
-	return strings.Compare(dbPassword, util.EncodeMD5(util.EncodeMD5(password)+salt)) == 0
-}
-
-// CheckStatus 检测用户权限
-func CheckStatus(user *model.User) bool {
-	return user.Status == model.UserStatusNormal
-}
-
-// ValidUsername 验证用户
-func ValidUsername(username string) error {
-	// 检测用户是否合规
-	if utf8.RuneCountInString(username) < 3 || utf8.RuneCountInString(username) > 12 {
-		return errcode.UsernameLengthLimit
-	}
-
-	if !regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(username) {
-		return errcode.UsernameCharLimit
-	}
-
-	// 重复检查
-	user, _ := ds.GetUserByUsername(username)
-
-	if user.Model != nil && user.ID > 0 {
-		return errcode.UsernameHasExisted
-	}
-
-	return nil
-}
-
-// CheckPassword 密码检查
-func CheckPassword(password string) error {
-	// 检测用户是否合规
-	if utf8.RuneCountInString(password) < 6 || utf8.RuneCountInString(password) > 16 {
-		return errcode.PasswordLengthLimit
-	}
-
-	return nil
-}
-
-// CheckPhoneCaptcha 验证手机验证码
-func CheckPhoneCaptcha(phone, captcha string) *errcode.Error {
-	// 如果禁止phone verify 则允许通过任意验证码
-	if DisablePhoneVerify {
-		return nil
-	}
-
-	c, err := ds.GetLatestPhoneCaptcha(phone)
-	if err != nil {
-		return errcode.ErrorPhoneCaptcha
-	}
-
-	if c.Captcha != captcha {
-		return errcode.ErrorPhoneCaptcha
-	}
-
-	if c.ExpiredOn < time.Now().Unix() {
-		return errcode.ErrorPhoneCaptcha
-	}
-
-	if c.UseTimes >= MAX_CAPTCHA_TIMES {
-		return errcode.MaxPhoneCaptchaUseTimes
-	}
-
-	// 更新检测次数
-	ds.UsePhoneCaptcha(c)
-
-	return nil
-}
-
-// CheckPhoneExist 检测手机号是否存在
-func CheckPhoneExist(uid int64, phone string) bool {
-	u, err := ds.GetUserByPhone(phone)
-	if err != nil {
-		return false
-	}
-
-	if u.Model == nil || u.ID == 0 {
-		return false
-	}
-
-	if u.ID == uid {
-		return false
-	}
-
-	return true
-}
-
-// EncryptPasswordAndSalt 密码加密&生成salt
-func EncryptPasswordAndSalt(password string) (string, string) {
-	salt := uuid.Must(uuid.NewV4()).String()[:8]
-	password = util.EncodeMD5(util.EncodeMD5(password) + salt)
-
-	return password, salt
-}
-
-// Register 用户注册
-func Register(username, password string) (*model.User, error) {
-	password, salt := EncryptPasswordAndSalt(password)
-
-	user := &model.User{
-		Nickname: username,
-		Username: username,
-		Password: password,
-		Avatar:   GetRandomAvatar(),
-		Salt:     salt,
-		Status:   model.UserStatusNormal,
-	}
-
-	user, err := ds.CreateUser(user)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-// GetUserInfo 获取用户信息
 func GetUserInfo(param *AuthRequest) (*model.User, error) {
-	user, err := ds.GetUserByUsername(param.Username)
+	return GetUserByAddress(param.UserAddress)
+}
+
+func GetUserByAddress(address string) (*model.User, error) {
+	user, err := ds.GetUserByAddress(address)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if user.Model != nil && user.ID > 0 {
+	if !user.ID.IsZero() {
 		return user, nil
 	}
 
-	return nil, errcode.UnauthorizedAuthNotExist
+	return nil, errcode.NoExistUserAddress
 }
 
-func GetUserByID(id int64) (*model.User, error) {
-	user, err := ds.GetUserByID(id)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if user.Model != nil && user.ID > 0 {
-		return user, nil
-	}
-
-	return nil, errcode.NoExistUsername
-}
-
-func GetUserByUsername(username string) (*model.User, error) {
-	user, err := ds.GetUserByUsername(username)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if user.Model != nil && user.ID > 0 {
-		return user, nil
-	}
-
-	return nil, errcode.NoExistUsername
-}
-
-// UpdateUserInfo 更新用户信息
 func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user); err != nil {
 		return errcode.ServerError
@@ -375,13 +172,12 @@ func ChangeUserAvatar(user *model.User, avatar string) (err *errcode.Error) {
 	return UpdateUserInfo(user)
 }
 
-// GetUserCollections 获取用户收藏列表
-func GetUserCollections(userID int64, offset, limit int) ([]*model.PostFormated, int64, error) {
-	collections, err := ds.GetUserPostCollections(userID, offset, limit)
+func GetUserCollections(userAddress string, offset, limit int) ([]*model.PostFormated, int64, error) {
+	collections, err := ds.GetUserPostCollections(userAddress, offset, limit)
 	if err != nil {
 		return nil, 0, err
 	}
-	totalRows, err := ds.GetUserPostCollectionCount(userID)
+	totalRows, err := ds.GetUserPostCollectionCount(userAddress)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -389,21 +185,20 @@ func GetUserCollections(userID int64, offset, limit int) ([]*model.PostFormated,
 	for _, collection := range collections {
 		posts = append(posts, collection.Post)
 	}
-	postsFormated, err := ds.MergePosts(posts)
+	postsFormatted, err := ds.MergePosts(posts)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return postsFormated, totalRows, nil
+	return postsFormatted, totalRows, nil
 }
 
-// GetUserStars 获取用户点赞列表
-func GetUserStars(userID int64, offset, limit int) ([]*model.PostFormated, int64, error) {
-	stars, err := ds.GetUserPostStars(userID, offset, limit)
+func GetUserStars(userAddress string, offset, limit int) ([]*model.PostFormated, int64, error) {
+	stars, err := ds.GetUserPostStars(userAddress, offset, limit)
 	if err != nil {
 		return nil, 0, err
 	}
-	totalRows, err := ds.GetUserPostStarCount(userID)
+	totalRows, err := ds.GetUserPostStarCount(userAddress)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -412,12 +207,12 @@ func GetUserStars(userID int64, offset, limit int) ([]*model.PostFormated, int64
 	for _, star := range stars {
 		posts = append(posts, star.Post)
 	}
-	postsFormated, err := ds.MergePosts(posts)
+	postsFormatted, err := ds.MergePosts(posts)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return postsFormated, totalRows, nil
+	return postsFormatted, totalRows, nil
 }
 
 // GetSuggestUsers Get user recommendations based on keywords
@@ -427,9 +222,9 @@ func GetSuggestUsers(keyword string) ([]string, error) {
 		return nil, err
 	}
 
-	usernames := []string{}
+	var usernames []string
 	for _, user := range users {
-		usernames = append(usernames, user.Username)
+		usernames = append(usernames, user.Nickname)
 	}
 
 	return usernames, nil
@@ -442,7 +237,7 @@ func GetSuggestTags(keyword string) ([]string, error) {
 		return nil, err
 	}
 
-	ts := []string{}
+	var ts []string
 	for _, t := range tags {
 		ts = append(ts, t.Tag)
 	}
@@ -450,13 +245,12 @@ func GetSuggestTags(keyword string) ([]string, error) {
 	return ts, nil
 }
 
-func IsFriend(userId, friendId int64) bool {
-	return ds.IsFriend(userId, friendId)
+func IsFriend(userAddress, friendAddress string) bool {
+	return ds.IsFriend(userAddress, friendAddress)
 }
 
-// checkPermision Check if the owner or administrator
-func checkPermision(user *model.User, targetUserId int64) *errcode.Error {
-	if user == nil || (user.ID != targetUserId && !user.IsAdmin) {
+func checkPermission(user *model.User, targetUserAddress string) *errcode.Error {
+	if user == nil || (user.Address != targetUserAddress) {
 		return errcode.NoPermission
 	}
 	return nil

@@ -15,24 +15,22 @@ type authorizationManageServant struct {
 }
 
 func (s *authorizationManageServant) IsAllow(user *model.User, action *core.Action) bool {
-	// user is activation if had bind phone
-	isActivation := (len(user.Phone) != 0)
-	isFriend := s.isFriend(user.ID, action.UserId)
+	isFriend := s.isFriend(user.Address, action.UserAddress)
 	// TODO: just use defaut act authorization chek rule now
-	return action.Act.IsAllow(user, action.UserId, isFriend, isActivation)
+	return action.Act.IsAllow(user, action.UserAddress, isFriend, true)
 }
 
-func (s *authorizationManageServant) BeFriendFilter(userId int64) core.FriendFilter {
+func (s *authorizationManageServant) BeFriendFilter(userAddress string) core.FriendFilter {
 	// just empty now
 	return core.FriendFilter{}
 }
 
-func (s *authorizationManageServant) BeFriendIds(userId int64) ([]int64, error) {
+func (s *authorizationManageServant) BeFriendIds(userAddress string) ([]string, error) {
 	// just empty now
-	return []int64{}, nil
+	return []string{}, nil
 }
 
-func (s *authorizationManageServant) isFriend(userId int64, friendId int64) bool {
+func (s *authorizationManageServant) isFriend(userAddress, friendAddress string) bool {
 	// just true now
 	return true
 }

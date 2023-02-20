@@ -8,7 +8,7 @@ type DataService interface {
 	TweetManageService
 	TweetHelpService
 
-	AttachmentCheckService
-
 	UserManageService
+
+	DaoManageService
 }
