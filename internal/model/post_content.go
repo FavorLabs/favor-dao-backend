@@ -122,7 +122,11 @@ func (p *PostContent) List(db *mongo.Database, conditions *ConditionsT, offset, 
 	finds = append(finds, options.Find().SetLimit(int64(limit)))
 	for k, v := range *conditions {
 		if k != "ORDER" {
-			query = findQuery([]bson.M{query, v})
+			if query != nil {
+				query = findQuery([]bson.M{query, v})
+			} else {
+				query = findQuery([]bson.M{v})
+			}
 		} else {
 			finds = append(finds, options.Find().SetSort(v))
 		}
