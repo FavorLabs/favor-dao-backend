@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func getDaos(c *gin.Context) {
+func GetDaos(c *gin.Context) {
 	response := app.NewResponse(c)
 
 	q := &core.QueryReq{
@@ -92,7 +92,7 @@ func GetDao(c *gin.Context) {
 	response.ToResponse(dao)
 }
 
-func GetBookmark(c *gin.Context) {
+func GetDaoBookmark(c *gin.Context) {
 	daoId := convert.StrTo(c.Query("dao_id")).String()
 	response := app.NewResponse(c)
 
@@ -112,7 +112,7 @@ func GetBookmark(c *gin.Context) {
 	})
 }
 
-func ActionBookmark(c *gin.Context) {
+func ActionDaoBookmark(c *gin.Context) {
 	param := service.DaoFollowReq{}
 	response := app.NewResponse(c)
 	valid, errs := app.BindAndValid(c, &param)

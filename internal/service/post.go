@@ -3,11 +3,12 @@ package service
 import (
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"math"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
@@ -192,18 +193,12 @@ func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
 	return nil
 }
 
-// deleteOssObjects 删除推文的媒体内容, 宽松处理错误(就是不处理), 后续完善
 func deleteOssObjects(mediaContents []string) {
 	mediaContentsSize := len(mediaContents)
 	if mediaContentsSize > 1 {
-		objectKeys := make([]string, 0, mediaContentsSize)
-		for _, cUrl := range mediaContents {
-			objectKeys = append(objectKeys, oss.ObjectKey(cUrl))
-		}
-		// TODO: 优化处理尽量使用channel传递objectKeys使用可控数量的Goroutine集中处理object删除动作，后续完善
-		go oss.DeleteObjects(objectKeys)
+		// todo
 	} else if mediaContentsSize == 1 {
-		oss.DeleteObject(oss.ObjectKey(mediaContents[0]))
+		// todo
 	}
 }
 

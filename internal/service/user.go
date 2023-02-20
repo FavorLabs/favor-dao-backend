@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 type PhoneCaptchaReq struct {
@@ -158,11 +157,6 @@ func ChangeUserAvatar(user *model.User, avatar string) (err *errcode.Error) {
 			deleteOssObjects([]string{avatar})
 		}
 	}()
-
-	if err := oss.PersistObject(oss.ObjectKey(avatar)); err != nil {
-		logrus.Errorf("service.ChangeUserAvatar persist object failed: %s", err)
-		return errcode.ServerError
-	}
 
 	user.Avatar = avatar
 	return UpdateUserInfo(user)

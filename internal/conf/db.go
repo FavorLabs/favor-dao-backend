@@ -18,7 +18,7 @@ var (
 	once  sync.Once
 )
 
-func MustGormDB() *mongo.Database {
+func MustMongoDB() *mongo.Database {
 	once.Do(func() {
 		var err error
 		if db, err = newDBEngine(); err != nil {

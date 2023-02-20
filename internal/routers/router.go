@@ -2,14 +2,11 @@ package routers
 
 import (
 	"net/http"
-	"path/filepath"
 
-	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/middleware"
 	"favor-dao-backend/internal/routers/api"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 func NewRouter() *gin.Engine {
@@ -22,13 +19,6 @@ func NewRouter() *gin.Engine {
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AddAllowHeaders("Authorization")
 	e.Use(cors.New(corsConfig))
-
-	// On-demand registration of docs, static resources, LocalOSS routing
-	{
-		registerDocs(e)
-		registerStatick(e)
-		routeLocalOSS(e)
-	}
 
 	// v1 group api
 	r := e.Group("/v1")
@@ -70,8 +60,6 @@ func NewRouter() *gin.Engine {
 
 		authApi.GET("/suggest/tags", api.GetSuggestTags)
 
-		privApi.POST("/attachment", api.UploadAttachment)
-
 		privApi.POST("/post", api.CreatePost)
 
 		privApi.DELETE("/post", api.DeletePost)
@@ -89,6 +77,14 @@ func NewRouter() *gin.Engine {
 		privApi.POST("/post/stick", api.StickPost)
 
 		privApi.POST("/post/visibility", api.VisiblePost)
+
+		// dao
+		authApi.GET("/daos", api.GetDaos)
+		authApi.GET("/dao", api.GetDao)
+		authApi.POST("/dao", api.CreateDao)
+		authApi.PUT("/dao", api.UpdateDao)
+		authApi.GET("/dao/bookmark", api.GetDaoBookmark)
+		authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
 	}
 
 	// default 404
@@ -108,19 +104,4 @@ func NewRouter() *gin.Engine {
 	})
 
 	return e
-}
-
-// routeLocalOSS register LocalOSS route if neeed
-func routeLocalOSS(e *gin.Engine) {
-	if !conf.CfgIf("LocalOSS") {
-		return
-	}
-
-	savePath, err := filepath.Abs(conf.LocalOSSSetting.SavePath)
-	if err != nil {
-		logrus.Fatalf("get localOSS save path err: %v", err)
-	}
-	e.Static("/oss", savePath)
-
-	logrus.Infof("register LocalOSS route in /oss on save path: %s", savePath)
 }

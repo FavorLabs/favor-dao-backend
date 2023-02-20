@@ -124,60 +124,6 @@ type MongoDBSettingS struct {
 	DBName   string
 }
 
-type ObjectStorageS struct {
-	RetainInDays int
-	TempDir      string
-}
-
-type MinIOSettingS struct {
-	AccessKey string
-	SecretKey string
-	Secure    bool
-	Endpoint  string
-	Bucket    string
-	Domain    string
-}
-
-type S3SettingS struct {
-	AccessKey string
-	SecretKey string
-	Secure    bool
-	Endpoint  string
-	Bucket    string
-	Domain    string
-}
-
-type AliOSSSettingS struct {
-	AccessKeyID     string
-	AccessKeySecret string
-	Endpoint        string
-	Bucket          string
-	Domain          string
-}
-
-type COSSettingS struct {
-	SecretID  string
-	SecretKey string
-	Region    string
-	Bucket    string
-	Domain    string
-}
-
-type HuaweiOBSSettingS struct {
-	AccessKey string
-	SecretKey string
-	Endpoint  string
-	Bucket    string
-	Domain    string
-}
-
-type LocalOSSSettingS struct {
-	SavePath string
-	Secure   bool
-	Bucket   string
-	Domain   string
-}
-
 type RedisSettingS struct {
 	Host     string
 	Password string
@@ -365,10 +311,6 @@ func (s *LoggerMeiliSettingS) maxLogBuffer() int {
 		return 1000
 	}
 	return s.MaxLogBuffer
-}
-
-func (s *ObjectStorageS) TempDirSlash() string {
-	return strings.Trim(s.TempDir, " /") + "/"
 }
 
 func (s *ZincSettingS) Endpoint() string {

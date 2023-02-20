@@ -11,10 +11,10 @@ Server:
   ReadTimeout: 60
   WriteTimeout: 60
 Features:
-  Default: [ "Base",  "Option", "Zinc", "LocalOSS", "LoggerFile" ]
-  Develop: [ "Base",  "BigCacheIndex", "Meili", "AliOSS", "LoggerMeili", "OSS:Retention" ]
-  Demo: [ "Base",  "Option", "Zinc", "MinIO", "LoggerZinc", "Migration" ]
-  Slim: [ "Base",  "LocalOSS", "LoggerFile", "OSS:TempDir" ]
+  Default: [ "Base",  "Option", "Zinc", "LoggerFile" ]
+  Develop: [ "Base",  "BigCacheIndex", "Meili", "LoggerMeili"]
+  Demo: [ "Base",  "Option", "Zinc", "LoggerZinc"]
+  Slim: [ "Base",  "LoggerFile" ]
   Base: [ "Redis" ]
   Option: [ "SimpleCacheIndex" ]
 CacheIndex:
@@ -50,63 +50,23 @@ TweetSearch:
   MaxUpdateQPS: 100            # QPS of Max Add/Remove/Update Post, setting range [10, 10000], default 100
   MinWorker: 10                # Minimum background update worker, set range [5, 1000], default 10
 Zinc:
-  Host: 127.0.0.1:4080
+  Host: 192.168.100.250:4080
   Index: dao-data
   User: admin
-  Password: 123
+  Password: admin
   Secure: False
 Meili:
   Host: meili:7700
   Index: dao-data
   ApiKey: dao-meilisearch
   Secure: False
-ObjectStorage:
-  RetainInDays: 2   # How many days of temporary object expiration time
-  TempDir: tmp      # Temporary object storage directory name
-AliOSS:
-  Endpoint:
-  AccessKeyID:
-  AccessKeySecret:
-  Bucket:
-  Domain:
-COS:
-  SecretID:
-  SecretKey:
-  Region: ap-shanghai
-  Bucket: demo-1888888888
-  Domain:
-HuaweiOBS:
-  AccessKey:
-  SecretKey:
-  Endpoint:
-  Bucket: dao
-  Domain:
-MinIO:
-  AccessKey:
-  SecretKey:
-  Secure: False
-  Endpoint: minio:9000
-  Bucket: dao
-  Domain: 127.0.0.1:9000
-S3:
-  AccessKey: "YOUR-ACCESSKEYID"
-  SecretKey: "YOUR-SECRETACCESSKEY"
-  Secure: True
-  Endpoint: s3.amazonaws.com
-  Bucket: dao
-  Domain:
-LocalOSS:
-  SavePath: data/oss
-  Secure: False
-  Bucket: dao
-  Domain: 127.0.0.1:8008
 MongoDB:
-  Username: root
-  Password: 12345678
-  Host: 127.0.0.1:27017
+  Username:
+  Password:
+  Host: 192.168.100.77:27017
   DBName: dao
 Redis:
-  Host: 127.0.0.1:6379
+  Host: 192.168.100.250:6380
   Password:
-  DB: 
+  DB: 1
   
