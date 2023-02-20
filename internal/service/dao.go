@@ -22,11 +22,6 @@ type DaoUpdateReq struct {
 	Visibility   model.DaoVisibleT  `json:"visibility"`
 }
 
-type DaoGetReq struct {
-	Id      primitive.ObjectID `json:"id"`
-	Address string             `json:"address"`
-}
-
 type DaoFollowReq struct {
 	DaoID string `json:"dao_id" binding:"required"`
 }
@@ -83,16 +78,26 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	return ds.UpdateDao(dao)
 }
 
-func GetDao(param DaoGetReq) (*model.DaoFormatted, error) {
+func GetDao(daoId string) (*model.DaoFormatted, error) {
+	id, err := primitive.ObjectIDFromHex(daoId)
+	if err != nil {
+		return nil, err
+	}
 	dao := &model.Dao{
-		ID:      param.Id,
-		Address: param.Address,
+		ID: id,
 	}
 	res, err := ds.GetDao(dao)
 	if err != nil {
 		return nil, err
 	}
 	return res.Format(), nil
+}
+
+func GetMyDaoList(address string) ([]*model.DaoFormatted, error) {
+	dao := &model.Dao{
+		Address: address,
+	}
+	return ds.GetMyDaoList(dao)
 }
 
 func GetDaoBookmark(userAddress string, daoId string) (*model.DaoBookmark, error) {

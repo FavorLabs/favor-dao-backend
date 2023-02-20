@@ -72,7 +72,7 @@ func NewRouter() *gin.Engine {
 
 		privApi.POST("/post/collection", api.PostCollection)
 
-		//privApi.POST("/post/lock", api.LockPost)
+		// privApi.POST("/post/lock", api.LockPost)
 
 		privApi.POST("/post/stick", api.StickPost)
 
@@ -81,6 +81,7 @@ func NewRouter() *gin.Engine {
 		// dao
 		authApi.GET("/daos", api.GetDaos)
 		authApi.GET("/dao", api.GetDao)
+		authApi.GET("/dao/my", api.GetMyDaoList)
 		authApi.POST("/dao", api.CreateDao)
 		authApi.PUT("/dao", api.UpdateDao)
 		authApi.GET("/dao/bookmark", api.GetDaoBookmark)

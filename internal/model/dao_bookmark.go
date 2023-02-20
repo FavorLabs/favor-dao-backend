@@ -62,11 +62,11 @@ func (m *DaoBookmark) GetByAddress(ctx context.Context, db *mongo.Database, addr
 	if err != nil {
 		return nil, err
 	}
-	var filter bson.M
-	filter["dao_id"] = id
-	filter["address"] = address
-	filter["is_del"] = 0
-	res := db.Collection(m.Table()).FindOne(ctx, filter)
+	res := db.Collection(m.Table()).FindOne(ctx, bson.M{
+		"dao_id":  id,
+		"address": address,
+		"is_del":  0,
+	})
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
@@ -121,6 +121,7 @@ func (m *DaoBookmark) GetList(ctx context.Context, db *mongo.Database, pipeline 
 	if err != nil {
 		return
 	}
+	list = []*DaoFormatted{}
 	for _, v := range a {
 		list = append(list, v.Dao.Format())
 	}

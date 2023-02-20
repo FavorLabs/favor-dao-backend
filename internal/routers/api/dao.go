@@ -75,21 +75,25 @@ func UpdateDao(c *gin.Context) {
 }
 
 func GetDao(c *gin.Context) {
-	param := service.DaoGetReq{}
+	daoId := convert.StrTo(c.Query("dao_id")).String()
 	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
-	dao, err := service.GetDao(param)
+
+	dao, err := service.GetDao(daoId)
 	if err != nil {
 		logrus.Errorf("service.GetDao err: %v\n", err)
 		response.ToErrorResponse(errcode.GetDaoFailed)
 		return
 	}
 	response.ToResponse(dao)
+}
+
+func GetMyDaoList(c *gin.Context) {
+	response := app.NewResponse(c)
+
+	address, _ := c.Get("address")
+
+	dao, _ := service.GetMyDaoList(address.(string))
+	response.ToResponseList(dao, int64(len(dao)))
 }
 
 func GetDaoBookmark(c *gin.Context) {

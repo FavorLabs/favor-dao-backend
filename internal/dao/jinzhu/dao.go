@@ -2,7 +2,6 @@ package jinzhu
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -44,6 +43,10 @@ func (s *daoManageServant) GetDao(dao *model.Dao) (*model.Dao, error) {
 	return dao.Get(context.TODO(), s.db)
 }
 
+func (s *daoManageServant) GetMyDaoList(dao *model.Dao) ([]*model.DaoFormatted, error) {
+	return dao.GetListByAddress(context.TODO(), s.db)
+}
+
 func (s *daoManageServant) DaoBookmarkCount(address string) int64 {
 	book := &model.DaoBookmark{Address: address}
 	return book.CountMark(context.TODO(), s.db)
@@ -56,17 +59,17 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 		if q.Type == "address" {
 			query[dao.Table()+".address"] = q.Query
 		} else {
-			query[dao.Table()+".name"] = fmt.Sprintf("/%s/", q.Query)
+			query[dao.Table()+".name"] = bson.M{"$regex": q.Query}
 		}
 	}
 	pipeline := mongo.Pipeline{
-		{{"$match", query}},
 		{{"$lookup", bson.M{
 			"from":         dao.Table(),
 			"localField":   "dao_id",
 			"foreignField": "_id",
 			"as":           "dao",
 		}}},
+		{{"$match", query}},
 		{{"$skip", offset}},
 		{{"$limit", limit}},
 		{{"$unwind", "$dao"}},
