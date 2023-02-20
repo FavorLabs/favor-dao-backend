@@ -159,10 +159,6 @@ func ChangeUserAvatar(user *model.User, avatar string) (err *errcode.Error) {
 		}
 	}()
 
-	if err := ds.CheckAttachment(avatar); err != nil {
-		return errcode.InvalidParams
-	}
-
 	if err := oss.PersistObject(oss.ObjectKey(avatar)); err != nil {
 		logrus.Errorf("service.ChangeUserAvatar persist object failed: %s", err)
 		return errcode.ServerError

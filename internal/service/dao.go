@@ -3,16 +3,32 @@ package service
 import (
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type DaoCreationReq struct {
 	Name         string            `json:"name"          binding:"required"`
 	Introduction string            `json:"introduction"`
 	Visibility   model.DaoVisibleT `json:"visibility"`
+}
+
+type DaoUpdateReq struct {
+	Id           primitive.ObjectID `json:"id"            binding:"required"`
+	Name         string             `json:"name"          binding:"required"`
+	Introduction string             `json:"introduction"`
+	Visibility   model.DaoVisibleT  `json:"visibility"`
+}
+
+type DaoGetReq struct {
+	Id      primitive.ObjectID `json:"id"`
+	Address string             `json:"address"`
+}
+
+type DaoFollowReq struct {
+	DaoID string `json:"dao_id" binding:"required"`
 }
 
 func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *model.DaoFormatted, err error) {
@@ -22,7 +38,7 @@ func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 		Visibility:   param.Visibility,
 		Introduction: param.Introduction,
 	}
-	res, err := dao.Create(c.Request.Context(), db)
+	res, err := ds.CreateDao(dao)
 	if err != nil {
 		return nil, err
 	}
@@ -44,24 +60,49 @@ func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 	return res.Format(), nil
 }
 
-func GetDaoBookmarkList(c *gin.Context, userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted, total int64) {
-	query := bson.M{"address": userAddress}
-	dao := &model.Dao{}
-	pipeline := mongo.Pipeline{
-		{{"$match", query}},
-		{{"$lookup", bson.M{
-			"from":         dao.Table(),
-			"localField":   "dao_id",
-			"foreignField": "_id",
-			"as":           "dao",
-		}}},
-		{{"$skip", offset}},
-		{{"$limit", limit}},
-		{{"$unwind", "$dao"}},
-		{{"$sort", bson.M{"_id": -1}}},
-	}
-	book := &model.DaoBookmark{Address: userAddress}
-	list = book.GetList(c.Request.Context(), db, pipeline)
-	total = book.CountMark(c.Request.Context(), db)
+func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted, total int64) {
+	list = ds.GetDaoBookmarkList(userAddress, q, offset, limit)
+	total = ds.DaoBookmarkCount(userAddress)
 	return list, total
+}
+
+func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
+	dao := &model.Dao{
+		ID:           param.Id,
+		Name:         param.Name,
+		Visibility:   param.Visibility,
+		Introduction: param.Introduction,
+	}
+	getDao, err := ds.GetDao(dao)
+	if err != nil {
+		return err
+	}
+	if getDao.Address != userAddress {
+		return errcode.NoPermission
+	}
+	return ds.UpdateDao(dao)
+}
+
+func GetDao(param DaoGetReq) (*model.DaoFormatted, error) {
+	dao := &model.Dao{
+		ID:      param.Id,
+		Address: param.Address,
+	}
+	res, err := ds.GetDao(dao)
+	if err != nil {
+		return nil, err
+	}
+	return res.Format(), nil
+}
+
+func GetDaoBookmark(userAddress string, daoId string) (*model.DaoBookmark, error) {
+	return ds.GetDaoBookmarkByAddressAndDaoID(userAddress, daoId)
+}
+
+func CreateDaoBookmark(myAddress string, daoId string) (*model.DaoBookmark, error) {
+	return ds.CreateDaoFollow(myAddress, daoId)
+}
+
+func DeleteDaoBookmark(book *model.DaoBookmark) error {
+	return ds.DeleteDaoFollow(book)
 }
