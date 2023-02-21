@@ -54,4 +54,7 @@ func setupDBEngine() {
 		Password: redisSetting.Password,
 		DB:       redisSetting.DB,
 	})
+	if err := Redis.Ping(context.TODO()).Err(); err != nil {
+		logrus.Fatalf("new redis failed: %s", err)
+	}
 }

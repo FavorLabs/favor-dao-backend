@@ -57,7 +57,25 @@ func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 
 func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted, total int64) {
 	list = ds.GetDaoBookmarkList(userAddress, q, offset, limit)
-	total = ds.DaoBookmarkCount(userAddress)
+	// get avatar
+	var addresses []string
+	for _, v := range list {
+		addresses = append(addresses, v.Address)
+	}
+	users, err := ds.GetUsersByAddresses(addresses)
+	if err == nil {
+		return nil, 0
+	}
+	userMap := make(map[string]*model.User, len(users))
+	for _, user := range users {
+		userMap[user.Address] = user
+	}
+	for k, v := range list {
+		list[k].Avatar = userMap[v.Address].Avatar
+	}
+	if len(list) > 0 {
+		total = ds.DaoBookmarkCount(userAddress)
+	}
 	return list, total
 }
 
