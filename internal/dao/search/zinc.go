@@ -93,7 +93,7 @@ func (s *zincTweetSearchServant) queryByContent(user *model.User, q *core.QueryR
 				"content": q.Query,
 			},
 		},
-		"sort": []string{"-is_top", "-latest_replied_on"},
+		"sort": []string{"-is_top", "-modified_on"},
 		"from": offset,
 		"size": limit,
 	})
@@ -109,7 +109,7 @@ func (s *zincTweetSearchServant) queryByTag(user *model.User, q *core.QueryReq, 
 		"query": map[string]types.Any{
 			"term": "tags." + q.Query + ":1",
 		},
-		"sort_fields": []string{"-is_top", "-latest_replied_on"},
+		"sort_fields": []string{"-is_top", "-modified_on"},
 		"from":        offset,
 		"max_results": limit,
 	})
@@ -123,11 +123,9 @@ func (s *zincTweetSearchServant) queryByAddress(user *model.User, q *core.QueryR
 	resp, err := s.client.ApiQuery(s.indexName, map[string]types.Any{
 		"search_type": "querystring",
 		"query": map[string]types.Any{
-			"match_phrase": map[string]types.Any{
-				"address": q.Query,
-			},
+			"term": "address:" + q.Query,
 		},
-		"sort_fields": []string{"-is_top", "-latest_replied_on"},
+		"sort_fields": []string{"-is_top", "-modified_on"},
 		"from":        offset,
 		"max_results": limit,
 	})
@@ -142,7 +140,7 @@ func (s *zincTweetSearchServant) queryAny(user *model.User, offset, limit int) (
 		"query": map[string]types.Any{
 			"match_all": map[string]string{},
 		},
-		"sort": []string{"-is_top", "-latest_replied_on"},
+		"sort": []string{"-is_top", "-modified_on"},
 		"from": offset,
 		"size": limit,
 	}

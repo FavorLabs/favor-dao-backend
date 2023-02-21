@@ -80,7 +80,7 @@ func (s *meiliTweetSearchServant) queryByContent(user *model.User, q *core.Query
 	request := &meilisearch.SearchRequest{
 		Offset: int64(offset),
 		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "latest_replied_on:desc"},
+		Sort:   []string{"is_top:desc", "modified_on:desc"},
 	}
 
 	filter := s.filterList(user)
@@ -101,7 +101,7 @@ func (s *meiliTweetSearchServant) queryByTag(user *model.User, q *core.QueryReq,
 	request := &meilisearch.SearchRequest{
 		Offset: int64(offset),
 		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "latest_replied_on:desc"},
+		Sort:   []string{"is_top:desc", "modified_on:desc"},
 	}
 
 	filter := s.filterList(user)
@@ -125,7 +125,7 @@ func (s *meiliTweetSearchServant) queryByAddress(user *model.User, q *core.Query
 	request := &meilisearch.SearchRequest{
 		Offset: int64(offset),
 		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "latest_replied_on:desc"},
+		Sort:   []string{"is_top:desc", "modified_on:desc"},
 	}
 
 	filter := s.filterList(user)
@@ -145,7 +145,7 @@ func (s *meiliTweetSearchServant) queryAny(user *model.User, offset, limit int) 
 	request := &meilisearch.SearchRequest{
 		Offset: int64(offset),
 		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "latest_replied_on:desc"},
+		Sort:   []string{"is_top:desc", "modified_on:desc"},
 	}
 
 	filter := s.filterList(user)
