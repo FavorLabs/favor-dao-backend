@@ -34,13 +34,10 @@ func NewRouter() *gin.Engine {
 		noAuthApi.GET("/tags", api.GetPostTags)
 
 		noAuthApi.GET("/user/profile", api.GetUserProfile)
-	}
 
-	looseApi := r.Group("/").Use(middleware.Session())
-	{
-		looseApi.GET("/posts", api.GetPostList)
+		noAuthApi.GET("/posts", api.GetPostList)
 
-		looseApi.GET("/user/posts", api.GetUserPosts)
+		noAuthApi.GET("/user/posts", api.GetUserPosts)
 	}
 
 	authApi := r.Group("/").Use(middleware.Session())

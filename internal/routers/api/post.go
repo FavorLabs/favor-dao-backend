@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
@@ -20,6 +22,9 @@ func GetPostList(c *gin.Context) {
 	}
 	if c.Query("type") == "tag" {
 		q.Type = "tag"
+	}
+	if strings.HasPrefix(q.Query, "0x") {
+		q.Type = "address"
 	}
 
 	user, _ := userFrom(c)
