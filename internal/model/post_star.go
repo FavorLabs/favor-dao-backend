@@ -9,9 +9,10 @@ import (
 
 type PostStar struct {
 	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Post    *Post              `json:"post" bson:"post"`
+	Post    *Post              `json:"-" bson:"-"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
+	IsDel   int                `json:"is_del" bson:"is_del"`
 }
 
 func (p *PostStar) table() string {
@@ -22,7 +23,7 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 	var queries []bson.M
 
 	if !p.ID.IsZero() {
-		queries = append(queries, bson.M{"_id": p.ID, "is_del": 0})
+		queries = append(queries, bson.M{"_id": p.ID})
 	}
 	if !p.PostID.IsZero() {
 		queries = append(queries, bson.M{"post_id": p.PostID})
@@ -31,10 +32,9 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
 
-	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
+	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 
 	pipeline := mongo.Pipeline{
-		{{"$match", findQuery(queries)}},
 		{{"$lookup", bson.M{
 			"from":         "post",
 			"localField":   "post_id",
@@ -42,6 +42,7 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 			"as":           "post",
 		}}},
 		{{"$unwind", "$post"}},
+		{{"$match", findQuery(queries)}},
 	}
 
 	ctx := context.TODO()
@@ -70,10 +71,9 @@ func (p *PostStar) Create(db *mongo.Database) (*PostStar, error) {
 
 func (p *PostStar) Delete(db *mongo.Database) error {
 	filter := bson.D{{"_id", p.ID}}
-	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
-	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
-	if res.Err() != nil {
-		return res.Err()
+	_, err := db.Collection(p.table()).DeleteOne(context.TODO(), filter)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
+	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 
 	for k, v := range *conditions {
 		if k != "ORDER" {
@@ -102,7 +102,6 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 		}
 	}
 	pipeline := mongo.Pipeline{
-		{{"$match", query}},
 		{{"$lookup", bson.M{
 			"from":         "post",
 			"localField":   "post_id",
@@ -110,6 +109,7 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 			"as":           "post",
 		}}},
 		{{"$unwind", "$post"}},
+		{{"$match", query}},
 		{{"$limit", limit}},
 		{{"$skip", offset}},
 		{{"$sort", sort}},
@@ -145,7 +145,7 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
+	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 
 	for k, v := range *conditions {
 		if k != "ORDER" {
@@ -154,7 +154,6 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 		}
 	}
 	pipeline := mongo.Pipeline{
-		{{"$match", query}},
 		{{"$lookup", bson.M{
 			"from":         "post",
 			"localField":   "post_id",
@@ -162,6 +161,7 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 			"as":           "post",
 		}}},
 		{{"$unwind", "$post"}},
+		{{"$match", query}},
 		{{"$count", "counted_documents"}},
 	}
 

@@ -9,7 +9,7 @@ import (
 
 type PostCollection struct {
 	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Post    *Post              `json:"post" bson:"post"`
+	Post    *Post              `json:"-" bson:"-"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
 }
@@ -34,7 +34,6 @@ func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
 
 	pipeline := mongo.Pipeline{
-		{{"$match", findQuery(queries)}},
 		{{"$lookup", bson.M{
 			"from":         "post",
 			"localField":   "post_id",
@@ -42,7 +41,7 @@ func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 			"as":           "post",
 		}}},
 		{{"$unwind", "$post"}},
-	}
+		{{"$match", findQuery(queries)}}}
 
 	ctx := context.TODO()
 	cursor, err := db.Collection(p.table()).Aggregate(ctx, pipeline)
