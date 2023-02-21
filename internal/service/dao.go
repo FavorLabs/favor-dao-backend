@@ -38,9 +38,11 @@ func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 		return nil, err
 	}
 
-	if dao.Visibility != model.DaoVisitPrivate {
+	if dao.Visibility == model.DaoVisitPublic {
 		// create first post
 		_, err = CreatePost(c, userAddress, PostCreationReq{
+			Visibility: model.PostVisitPublic,
+			DaoId:      dao.ID,
 			Contents: []*PostContentItem{{
 				Content: "I created a new DAO, welcome to follow!",
 				Type:    model.CONTENT_TYPE_TEXT,

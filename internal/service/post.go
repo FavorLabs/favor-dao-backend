@@ -144,9 +144,7 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 		}
 	}
 
-	// 私密推文不创建标签与用户提醒
-	if post.Visibility != model.PostVisitPrivate && post.Visibility != model.PostVisitDraft {
-		// 创建标签
+	if post.Visibility == model.PostVisitPublic {
 		for _, t := range tags {
 			tag := &model.Tag{
 				Address: address,
@@ -157,7 +155,6 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 
 	}
 
-	// 推送Search
 	PushPostToSearch(post)
 
 	formattedPosts, err := ds.RevampPosts([]*model.PostFormatted{post.Format()})

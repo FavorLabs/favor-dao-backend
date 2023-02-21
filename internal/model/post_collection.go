@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -40,8 +41,9 @@ func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
+		{{"$match", findQuery(queries)}},
 		{{"$unwind", "$post"}},
-		{{"$match", findQuery(queries)}}}
+	}
 
 	ctx := context.TODO()
 	cursor, err := db.Collection(p.table()).Aggregate(ctx, pipeline)
@@ -103,17 +105,17 @@ func (p *PostCollection) List(db *mongo.Database, conditions *ConditionsT, offse
 	}
 
 	pipeline := mongo.Pipeline{
-		{{"$match", query}},
 		{{"$lookup", bson.M{
 			"from":         "post",
 			"localField":   "post_id",
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
-		{{"$unwind", "$post"}},
-		{{"$limit", limit}},
-		{{"$skip", offset}},
+		{{"$match", query}},
 		{{"$sort", sort}},
+		{{"$skip", offset}},
+		{{"$limit", limit}},
+		{{"$unwind", "$post"}},
 	}
 
 	ctx := context.TODO()
@@ -150,19 +152,17 @@ func (p *PostCollection) Count(db *mongo.Database, conditions *ConditionsT) (int
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			queries = append(queries, v)
-			query = findQuery(queries)
 		}
 	}
-
+	query = findQuery(queries)
 	pipeline := mongo.Pipeline{
-		{{"$match", query}},
 		{{"$lookup", bson.M{
 			"from":         "post",
 			"localField":   "post_id",
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
-		{{"$unwind", "$post"}},
+		{{"$match", query}},
 		{{"$count", "counted_documents"}},
 	}
 
