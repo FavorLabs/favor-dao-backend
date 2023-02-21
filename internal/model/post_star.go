@@ -9,10 +9,17 @@ import (
 
 type PostStar struct {
 	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Post    *Post              `json:"-" bson:"-"`
+	Post    *Post              `json:"-" bson:"posts"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
 	IsDel   int                `json:"is_del" bson:"is_del"`
+}
+
+type PostStarFormatted struct {
+	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Post    *Post              `json:"post" bson:"post"`
+	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
+	Address string             `json:"address" bson:"address"`
 }
 
 func (p *PostStar) table() string {
@@ -78,9 +85,9 @@ func (p *PostStar) Delete(db *mongo.Database) error {
 	return nil
 }
 
-func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*PostStar, error) {
+func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*PostStarFormatted, error) {
 	var (
-		stars   []*PostStar
+		stars   []*PostStarFormatted
 		queries []bson.M
 		query   bson.M
 		sort    bson.M
@@ -96,11 +103,11 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			queries = append(queries, v)
-			query = findQuery(queries)
 		} else {
 			sort = v
 		}
 	}
+	query = findQuery(queries)
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{
 			"from":         "post",
@@ -113,7 +120,6 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 		{{"$limit", limit}},
 		{{"$skip", offset}},
 		{{"$sort", sort}},
-		{{"$count", "counted_documents"}},
 	}
 
 	ctx := context.TODO()
@@ -124,7 +130,7 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	defer cursor.Close(ctx)
 
 	for cursor.Next(context.TODO()) {
-		var star PostStar
+		var star PostStarFormatted
 		if cursor.Decode(&star) != nil {
 			return nil, err
 		}
@@ -150,9 +156,9 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			queries = append(queries, v)
-			query = findQuery(queries)
 		}
 	}
+	query = findQuery(queries)
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{
 			"from":         "post",
@@ -172,10 +178,12 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	}
 	defer cursor.Close(ctx)
 
-	var results []bson.D
-	if err = cursor.All(context.TODO(), &results); err != nil {
+	var count struct {
+		Count int64 `bson:"counted_documents"`
+	}
+	cursor.Next(ctx)
+	if err = cursor.Decode(&count); err != nil {
 		panic(err)
 	}
-	// todo count
-	return 0, err
+	return count.Count, err
 }

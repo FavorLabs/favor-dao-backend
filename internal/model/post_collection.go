@@ -173,5 +173,12 @@ func (p *PostCollection) Count(db *mongo.Database, conditions *ConditionsT) (int
 	}
 	defer cursor.Close(ctx)
 
-	return 0, nil
+	var count struct {
+		Count int64 `bson:"counted_documents"`
+	}
+	cursor.Next(ctx)
+	if err = cursor.Decode(&count); err != nil {
+		panic(err)
+	}
+	return count.Count, err
 }

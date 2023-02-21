@@ -178,6 +178,14 @@ func PostStar(c *gin.Context) {
 	})
 }
 
+func GetPostView(c *gin.Context) {
+
+}
+
+func PostView(c *gin.Context) {
+
+}
+
 func GetPostCollection(c *gin.Context) {
 	postID := convert.StrTo(c.Query("id")).String()
 	response := app.NewResponse(c)

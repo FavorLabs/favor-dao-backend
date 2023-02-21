@@ -11,7 +11,7 @@ type TweetService interface {
 	GetPosts(conditions *model.ConditionsT, offset, limit int) ([]*model.Post, error)
 	GetPostCount(conditions *model.ConditionsT) (int64, error)
 	GetUserPostStar(postID primitive.ObjectID, userID string) (*model.PostStar, error)
-	GetUserPostStars(address string, offset, limit int) ([]*model.PostStar, error)
+	GetUserPostStars(address string, offset, limit int) ([]*model.PostStarFormatted, error)
 	GetUserPostStarCount(address string) (int64, error)
 	GetUserPostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error)
 	GetUserPostCollections(address string, offset, limit int) ([]*model.PostCollection, error)
