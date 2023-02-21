@@ -177,7 +177,7 @@ func (s *zincTweetSearchServant) createIndex() {
 	// Create index if it does not exist
 	s.client.CreateIndex(s.indexName, &zinc.ZincIndexProperty{
 		"id": &zinc.ZincIndexPropertyT{
-			Type:     "numeric",
+			Type:     "text",
 			Index:    true,
 			Store:    true,
 			Sortable: true,

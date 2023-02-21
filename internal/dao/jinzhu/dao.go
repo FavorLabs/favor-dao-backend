@@ -71,10 +71,10 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 			"as":           "dao",
 		}}},
 		{{"$match", query}},
+		{{"$sort", bson.M{"_id": -1}}},
 		{{"$skip", offset}},
 		{{"$limit", limit}},
 		{{"$unwind", "$dao"}},
-		{{"$sort", bson.M{"_id": -1}}},
 	}
 	book := &model.DaoBookmark{Address: userAddress}
 	list = book.GetList(context.TODO(), s.db, pipeline)
