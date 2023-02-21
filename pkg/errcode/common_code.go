@@ -6,7 +6,7 @@ var (
 	InvalidParams             = NewError(10001, "入参错误")
 	NotFound                  = NewError(10002, "找不到")
 	UnauthorizedAuthNotExist  = NewError(10003, "账户不存在")
-	UnauthorizedAuthFailed    = NewError(10004, "账户密码错误")
+	UnauthorizedAuthFailed    = NewError(10004, "账户验证错误")
 	UnauthorizedTokenError    = NewError(10005, "鉴权失败，Token 错误或丢失")
 	UnauthorizedTokenTimeout  = NewError(10006, "鉴权失败，Token 超时")
 	UnauthorizedTokenGenerate = NewError(10007, "鉴权失败，Token 生成失败")

@@ -8,17 +8,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"go.mongodb.org/mongo-driver/mongo"
-
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
+	unipass_sigverify "github.com/unipassid/unipass-sigverify-go"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type PhoneCaptchaReq struct {
@@ -30,10 +30,20 @@ type AuthRequest struct {
 	UserAddress string `json:"user_address" form:"user_address" binding:"required"`
 }
 
+type WalletType string
+
+const (
+	WalletConnect WalletType = "wallet_connect"
+	MetaMask      WalletType = "meta_mask"
+	OKX           WalletType = "okx"
+	Unipass       WalletType = "unipass"
+)
+
 type AuthByWalletRequest struct {
-	Timestamp  int64  `json:"timestamp" binding:"required"`
-	WalletAddr string `json:"wallet_addr" binding:"required"`
-	Signature  string `json:"signature" binding:"required"`
+	Timestamp  int64      `json:"timestamp" binding:"required"`
+	WalletAddr string     `json:"wallet_addr" binding:"required"`
+	Signature  string     `json:"signature" binding:"required"`
+	Type       WalletType `json:"type" binding:"required"`
 }
 
 type RegisterRequest struct {
@@ -64,11 +74,11 @@ const MAX_LOGIN_ERR_TIMES = 10
 
 // DoLoginWallet Wallet login, register if user does not exist
 func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, error) {
-	signature, err := hexutil.Decode(param.Signature)
+	walletBytes, err := hexutil.Decode(param.WalletAddr)
 	if err != nil {
 		return nil, errcode.InvalidParams
 	}
-	walletBytes, err := hexutil.Decode(param.WalletAddr)
+	signature, err := hexutil.Decode(param.Signature)
 	if err != nil {
 		return nil, errcode.InvalidParams
 	}
@@ -92,40 +102,49 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		}
 
 		// check valid timestamp
-		if time.Now().After(time.Unix(param.Timestamp, 0).Add(time.Minute)) {
+		if time.Now().After(time.UnixMilli(param.Timestamp).Add(time.Minute)) {
 			return nil, errcode.UnauthorizedTokenTimeout
 		}
 
+		var ok bool
+
 		// parse message
 		guessMessage := fmt.Sprintf("%s login FavorTube at %d", param.WalletAddr, param.Timestamp)
-		ethMessage := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(guessMessage), guessMessage))
-		// Convert to btcec input format with 'recovery id' v at the beginning.
-		btcsig := make([]byte, 65)
-		btcsig[0] = signature[64]
-		copy(btcsig[1:], signature)
-		rawKey, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, crypto.Keccak256(ethMessage))
-		pubkey := (*ecdsa.PublicKey)(rawKey)
-		pubBytes := elliptic.Marshal(btcec.S256(), pubkey.X, pubkey.Y)
-		// pubkey, err := crypto.Ecrecover(crypto.Keccak256(ethMessage), signature)
-		if err == nil {
-			var signer common.Address
-			copy(signer[:], crypto.Keccak256(pubBytes[1:])[12:])
-			if bytes.Equal(walletBytes, signer.Bytes()) {
-				if created {
-					user, err = ds.CreateUser(&model.User{
-						Nickname: param.WalletAddr[:10],
-						Address:  param.WalletAddr,
-						Avatar:   GetRandomAvatar(),
-					})
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				// Clear Login Count
-				conf.Redis.Del(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr))
-				return user, nil
+		switch param.Type {
+		case WalletConnect, MetaMask, OKX:
+			ethMessage := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(guessMessage), guessMessage))
+			// Convert to btcec input format with 'recovery id' v at the beginning.
+			btcsig := make([]byte, 65)
+			btcsig[0] = signature[64]
+			copy(btcsig[1:], signature)
+			rawKey, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, crypto.Keccak256(ethMessage))
+			if err == nil {
+				pubkey := (*ecdsa.PublicKey)(rawKey)
+				pubBytes := elliptic.Marshal(btcec.S256(), pubkey.X, pubkey.Y)
+				var signer common.Address
+				copy(signer[:], crypto.Keccak256(pubBytes[1:])[12:])
+				ok = bytes.Equal(walletBytes, signer.Bytes())
 			}
+		case Unipass:
+			ok, _ = unipass_sigverify.VerifyMessageSignature(ctx, common.BytesToAddress(walletBytes), []byte(guessMessage), signature, true, eth)
+		default:
+			return nil, errcode.InvalidParams
+		}
+		if ok {
+			if created {
+				user, err = ds.CreateUser(&model.User{
+					Nickname: param.WalletAddr[:10],
+					Address:  param.WalletAddr,
+					Avatar:   GetRandomAvatar(),
+				})
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			// Clear Login Count
+			conf.Redis.Del(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr))
+			return user, nil
 		}
 		// Clear Login Err Count
 		_, err = conf.Redis.Incr(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result()

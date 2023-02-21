@@ -1,19 +1,31 @@
 package service
 
 import (
+	"fmt"
+
+	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var (
-	ds core.DataService
-	ts core.TweetSearchService
+	ds  core.DataService
+	ts  core.TweetSearchService
+	eth *ethclient.Client
 )
 
 func Initialize() {
 	ds = dao.DataService()
 	ts = dao.TweetSearchService()
+
+	// MUST connect!
+	client, err := ethclient.Dial(conf.EthSetting.Endpoint)
+	if err != nil {
+		panic(fmt.Sprintf("dial eth: %s", err))
+	}
+	eth = client
 }
 
 func persistMediaContents(contents []*PostContentItem) (items []string, err error) {
