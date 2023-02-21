@@ -23,6 +23,7 @@ var (
 	TweetSearchSetting      *TweetSearchS
 	ZincSetting             *ZincSettingS
 	MeiliSetting            *MeiliSettingS
+	EthSetting              *EthSettingS
 )
 
 func setupSetting(suite []string, noDefault bool) error {
@@ -54,6 +55,7 @@ func setupSetting(suite []string, noDefault bool) error {
 		"Zinc":             &ZincSetting,
 		"Meili":            &MeiliSetting,
 		"Redis":            &redisSetting,
+		"Eth":              &EthSetting,
 	}
 	if err = setting.Unmarshal(objects); err != nil {
 		return err
