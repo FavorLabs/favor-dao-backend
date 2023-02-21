@@ -2,7 +2,7 @@ package model
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -75,8 +75,10 @@ func (m *User) List(db *mongo.Database, conditions *ConditionsT, offset, limit i
 		query  bson.M
 	)
 	finds := make([]*options.FindOptions, 0, 3)
-	finds = append(finds, options.Find().SetSkip(int64(offset)))
-	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	if limit > 0 {
+		finds = append(finds, options.Find().SetSkip(int64(offset)))
+		finds = append(finds, options.Find().SetLimit(int64(limit)))
+	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
@@ -105,7 +107,7 @@ func (m *User) FindListByKeyword(ctx context.Context, db *mongo.Database, keywor
 	var filter bson.M
 	if keyword != "" {
 		filter = bson.M{
-			"nickname": fmt.Sprintf("/%s/", keyword),
+			"nickname": bson.M{"$regex": keyword},
 		}
 	}
 	finds := make([]*options.FindOptions, 0, 3)
@@ -121,6 +123,9 @@ func (m *User) FindListByKeyword(ctx context.Context, db *mongo.Database, keywor
 }
 
 func (m *User) Create(ctx context.Context, db *mongo.Database) (*User, error) {
+	now := time.Now().Unix()
+	m.CreatedOn = now
+	m.ModifiedOn = now
 	res, err := db.Collection(m.Table()).InsertOne(ctx, &m)
 	if err != nil {
 		return nil, err
@@ -137,6 +142,7 @@ func (m *User) Update(ctx context.Context, db *mongo.Database) error {
 		},
 		},
 	}
+	m.ModifiedOn = time.Now().Unix()
 	res := db.Collection(m.Table()).FindOneAndReplace(ctx, filter, &m)
 	return res.Err()
 }

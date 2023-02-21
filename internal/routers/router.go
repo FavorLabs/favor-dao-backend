@@ -17,7 +17,7 @@ func NewRouter() *gin.Engine {
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
-	corsConfig.AddAllowHeaders("Authorization")
+	corsConfig.AddAllowHeaders("X-Session-Token")
 	e.Use(cors.New(corsConfig))
 
 	// v1 group api
