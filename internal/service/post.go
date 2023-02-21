@@ -98,7 +98,7 @@ func tagsFrom(originTags []string) []string {
 
 // CreatePost 创建文章
 // TODO: 推文+推文内容需要在一个事务中添加，后续优化
-func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model.PostFormated, err error) {
+func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model.PostFormatted, err error) {
 	var mediaContents []string
 
 	defer func() {
@@ -158,11 +158,11 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	// 推送Search
 	PushPostToSearch(post)
 
-	formatedPosts, err := ds.RevampPosts([]*model.PostFormated{post.Format()})
+	formattedPosts, err := ds.RevampPosts([]*model.PostFormatted{post.Format()})
 	if err != nil {
 		return nil, err
 	}
-	return formatedPosts[0], nil
+	return formattedPosts[0], nil
 }
 
 func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
@@ -347,7 +347,7 @@ func DeletePostCollection(collection *model.PostCollection) error {
 	return nil
 }
 
-func GetPost(id primitive.ObjectID) (*model.PostFormated, error) {
+func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 	post, err := ds.GetPostByID(id)
 
 	if err != nil {
@@ -385,7 +385,7 @@ func GetIndexPosts(user *model.User, offset int, limit int) (*rest.IndexTweetsRe
 	return ds.IndexPosts(user, offset, limit)
 }
 
-func GetPostList(req *PostListReq) ([]*model.PostFormated, error) {
+func GetPostList(req *PostListReq) ([]*model.PostFormatted, error) {
 	posts, err := ds.GetPosts(req.Conditions, req.Offset, req.Limit)
 
 	if err != nil {
@@ -399,7 +399,7 @@ func GetPostCount(conditions *model.ConditionsT) (int64, error) {
 	return ds.GetPostCount(conditions)
 }
 
-func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int) ([]*model.PostFormated, int64, error) {
+func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
 	resp, err := ts.Search(user, q, offset, limit)
 	if err != nil {
 		return nil, 0, err
@@ -411,7 +411,7 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	return posts, resp.Total, nil
 }
 
-func GetPostListFromSearchByQuery(user *model.User, query string, offset, limit int) ([]*model.PostFormated, int64, error) {
+func GetPostListFromSearchByQuery(user *model.User, query string, offset, limit int) ([]*model.PostFormatted, int64, error) {
 	q := &core.QueryReq{
 		Query: query,
 		Type:  "search",
@@ -420,20 +420,20 @@ func GetPostListFromSearchByQuery(user *model.User, query string, offset, limit 
 }
 
 func PushPostToSearch(post *model.Post) {
-	postFormated := post.Format()
-	postFormated.User = &model.UserFormatted{
+	postFormatted := post.Format()
+	postFormatted.User = &model.UserFormatted{
 		ID: post.Address,
 	}
 	contents, _ := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
 	for _, content := range contents {
-		postFormated.Contents = append(postFormated.Contents, content.Format())
+		postFormatted.Contents = append(postFormatted.Contents, content.Format())
 	}
 
-	contentFormated := ""
+	contentFormatted := ""
 
-	for _, content := range postFormated.Contents {
+	for _, content := range postFormatted.Contents {
 		if content.Type == model.CONTENT_TYPE_TEXT || content.Type == model.CONTENT_TYPE_TITLE {
-			contentFormated = contentFormated + content.Content + "\n"
+			contentFormatted = contentFormatted + content.Content + "\n"
 		}
 	}
 
@@ -443,15 +443,22 @@ func PushPostToSearch(post *model.Post) {
 	}
 
 	data := core.DocItems{{
-		"id":               post.ID,
-		"address":          post.Address,
-		"collection_count": post.CollectionCount,
-		"upvote_count":     post.UpvoteCount,
-		"visibility":       post.Visibility,
-		"is_top":           post.IsTop,
-		"is_essence":       post.IsEssence,
-		"content":          contentFormated,
-		"tags":             tagMaps,
+		"id":                post.ID,
+		"address":           post.Address,
+		"dao_id":            post.DaoId.Hex(),
+		"view_count":        post.ViewCount,
+		"collection_count":  post.CollectionCount,
+		"upvote_count":      post.UpvoteCount,
+		"member":            post.Member,
+		"visibility":        post.Visibility,
+		"is_top":            post.IsTop,
+		"is_essence":        post.IsEssence,
+		"content":           contentFormatted,
+		"tags":              tagMaps,
+		"type":              post.Type,
+		"created_on":        post.CreatedOn,
+		"modified_on":       post.ModifiedOn,
+		"latest_replied_on": post.LatestRepliedOn,
 	}}
 
 	ts.AddDocuments(data, fmt.Sprintf("%d", post.ID))

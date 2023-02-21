@@ -10,7 +10,7 @@ type tweetSearchFilter struct {
 }
 
 func (s *tweetSearchFilter) filterResp(user *model.User, resp *core.QueryResp) {
-	var item *model.PostFormated
+	var item *model.PostFormatted
 	items := resp.Items
 	latestIndex := len(items) - 1
 	if user == nil {

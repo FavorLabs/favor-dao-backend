@@ -2,6 +2,8 @@ package jinzhu
 
 import (
 	"context"
+	"strings"
+
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -9,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"strings"
 )
 
 var (
@@ -51,7 +52,7 @@ func newTweetHelpService(db *mongo.Database) core.TweetHelpService {
 }
 
 // MergePosts post data integration
-func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormated, error) {
+func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatted, error) {
 	postIds := make([]primitive.ObjectID, 0, len(posts))
 	addresses := make([]string, 0, len(posts))
 	for _, post := range posts {
@@ -80,7 +81,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormate
 	}
 
 	// data integration
-	postsFormated := make([]*model.PostFormated, 0, len(posts))
+	postsFormated := make([]*model.PostFormatted, 0, len(posts))
 	for _, post := range posts {
 		postFormated := post.Format()
 		postFormated.User = userMap[post.Address]
@@ -91,7 +92,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormate
 }
 
 // RevampPosts post data shaping repair
-func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormated) ([]*model.PostFormated, error) {
+func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.PostFormatted, error) {
 	postIds := make([]primitive.ObjectID, 0, len(posts))
 	addresses := make([]string, 0, len(posts))
 	for _, post := range posts {

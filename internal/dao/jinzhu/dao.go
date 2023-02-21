@@ -3,6 +3,7 @@ package jinzhu
 import (
 	"context"
 	"strings"
+	"time"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
@@ -95,11 +96,17 @@ func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string) (*mod
 		return nil, err
 	}
 	book := &model.DaoBookmark{Address: myAddress, DaoID: id}
-	res, err := book.Create(context.TODO(), s.db)
+	oldBook, err := book.GetByAddress(context.TODO(), s.db, myAddress, daoID, true)
+	if err != nil {
+		return book.Create(context.TODO(), s.db)
+	}
+	oldBook.IsDel = 1
+	oldBook.ModifiedOn = time.Now().Unix()
+	err = oldBook.Update(context.TODO(), s.db)
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
+	return oldBook, nil
 }
 
 func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark) error {

@@ -35,8 +35,8 @@ type TweetManageService interface {
 }
 
 type TweetHelpService interface {
-	RevampPosts(posts []*model.PostFormated) ([]*model.PostFormated, error)
-	MergePosts(posts []*model.Post) ([]*model.PostFormated, error)
+	RevampPosts(posts []*model.PostFormatted) ([]*model.PostFormatted, error)
+	MergePosts(posts []*model.Post) ([]*model.PostFormatted, error)
 }
 
 type IndexPostsService interface {
