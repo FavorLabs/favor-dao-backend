@@ -92,6 +92,10 @@ type FeaturesSettingS struct {
 	features map[string]string
 }
 
+type EthSettingS struct {
+	Endpoint string
+}
+
 type TweetSearchS struct {
 	MaxUpdateQPS int
 	MinWorker    int

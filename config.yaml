@@ -66,4 +66,5 @@ Redis:
   Host: 192.168.100.250:6380
   Password: 12345
   DB: 1
-  
+Eth:
+  Endpoint: "https://node.wallet.unipass.id/polygon-mumbai"
