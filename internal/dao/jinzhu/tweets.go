@@ -318,7 +318,7 @@ func (s *tweetServant) GetUserPostStar(postID primitive.ObjectID, address string
 	return star.Get(s.db)
 }
 
-func (s *tweetServant) GetUserPostStars(address string, offset, limit int) ([]*model.PostStar, error) {
+func (s *tweetServant) GetUserPostStars(address string, offset, limit int) ([]*model.PostStarFormatted, error) {
 	star := &model.PostStar{
 		Address: address,
 	}

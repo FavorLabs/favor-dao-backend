@@ -76,7 +76,7 @@ func CreatePost(c *gin.Context) {
 	}
 
 	// todo userid? address
-	address, _ := c.Get("Address")
+	address, _ := c.Get("address")
 	post, err := service.CreatePost(c, address.(string), param)
 
 	if err != nil {
@@ -89,21 +89,15 @@ func CreatePost(c *gin.Context) {
 }
 
 func DeletePost(c *gin.Context) {
-	param := service.PostDelReq{}
 	response := app.NewResponse(c)
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
-		return
-	}
+	id := c.Query("id")
 
 	user, exist := userFrom(c)
 	if !exist {
 		response.ToErrorResponse(errcode.NoPermission)
 		return
 	}
-	postId, err := primitive.ObjectIDFromHex(param.ID)
+	postId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		logrus.Errorf("service.DeletePost err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)
@@ -182,6 +176,14 @@ func PostStar(c *gin.Context) {
 	response.ToResponse(gin.H{
 		"status": status,
 	})
+}
+
+func GetPostView(c *gin.Context) {
+
+}
+
+func PostView(c *gin.Context) {
+
 }
 
 func GetPostCollection(c *gin.Context) {

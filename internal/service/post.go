@@ -36,6 +36,7 @@ type PostTagsReq struct {
 
 type PostCreationReq struct {
 	Contents   []*PostContentItem `json:"contents" binding:"required"`
+	DaoId      primitive.ObjectID `json:"dao_id"`
 	Tags       []string           `json:"tags" binding:"required"`
 	Type       model.PostType     `json:"type"`
 	Users      []string           `json:"users" binding:"required"`
@@ -114,6 +115,7 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	tags := tagsFrom(param.Tags)
 	post := &model.Post{
 		Address:    address,
+		DaoId:      param.DaoId,
 		Tags:       strings.Join(tags, ","),
 		Visibility: param.Visibility,
 		Type:       param.Type,

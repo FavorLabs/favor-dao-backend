@@ -17,6 +17,7 @@ const (
 	CONTENT_TYPE_TEXT
 	CONTENT_TYPE_IMAGE
 	CONTENT_TYPE_VIDEO
+	CONTENT_TYPE_FAVOR
 	CONTENT_TYPE_AUDIO
 	CONTENT_TYPE_LINK
 )
@@ -39,10 +40,11 @@ const (
 type PostContent struct {
 	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
-	Address string             `json:"address"`
-	Content string             `json:"content"`
-	Type    PostContentT       `json:"type"`
-	Sort    int64              `json:"sort"`
+	Address string             `json:"address" bson:"address"`
+	Content string             `json:"content" bson:"content"`
+	Type    PostContentT       `json:"type" bson:"type"`
+	Sort    int64              `json:"sort" bson:"sort"`
+	IsDel   int                `json:"is_del" bson:"is_del"`
 }
 
 type PostContentFormated struct {
@@ -55,7 +57,7 @@ type PostContentFormated struct {
 }
 
 func (p *PostContent) table() string {
-	return "post_context"
+	return "post_content"
 }
 
 func (p *PostContent) DeleteByPostId(db *mongo.Database, postId primitive.ObjectID) error {
@@ -73,7 +75,7 @@ func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId primitive
 	filter := bson.D{
 		{"is_del", 0},
 		{"post_id", postId},
-		{"type", bson.D{{"$in", bson.A{CONTENT_TYPE_IMAGE, CONTENT_TYPE_VIDEO, CONTENT_TYPE_AUDIO}}}}}
+		{"type", bson.D{{"$in", bson.A{CONTENT_TYPE_IMAGE, CONTENT_TYPE_VIDEO, CONTENT_TYPE_AUDIO, CONTENT_TYPE_FAVOR}}}}}
 	cursor, err := db.Collection(p.table()).Find(context.TODO(), filter)
 	if err != nil {
 		return nil, err
@@ -101,6 +103,7 @@ func (p *PostContent) Format() *PostContentFormated {
 	return &PostContentFormated{
 		ID:      p.ID,
 		PostID:  p.PostID,
+		Address: p.Address,
 		Content: p.Content,
 		Type:    p.Type,
 		Sort:    p.Sort,
