@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -48,8 +49,8 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
-		{{"$unwind", "$post"}},
 		{{"$match", findQuery(queries)}},
+		{{"$unwind", "$post"}},
 	}
 
 	ctx := context.TODO()
@@ -115,11 +116,11 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
-		{{"$unwind", "$post"}},
 		{{"$match", query}},
-		{{"$limit", limit}},
-		{{"$skip", offset}},
 		{{"$sort", sort}},
+		{{"$skip", offset}},
+		{{"$limit", limit}},
+		{{"$unwind", "$post"}},
 	}
 
 	ctx := context.TODO()
@@ -166,7 +167,6 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
-		{{"$unwind", "$post"}},
 		{{"$match", query}},
 		{{"$count", "counted_documents"}},
 	}

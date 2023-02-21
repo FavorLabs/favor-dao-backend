@@ -127,7 +127,7 @@ func (m *Tag) TagsFrom(ctx context.Context, db *mongo.Database, tags []string) (
 	return
 }
 
-func (t *Tag) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Tag, error) {
+func (m *Tag) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Tag, error) {
 
 	var (
 		tags   []*Tag
@@ -135,8 +135,8 @@ func (t *Tag) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 		cursor *mongo.Cursor
 		query  bson.M
 	)
-	if t.Address != "" {
-		query = bson.M{"address": t.Address}
+	if m.Address != "" {
+		query = bson.M{"address": m.Address}
 	}
 	finds := make([]*options.FindOptions, 0, 3)
 	finds = append(finds, options.Find().SetSkip(int64(offset)))
@@ -148,7 +148,7 @@ func (t *Tag) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 			finds = append(finds, options.Find().SetSort(v))
 		}
 	}
-	if cursor, err = db.Collection(t.Table()).Find(context.TODO(), query, finds...); err != nil {
+	if cursor, err = db.Collection(m.Table()).Find(context.TODO(), query, finds...); err != nil {
 		return nil, err
 	}
 	for cursor.Next(context.TODO()) {
