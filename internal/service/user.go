@@ -6,10 +6,11 @@ import (
 	"crypto/elliptic"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
@@ -105,7 +106,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		rawKey, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, crypto.Keccak256(ethMessage))
 		pubkey := (*ecdsa.PublicKey)(rawKey)
 		pubBytes := elliptic.Marshal(btcec.S256(), pubkey.X, pubkey.Y)
-		//pubkey, err := crypto.Ecrecover(crypto.Keccak256(ethMessage), signature)
+		// pubkey, err := crypto.Ecrecover(crypto.Keccak256(ethMessage), signature)
 		if err == nil {
 			var signer common.Address
 			copy(signer[:], crypto.Keccak256(pubBytes[1:])[12:])
@@ -174,7 +175,7 @@ func ChangeUserAvatar(user *model.User, avatar string) (err *errcode.Error) {
 	return UpdateUserInfo(user)
 }
 
-func GetUserCollections(userAddress string, offset, limit int) ([]*model.PostFormated, int64, error) {
+func GetUserCollections(userAddress string, offset, limit int) ([]*model.PostFormatted, int64, error) {
 	collections, err := ds.GetUserPostCollections(userAddress, offset, limit)
 	if err != nil {
 		return nil, 0, err
@@ -195,7 +196,7 @@ func GetUserCollections(userAddress string, offset, limit int) ([]*model.PostFor
 	return postsFormatted, totalRows, nil
 }
 
-func GetUserStars(userAddress string, offset, limit int) ([]*model.PostFormated, int64, error) {
+func GetUserStars(userAddress string, offset, limit int) ([]*model.PostFormatted, int64, error) {
 	stars, err := ds.GetUserPostStars(userAddress, offset, limit)
 	if err != nil {
 		return nil, 0, err

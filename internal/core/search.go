@@ -19,7 +19,7 @@ type QueryReq struct {
 }
 
 type QueryResp struct {
-	Items []*model.PostFormated
+	Items []*model.PostFormatted
 	Total int64
 }
 

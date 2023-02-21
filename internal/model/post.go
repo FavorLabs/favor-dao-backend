@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,22 +24,30 @@ const (
 )
 
 type Post struct {
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Address         string             `json:"address" bson:"address"`
-	DaoId           primitive.ObjectID `json:"dao_id" bson:"dao_id"`
-	ViewCount       int64              `json:"view_count" bson:"view_count"`
-	CollectionCount int64              `json:"collection_count" bson:"collection_count"`
-	UpvoteCount     int64              `json:"upvote_count" bson:"upvote_count"`
-	Member          int                `json:"member" bson:"member"`
-	Visibility      PostVisibleT       `json:"visibility" bson:"visibility"`
-	IsTop           int                `json:"is_top" bson:"is_top"`
-	IsEssence       int                `json:"is_essence" bson:"is_essence"`
-	Tags            string             `json:"tags" bson:"tags"`
-	Type            PostType           `json:"type" bson:"type"`
+	ID              primitive.ObjectID `json:"id"                bson:"_id,omitempty"`
+	CreatedOn       int64              `json:"created_on"        bson:"created_on"`
+	ModifiedOn      int64              `json:"modified_on"       bson:"modified_on"`
+	DeletedOn       int64              `json:"deleted_on"        bson:"deleted_on"`
+	IsDel           int                `json:"is_del"            bson:"is_del"`
+	LatestRepliedOn int64              `json:"latest_replied_on" bson:"latest_replied_on"`
+	Address         string             `json:"address"           bson:"address"`
+	DaoId           primitive.ObjectID `json:"dao_id"            bson:"dao_id"`
+	ViewCount       int64              `json:"view_count"        bson:"view_count"`
+	CollectionCount int64              `json:"collection_count"  bson:"collection_count"`
+	UpvoteCount     int64              `json:"upvote_count"      bson:"upvote_count"`
+	Member          int                `json:"member"            bson:"member"`
+	Visibility      PostVisibleT       `json:"visibility"        bson:"visibility"`
+	IsTop           int                `json:"is_top"            bson:"is_top"`
+	IsEssence       int                `json:"is_essence"        bson:"is_essence"`
+	Tags            string             `json:"tags"              bson:"tags"`
+	Type            PostType           `json:"type"              bson:"type"`
 }
 
-type PostFormated struct {
+type PostFormatted struct {
 	ID              primitive.ObjectID     `json:"id"`
+	CreatedOn       int64                  `json:"created_on"`
+	ModifiedOn      int64                  `json:"modified_on"`
+	LatestRepliedOn int64                  `json:"latest_replied_on"`
 	DaoId           primitive.ObjectID     `json:"daoId"`
 	Address         string                 `json:"address"`
 	User            *UserFormatted         `json:"user"`
@@ -58,12 +67,12 @@ func (p *Post) table() string {
 	return "post"
 }
 
-func (p *Post) Format() *PostFormated {
+func (p *Post) Format() *PostFormatted {
 	tagsMap := map[string]int8{}
 	for _, tag := range strings.Split(p.Tags, ",") {
 		tagsMap[tag] = 1
 	}
-	return &PostFormated{
+	return &PostFormatted{
 		ID:              p.ID,
 		DaoId:           p.DaoId,
 		Address:         p.Address,
@@ -82,6 +91,9 @@ func (p *Post) Format() *PostFormated {
 }
 
 func (p *Post) Create(db *mongo.Database) (*Post, error) {
+	now := time.Now().Unix()
+	p.CreatedOn = now
+	p.ModifiedOn = now
 	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
 	if err != nil {
 		return nil, err
@@ -92,7 +104,10 @@ func (p *Post) Create(db *mongo.Database) (*Post, error) {
 
 func (p *Post) Delete(db *mongo.Database) error {
 	filter := bson.D{{"_id", p.ID}}
-	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
+	update := bson.D{{"$set", bson.D{
+		{"is_del", 1},
+		{"deleted_on", time.Now().Unix()},
+	}}}
 	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
 	if res.Err() != nil {
 		return res.Err()
@@ -180,6 +195,7 @@ func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error)
 }
 
 func (p *Post) Update(db *mongo.Database) error {
+	p.ModifiedOn = time.Now().Unix()
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
 	update := bson.M{"$set": p}
 	if _, err := db.Collection(p.table()).UpdateMany(context.TODO(), filter, update); err != nil {

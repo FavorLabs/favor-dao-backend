@@ -11,12 +11,9 @@ Server:
   ReadTimeout: 60
   WriteTimeout: 60
 Features:
-  Default: [ "Base",  "Option", "Zinc", "LoggerFile" ]
-  Develop: [ "Base",  "BigCacheIndex", "Meili", "LoggerMeili"]
-  Demo: [ "Base",  "Option", "Zinc", "LoggerZinc"]
-  Slim: [ "Base",  "LoggerFile" ]
-  Base: [ "Redis" ]
-  Option: [ "SimpleCacheIndex" ]
+  Default: [ "SimpleCacheIndex", "Zinc", "LoggerZinc" ]
+  Develop: [ "BigCacheIndex", "Meili", "LoggerMeili" ]
+  Demo: [ "SimpleCacheIndex", "Zinc", "LoggerFile" ]
 CacheIndex:
   MaxUpdateQPS: 100             # QPS of max add/remove/update Post, set range [10, 10000], default 100
 SimpleCacheIndex:
@@ -34,7 +31,7 @@ LoggerFile:
   FileName: app
   FileExt: .log
 LoggerZinc:
-  Host: zinc:4080
+  Host: 192.168.100.250:4080
   Index: dao-log
   User: admin
   Password: admin
@@ -63,10 +60,10 @@ Meili:
 MongoDB:
   Username:
   Password:
-  Host: 192.168.100.77:27017
+  Host: 192.168.100.250:21718
   DBName: dao
 Redis:
-  Host: 192.168.100.49:6379
-  Password:
+  Host: 192.168.100.250:6380
+  Password: 12345
   DB: 1
   

@@ -57,16 +57,19 @@ func (m *DaoBookmark) Update(ctx context.Context, db *mongo.Database) error {
 	return nil
 }
 
-func (m *DaoBookmark) GetByAddress(ctx context.Context, db *mongo.Database, address string, daoId string) (*DaoBookmark, error) {
+func (m *DaoBookmark) GetByAddress(ctx context.Context, db *mongo.Database, address string, daoId string, hasDel ...bool) (*DaoBookmark, error) {
 	id, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
 		return nil, err
 	}
-	res := db.Collection(m.Table()).FindOne(ctx, bson.M{
+	filter := bson.M{
 		"dao_id":  id,
 		"address": address,
-		"is_del":  0,
-	})
+	}
+	if len(hasDel) == 0 {
+		filter["is_del"] = 0
+	}
+	res := db.Collection(m.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
 	}

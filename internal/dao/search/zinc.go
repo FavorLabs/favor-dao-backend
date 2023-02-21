@@ -154,9 +154,9 @@ func (s *zincTweetSearchServant) queryAny(user *model.User, offset, limit int) (
 }
 
 func (s *zincTweetSearchServant) postsFrom(resp *zinc.QueryResultT) (*core.QueryResp, error) {
-	posts := make([]*model.PostFormated, 0, len(resp.Hits.Hits))
+	posts := make([]*model.PostFormatted, 0, len(resp.Hits.Hits))
 	for _, hit := range resp.Hits.Hits {
-		item := &model.PostFormated{}
+		item := &model.PostFormatted{}
 		raw, err := json.Marshal(hit.Source)
 		if err != nil {
 			return nil, err
@@ -174,7 +174,7 @@ func (s *zincTweetSearchServant) postsFrom(resp *zinc.QueryResultT) (*core.Query
 }
 
 func (s *zincTweetSearchServant) createIndex() {
-	// 不存在则创建索引
+	// Create index if it does not exist
 	s.client.CreateIndex(s.indexName, &zinc.ZincIndexProperty{
 		"id": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
@@ -187,7 +187,12 @@ func (s *zincTweetSearchServant) createIndex() {
 			Index: true,
 			Store: true,
 		},
-		"comment_count": &zinc.ZincIndexPropertyT{
+		"dao_id": &zinc.ZincIndexPropertyT{
+			Type:  "text",
+			Index: true,
+			Store: true,
+		},
+		"view_count": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
 			Index:    true,
 			Sortable: true,
@@ -200,6 +205,12 @@ func (s *zincTweetSearchServant) createIndex() {
 			Store:    true,
 		},
 		"upvote_count": &zinc.ZincIndexPropertyT{
+			Type:     "numeric",
+			Index:    true,
+			Sortable: true,
+			Store:    true,
+		},
+		"member": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
 			Index:    true,
 			Sortable: true,
@@ -237,11 +248,10 @@ func (s *zincTweetSearchServant) createIndex() {
 			Index: true,
 			Store: true,
 		},
-		"latest_replied_on": &zinc.ZincIndexPropertyT{
-			Type:     "numeric",
-			Index:    true,
-			Sortable: true,
-			Store:    true,
+		"type": &zinc.ZincIndexPropertyT{
+			Type:  "numeric",
+			Index: true,
+			Store: true,
 		},
 		"created_on": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
@@ -250,6 +260,12 @@ func (s *zincTweetSearchServant) createIndex() {
 			Store:    true,
 		},
 		"modified_on": &zinc.ZincIndexPropertyT{
+			Type:     "numeric",
+			Index:    true,
+			Sortable: true,
+			Store:    true,
+		},
+		"latest_replied_on": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
 			Index:    true,
 			Sortable: true,

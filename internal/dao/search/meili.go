@@ -170,9 +170,9 @@ func (s *meiliTweetSearchServant) filterList(user *model.User) string {
 }
 
 func (s *meiliTweetSearchServant) postsFrom(resp *meilisearch.SearchResponse) (*core.QueryResp, error) {
-	posts := make([]*model.PostFormated, 0, len(resp.Hits))
+	posts := make([]*model.PostFormatted, 0, len(resp.Hits))
 	for _, hit := range resp.Hits {
-		item := &model.PostFormated{}
+		item := &model.PostFormatted{}
 		raw, err := json.Marshal(hit)
 		if err != nil {
 			return nil, err

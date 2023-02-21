@@ -63,8 +63,8 @@ func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int)
 		addresses = append(addresses, v.Address)
 	}
 	users, err := ds.GetUsersByAddresses(addresses)
-	if err == nil {
-		return nil, 0
+	if err != nil {
+		return
 	}
 	userMap := make(map[string]*model.User, len(users))
 	for _, user := range users {
