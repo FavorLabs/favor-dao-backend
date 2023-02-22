@@ -66,9 +66,11 @@ func NewRouter() *gin.Engine {
 
 		authApi.GET("/post/star", api.GetPostStar)
 
-		authApi.GET("/post/view", api.GetPostStar)
-
 		privApi.POST("/post/star", api.PostStar)
+
+		authApi.GET("/post/view", api.GetPostView)
+
+		privApi.POST("/post/view", api.PostView)
 
 		authApi.GET("/post/collection", api.GetPostCollection)
 
