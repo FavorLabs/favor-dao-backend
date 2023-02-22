@@ -16,7 +16,6 @@ type TweetService interface {
 	GetUserPostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error)
 	GetUserPostCollections(address string, offset, limit int) ([]*model.PostCollection, error)
 	GetUserPostCollectionCount(address string) (int64, error)
-	GetPostAttatchmentBill(postID primitive.ObjectID, address string) (*model.PostAttachmentBill, error)
 	GetPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error)
 	GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error)
 }

@@ -81,14 +81,14 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 	}
 
 	// data integration
-	postsFormated := make([]*model.PostFormatted, 0, len(posts))
+	postsFormatted := make([]*model.PostFormatted, 0, len(posts))
 	for _, post := range posts {
-		postFormated := post.Format()
-		postFormated.User = userMap[post.Address]
-		postFormated.Contents = contentMap[post.ID]
-		postsFormated = append(postsFormated, postFormated)
+		postFormatted := post.Format()
+		postFormatted.User = userMap[post.Address]
+		postFormatted.Contents = contentMap[post.ID]
+		postsFormatted = append(postsFormatted, postFormatted)
 	}
-	return postsFormated, nil
+	return postsFormatted, nil
 }
 
 // RevampPosts post data shaping repair
@@ -370,15 +370,6 @@ func (s *tweetServant) GetUserPostCollectionCount(address string) (int64, error)
 		Address: address,
 	}
 	return collection.Count(s.db, &model.ConditionsT{})
-}
-
-func (s *tweetServant) GetPostAttatchmentBill(postID primitive.ObjectID, address string) (*model.PostAttachmentBill, error) {
-	bill := &model.PostAttachmentBill{
-		PostID:  postID,
-		Address: address,
-	}
-
-	return bill.Get(s.db)
 }
 
 func (s *tweetServant) GetPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {

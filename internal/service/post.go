@@ -3,9 +3,9 @@ package service
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strings"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -478,55 +478,63 @@ func PushPostToSearch(post *model.Post) {
 		"latest_replied_on": post.LatestRepliedOn,
 	}}
 
-	ts.AddDocuments(data, fmt.Sprintf("%d", post.ID))
+	ts.AddDocuments(data, post.ID.Hex())
 }
 
 func DeleteSearchPost(post *model.Post) error {
 	return ts.DeleteDocuments([]string{fmt.Sprintf("%d", post.ID)})
 }
 
-func PushPostsToSearch(c *gin.Context) {
-	if ok, _ := conf.Redis.SetNX(c, "JOB_PUSH_TO_SEARCH", 1, time.Hour).Result(); ok {
-		splitNum := 1000
-		totalRows, _ := GetPostCount(&model.ConditionsT{
-			"query": bson.M{"visibility": bson.D{{"$in", model.PostVisitPublic}}},
+func PushPostsToSearch() {
+	splitNum := 1000
+	totalRows, _ := GetPostCount(&model.ConditionsT{
+		"query": bson.M{"visibility": model.PostVisitPublic},
+	})
+
+	pages := math.Ceil(float64(totalRows) / float64(splitNum))
+	nums := int(pages)
+
+	for i := 0; i < nums; i++ {
+		posts, _ := GetPostList(&PostListReq{
+			Conditions: &model.ConditionsT{},
+			Offset:     i * splitNum,
+			Limit:      splitNum,
 		})
 
-		pages := math.Ceil(float64(totalRows) / float64(splitNum))
-		nums := int(pages)
+		for _, post := range posts {
+			contentFormatted := ""
 
-		for i := 0; i < nums; i++ {
-			posts, _ := GetPostList(&PostListReq{
-				Conditions: &model.ConditionsT{},
-				Offset:     i * splitNum,
-				Limit:      splitNum,
-			})
-
-			for _, post := range posts {
-				contentFormated := ""
-
-				for _, content := range post.Contents {
-					if content.Type == model.CONTENT_TYPE_TEXT || content.Type == model.CONTENT_TYPE_TITLE {
-						contentFormated = contentFormated + content.Content + "\n"
-					}
+			for _, content := range post.Contents {
+				if content.Type == model.CONTENT_TYPE_TEXT || content.Type == model.CONTENT_TYPE_TITLE {
+					contentFormatted = contentFormatted + content.Content + "\n"
 				}
-
-				docs := core.DocItems{{
-					"id":               post.ID,
-					"user_id":          post.User.ID,
-					"collection_count": post.CollectionCount,
-					"upvote_count":     post.UpvoteCount,
-					"visibility":       post.Visibility,
-					"is_top":           post.IsTop,
-					"is_essence":       post.IsEssence,
-					"content":          contentFormated,
-					"tags":             post.Tags,
-				}}
-				ts.AddDocuments(docs, fmt.Sprintf("%d", post.ID))
 			}
-		}
 
-		conf.Redis.Del(c, "JOB_PUSH_TO_SEARCH")
+			docs := core.DocItems{{
+				"id":                post.ID,
+				"address":           post.Address,
+				"dao_id":            post.DaoId.Hex(),
+				"view_count":        post.ViewCount,
+				"collection_count":  post.CollectionCount,
+				"upvote_count":      post.UpvoteCount,
+				"member":            post.Member,
+				"visibility":        post.Visibility,
+				"is_top":            post.IsTop,
+				"is_essence":        post.IsEssence,
+				"content":           contentFormatted,
+				"tags":              post.Tags,
+				"type":              post.Type,
+				"created_on":        post.CreatedOn,
+				"modified_on":       post.ModifiedOn,
+				"latest_replied_on": post.LatestRepliedOn,
+			}}
+			_, err := ts.AddDocuments(docs, post.ID.Hex())
+			if err != nil {
+				log.Printf("add document err: %s\n", err)
+				continue
+			}
+			log.Printf("add document success, post_id: %s\n", post.ID.Hex())
+		}
 	}
 }
 
@@ -575,10 +583,4 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 	}
 
 	return tagsFormated, nil
-}
-
-func CheckPostAttachmentIsPaid(postID primitive.ObjectID, address string) bool {
-	bill, err := ds.GetPostAttatchmentBill(postID, address)
-
-	return err == nil && !bill.ID.IsZero()
 }
