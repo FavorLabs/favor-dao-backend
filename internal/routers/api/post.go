@@ -159,7 +159,7 @@ func PostStar(c *gin.Context) {
 	postId, err := primitive.ObjectIDFromHex(param.ID)
 	if err != nil {
 		logrus.Errorf("service.PostStar err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostFailed)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
 		return
 	}
 	status := false
@@ -184,11 +184,39 @@ func PostStar(c *gin.Context) {
 }
 
 func GetPostView(c *gin.Context) {
+	postID := convert.StrTo(c.Query("id")).String()
+	response := app.NewResponse(c)
+	postId, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		logrus.Errorf("service.GetPostView err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
+		return
+	}
+	view, _ := service.GetPostView(postId)
+	response.ToResponse(gin.H{
+		"count": view,
+	})
 
 }
 
 func PostView(c *gin.Context) {
-
+	postID := convert.StrTo(c.Query("id")).String()
+	response := app.NewResponse(c)
+	postId, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		logrus.Errorf("service.PostView err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
+		return
+	}
+	err = service.CreatePostView(postId)
+	if err != nil {
+		logrus.Errorf("service.PostView err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
+	response.ToResponse(gin.H{
+		"status": true,
+	})
 }
 
 func GetPostCollection(c *gin.Context) {

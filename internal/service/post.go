@@ -289,6 +289,24 @@ func DeletePostStar(star *model.PostStar) error {
 	return nil
 }
 
+func CreatePostView(postID primitive.ObjectID) error {
+	post, err := ds.GetPostByID(postID)
+	if err != nil {
+		return err
+	}
+	post.ViewCount++
+	err = ds.UpdatePost(post)
+	return err
+}
+
+func GetPostView(postID primitive.ObjectID) (int64, error) {
+	post, err := ds.GetPostByID(postID)
+	if err != nil {
+		return 0, err
+	}
+	return post.ViewCount, err
+}
+
 func GetPostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
 	return ds.GetUserPostCollection(postID, address)
 }
