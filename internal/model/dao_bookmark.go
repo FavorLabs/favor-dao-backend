@@ -132,7 +132,10 @@ func (m *DaoBookmark) GetList(ctx context.Context, db *mongo.Database, pipeline 
 }
 
 func (m *DaoBookmark) CountMark(ctx context.Context, db *mongo.Database) int64 {
-	query := bson.M{"address": m.Address}
+	query := bson.M{
+		"address": m.Address,
+		"is_del":  0,
+	}
 	documents, err := db.Collection(m.Table()).CountDocuments(ctx, query)
 	if err != nil {
 		return 0
