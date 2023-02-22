@@ -54,7 +54,10 @@ func (s *daoManageServant) DaoBookmarkCount(address string) int64 {
 }
 
 func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted) {
-	query := bson.M{"address": userAddress}
+	query := bson.M{
+		"address": userAddress,
+		"is_del":  0,
+	}
 	dao := &model.Dao{}
 	if q.Query != "" {
 		if q.Type == "address" {
@@ -100,8 +103,9 @@ func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string) (*mod
 	if err != nil {
 		return book.Create(context.TODO(), s.db)
 	}
-	oldBook.IsDel = 1
+	oldBook.IsDel = 0
 	oldBook.ModifiedOn = time.Now().Unix()
+	oldBook.DeletedOn = 0
 	err = oldBook.Update(context.TODO(), s.db)
 	if err != nil {
 		return nil, err
