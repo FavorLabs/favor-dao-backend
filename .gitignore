@@ -19,5 +19,5 @@
 config.yaml
 *.log
 data
-./dist
+dist
 .DS_Store
