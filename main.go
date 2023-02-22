@@ -10,6 +10,7 @@ import (
 	"favor-dao-backend/internal"
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/routers"
+	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/debug"
 	"favor-dao-backend/pkg/util"
 	"github.com/fatih/color"
@@ -17,6 +18,7 @@ import (
 )
 
 var (
+	pushSearch        bool
 	noDefaultFeatures bool
 	features          suites
 )
@@ -42,12 +44,18 @@ func init() {
 }
 
 func flagParse() {
+	flag.BoolVar(&pushSearch, "push-search", false, "push posts to search")
 	flag.BoolVar(&noDefaultFeatures, "no-default-features", false, "whether use default features")
 	flag.Var(&features, "features", "use special features")
 	flag.Parse()
 }
 
 func main() {
+	if pushSearch {
+		service.PushPostsToSearch()
+		return
+	}
+
 	gin.SetMode(conf.ServerSetting.RunMode)
 
 	router := routers.NewRouter()

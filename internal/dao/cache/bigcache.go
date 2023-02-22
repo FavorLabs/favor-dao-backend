@@ -98,7 +98,7 @@ func (s *bigCacheIndexServant) keyFrom(user *model.User, offset int, limit int) 
 	if user != nil {
 		userId = user.Address
 	}
-	return fmt.Sprintf("index:%d:%d:%d", userId, offset, limit)
+	return fmt.Sprintf("index:%s:%d:%d", userId, offset, limit)
 }
 
 func (s *bigCacheIndexServant) SendAction(act core.IdxAct, post *model.Post) {
@@ -167,7 +167,7 @@ func (s *bigCacheIndexServant) deleteCacheByAddress(address string) {
 		s.cache.Delete(k)
 	}
 	s.lastCacheResetTime = time.Now()
-	logrus.Debugf("bigCacheIndexServant.deleteCacheByUserId userId:%d", address)
+	logrus.Debugf("bigCacheIndexServant.deleteCacheByUserId userId:%s", address)
 }
 
 func (s *bigCacheIndexServant) Name() string {
