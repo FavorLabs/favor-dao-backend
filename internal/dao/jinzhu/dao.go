@@ -40,6 +40,10 @@ func (s *daoManageServant) UpdateDao(dao *model.Dao) error {
 	return dao.Update(context.TODO(), s.db)
 }
 
+func (s *daoManageServant) GetDaoByName(dao *model.Dao) (*model.DaoFormatted, error) {
+	return dao.GetByName(context.TODO(), s.db)
+}
+
 func (s *daoManageServant) GetDao(dao *model.Dao) (*model.Dao, error) {
 	return dao.Get(context.TODO(), s.db)
 }

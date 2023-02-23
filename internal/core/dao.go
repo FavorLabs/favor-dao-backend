@@ -7,6 +7,7 @@ import (
 type DaoManageService interface {
 	GetDaoByKeyword(keyword string) ([]*model.Dao, error)
 	GetDao(dao *model.Dao) (*model.Dao, error)
+	GetDaoByName(dao *model.Dao) (*model.DaoFormatted, error)
 	GetMyDaoList(dao *model.Dao) ([]*model.DaoFormatted, error)
 	CreateDao(dao *model.Dao) (*model.Dao, error)
 	UpdateDao(dao *model.Dao) error

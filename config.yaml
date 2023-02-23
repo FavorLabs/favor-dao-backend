@@ -7,7 +7,7 @@ App:
 Server:
   RunMode: debug
   HttpIp: 0.0.0.0
-  HttpPort: 8008
+  HttpPort: 8010
   ReadTimeout: 60
   WriteTimeout: 60
 Features:
@@ -63,8 +63,8 @@ MongoDB:
   Host: 192.168.100.250:21718
   DBName: dao
 Redis:
-  Host: 192.168.100.250:6380
-  Password: 12345
+  Host: 192.168.100.250:63091
+  Password: redis
   DB: 1
 Eth:
   Endpoint: "https://node.wallet.unipass.id/polygon-mumbai"

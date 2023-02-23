@@ -105,6 +105,20 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	return &dao, nil
 }
 
+func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted, error) {
+	filter := bson.M{"name": m.Name, "is_del": 0}
+	res := db.Collection(m.Table()).FindOne(ctx, filter)
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	var dao *Dao
+	err := res.Decode(&dao)
+	if err != nil {
+		return nil, err
+	}
+	return dao.Format(), nil
+}
+
 func (m *Dao) GetListByAddress(ctx context.Context, db *mongo.Database) (list []*DaoFormatted, err error) {
 	filter := bson.M{"address": m.Address, "is_del": 0}
 	cur, err := db.Collection(m.Table()).Find(ctx, filter)
