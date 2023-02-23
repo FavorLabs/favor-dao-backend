@@ -58,7 +58,8 @@ var (
 	RechargeNotifyError = NewError(70002, "充值回调失败")
 	GetRechargeFailed   = NewError(70003, "充值详情获取失败")
 
-	CreateDaoFailed = NewError(80001, "DAO创建失败")
-	GetDaoFailed    = NewError(80002, "获取DAO失败")
-	UpdateDaoFailed = NewError(80003, "更新DAO失败")
+	CreateDaoFailed          = NewError(80001, "DAO创建失败")
+	GetDaoFailed             = NewError(80002, "获取DAO失败")
+	UpdateDaoFailed          = NewError(80003, "更新DAO失败")
+	CreateDaoNameDuplication = NewError(80004, "DAO name duplication")
 )

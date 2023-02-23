@@ -26,6 +26,13 @@ type DaoFollowReq struct {
 	DaoID string `json:"dao_id" binding:"required"`
 }
 
+func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
+	dao := &model.Dao{
+		Name: name,
+	}
+	return ds.GetDaoByName(dao)
+}
+
 func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *model.DaoFormatted, err error) {
 	dao := &model.Dao{
 		Address:      userAddress,

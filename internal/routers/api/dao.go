@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -10,6 +11,7 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func GetDaos(c *gin.Context) {
@@ -40,6 +42,11 @@ func CreateDao(c *gin.Context) {
 		return
 	}
 
+	_, err := service.GetDaoByName(param.Name)
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		response.ToErrorResponse(errcode.CreateDaoNameDuplication)
+		return
+	}
 	userAddress, _ := c.Get("address")
 	dao, err := service.CreateDao(c, userAddress.(string), param)
 
