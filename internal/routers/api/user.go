@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"unicode/utf8"
 
 	"favor-dao-backend/internal/conf"
@@ -161,8 +162,7 @@ func GetUserProfile(c *gin.Context) {
 func GetUserPosts(c *gin.Context) {
 	response := app.NewResponse(c)
 	address := c.Query("address")
-
-	// todo address !
+	postType := c.Query("type")
 	user, err := service.GetUserByAddress(address)
 	if err != nil {
 		logrus.Errorf("service.GetUserByAddress err: %v\n", err)
@@ -177,9 +177,22 @@ func GetUserPosts(c *gin.Context) {
 			visibilities = append(visibilities, model.PostVisitPrivate)
 		}
 	}
+	var postTypes []model.PostType
+	if postType != "" {
+		p, err := strconv.ParseInt(postType, 10, 0)
+		if err != nil {
+			logrus.Errorf("service.GetUserPosts err: %v\n", err)
+			response.ToErrorResponse(errcode.GetPostsFailed)
+			return
+		}
+		postTypes = append(postTypes, model.PostType(int(p)))
+	} else {
+		postTypes = append(postTypes, model.SMS, model.VIDEO)
+	}
 	conditions := model.ConditionsT{
-		"query": bson.M{"address": user.Address, "visibility": bson.M{"$in": visibilities}},
-		"ORDER": bson.M{"latest_replied_on": -1},
+		"query": bson.M{"address": user.Address,
+			"visibility": bson.M{"$in": visibilities}, "type": bson.M{"$in": postTypes}},
+		"ORDER": bson.M{"_id": -1},
 	}
 
 	posts, err := service.GetPostList(&service.PostListReq{
