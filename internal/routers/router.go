@@ -23,9 +23,12 @@ func NewRouter() *gin.Engine {
 	// v1 group api
 	r := e.Group("/v1")
 
+	r.Use(Aggregate())
+
 	r.GET("/", api.Version)
 
-	r.POST("/auth/login", api.Login)
+	//r.POST("/auth/login", api.Login)
+	r.Use(cacheResponse).POST("/auth/login_hello", api.Login)
 
 	noAuthApi := r.Group("/")
 	{
@@ -83,10 +86,12 @@ func NewRouter() *gin.Engine {
 		authApi.GET("/daos", api.GetDaos)
 		authApi.GET("/dao", api.GetDao)
 		authApi.GET("/dao/my", api.GetMyDaoList)
-		authApi.POST("/dao", api.CreateDao)
+		//authApi.POST("/dao", api.CreateDao)
+		authApi.Use(cacheResponse).POST("/dao_server", api.CreateDao)
 		authApi.PUT("/dao", api.UpdateDao)
 		authApi.GET("/dao/bookmark", api.GetDaoBookmark)
-		authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
+		//authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
+		authApi.Use(cacheResponse).POST("/dao/bookmark_server", api.ActionDaoBookmark)
 	}
 
 	// default 404

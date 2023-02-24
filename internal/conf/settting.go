@@ -96,6 +96,10 @@ type EthSettingS struct {
 	Endpoint string
 }
 
+type ChatSettingS struct {
+	Api string
+}
+
 type TweetSearchS struct {
 	MaxUpdateQPS int
 	MinWorker    int

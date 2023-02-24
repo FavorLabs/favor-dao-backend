@@ -41,12 +41,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	userInfo, _ := json.Marshal(app.UserInfo{
-		Nickname: user.Nickname,
-		Avatar:   user.Avatar,
-	})
-
-	if err := conf.Redis.Set(c, fmt.Sprintf("user_%s", param.WalletAddr), userInfo, 0).Err(); err != nil {
+	if err := service.UpdateUserExternalInfo(c, user); err != nil {
 		logrus.Errorf("conf.Redis.Set err: %v", err)
 		response.ToErrorResponse(errcode.UnauthorizedTokenError)
 		return
