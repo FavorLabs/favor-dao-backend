@@ -1,4 +1,4 @@
-package jinzhu
+package monogo
 
 import (
 	"favor-dao-backend/internal/core"
