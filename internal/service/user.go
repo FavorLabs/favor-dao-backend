@@ -2,8 +2,10 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -176,8 +178,20 @@ func GetUserByAddress(address string) (*model.User, error) {
 	return nil, errcode.NoExistUserAddress
 }
 
+func UpdateUserExternalInfo(ctx context.Context, user *model.User) error {
+	userInfo, _ := json.Marshal(model.UserInfo{
+		Nickname: user.Nickname,
+		Avatar:   user.Avatar,
+	})
+	key := fmt.Sprintf("user_%s", user.Address)
+	return conf.Redis.Set(ctx, key, userInfo, 0).Err()
+}
+
 func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user); err != nil {
+		return errcode.ServerError
+	}
+	if err := UpdateUserExternalInfo(context.Background(), user); err != nil {
 		return errcode.ServerError
 	}
 	return nil

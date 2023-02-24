@@ -24,6 +24,7 @@ var (
 	ZincSetting             *ZincSettingS
 	MeiliSetting            *MeiliSettingS
 	EthSetting              *EthSettingS
+	ChatSetting             *ChatSettingS
 )
 
 func setupSetting(suite []string, noDefault bool) error {
@@ -56,6 +57,7 @@ func setupSetting(suite []string, noDefault bool) error {
 		"Meili":            &MeiliSetting,
 		"Redis":            &redisSetting,
 		"Eth":              &EthSetting,
+		"Chat":             &ChatSetting,
 	}
 	if err = setting.Unmarshal(objects); err != nil {
 		return err

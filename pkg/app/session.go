@@ -10,11 +10,6 @@ type Session struct {
 	WalletAddr   string `json:"wallet_addr"`
 }
 
-type UserInfo struct {
-	Nickname string `json:"nickname"`
-	Avatar   string `json:"avatar"`
-}
-
 func GenerateToken() (string, error) {
 	tokenGen, err := nanoid.Standard(64)
 	if err != nil {

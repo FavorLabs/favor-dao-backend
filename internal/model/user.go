@@ -22,6 +22,11 @@ type User struct {
 	Role       string             `json:"role"             bson:"role"`
 }
 
+type UserInfo struct {
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar"`
+}
+
 type UserFormatted struct {
 	ID       string `json:"id"`
 	Nickname string `json:"nickname"`
