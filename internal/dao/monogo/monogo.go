@@ -2,7 +2,7 @@
 // Jinzhu is the primary developer of gorm so use his name as
 // pakcage name as a saluter.
 
-package jinzhu
+package monogo
 
 import (
 	"favor-dao-backend/internal/conf"

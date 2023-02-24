@@ -5,7 +5,7 @@ import (
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
-	"favor-dao-backend/internal/dao/jinzhu"
+	"favor-dao-backend/internal/dao/monogo"
 	"favor-dao-backend/internal/dao/search"
 	"github.com/sirupsen/logrus"
 )
@@ -20,7 +20,7 @@ var (
 func DataService() core.DataService {
 	onceDs.Do(func() {
 		var v core.VersionInfo
-		ds, v = jinzhu.NewDataService()
+		ds, v = monogo.NewDataService()
 		logrus.Infof("use %s as data service with version %s", v.Name(), v.Version())
 	})
 	return ds
@@ -46,6 +46,6 @@ func TweetSearchService() core.TweetSearchService {
 }
 
 func newAuthorizationManageService() (s core.AuthorizationManageService) {
-	s = jinzhu.NewAuthorizationManageService()
+	s = monogo.NewAuthorizationManageService()
 	return
 }
