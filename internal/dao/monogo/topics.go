@@ -1,4 +1,4 @@
-package jinzhu
+package monogo
 
 import (
 	"go.mongodb.org/mongo-driver/bson"

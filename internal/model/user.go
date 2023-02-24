@@ -46,7 +46,7 @@ func (m *User) Format() *UserFormatted {
 }
 
 func (m *User) Table() string {
-	return "user"
+	return "d_user"
 }
 
 func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
