@@ -38,7 +38,8 @@ const (
 	WalletConnect WalletType = "wallet_connect"
 	MetaMask      WalletType = "meta_mask"
 	OKX           WalletType = "okx"
-	Unipass       WalletType = "unipass"
+	Unipass_Std   WalletType = "unipass_std"
+	Unipass_eth   WalletType = "unipass_eth"
 )
 
 type AuthByWalletRequest struct {
@@ -127,7 +128,9 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 				copy(signer[:], crypto.Keccak256(pubBytes[1:])[12:])
 				ok = bytes.Equal(walletBytes, signer.Bytes())
 			}
-		case Unipass:
+		case Unipass_Std:
+			ok, _ = unipass_sigverify.VerifyMessageSignature(ctx, common.BytesToAddress(walletBytes), []byte(guessMessage), signature, false, eth)
+		case Unipass_eth:
 			ok, _ = unipass_sigverify.VerifyMessageSignature(ctx, common.BytesToAddress(walletBytes), []byte(guessMessage), signature, true, eth)
 		default:
 			return nil, errcode.InvalidParams
