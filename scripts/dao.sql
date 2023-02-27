@@ -12,8 +12,9 @@ db.createCollection("post_collection");
 
 db.dao.createIndexes([
     {address: 1},
-    {name: "text"},
 ]);
+
+db.dao.createIndex({"name": "text"}, {unique: true})
 
 db.dao_bookmark.createIndexes([
     {dao_id: 1},
@@ -47,4 +48,4 @@ db.tag.createIndexes([
 
 db.user.createIndex({"address": 1}, {unique: true})
 
-db.user.createIndex({nickname: "text"});
+db.user.createIndex({nickname: "text"}, {unique: true});
