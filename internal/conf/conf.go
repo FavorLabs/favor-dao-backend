@@ -78,6 +78,10 @@ func Initialize(suite []string, noDefault bool) {
 		log.Fatalf("init.setupSetting err: %v", err)
 	}
 
+	if ChatSetting == nil || ChatSetting.Api == "" {
+		panic("MUST connect with revolt api")
+	}
+
 	setupLogger()
 	setupDBEngine()
 }
