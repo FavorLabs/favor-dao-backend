@@ -29,6 +29,7 @@ type Dao struct {
 	Name         string             `json:"name"             bson:"name"`
 	Visibility   DaoVisibleT        `json:"visibility"       bson:"visibility"`
 	Introduction string             `json:"introduction"     bson:"introduction"`
+	Avatar       string             `json:"avatar"           bson:"avatar"`
 }
 
 type DaoFormatted struct {
@@ -47,6 +48,7 @@ func (m *Dao) Format() *DaoFormatted {
 		Name:         m.Name,
 		Introduction: m.Introduction,
 		Visibility:   m.Visibility,
+		Avatar:       m.Avatar,
 	}
 }
 

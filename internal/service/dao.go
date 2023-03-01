@@ -20,6 +20,7 @@ type DaoUpdateReq struct {
 	Name         string             `json:"name"          binding:"required"`
 	Introduction string             `json:"introduction"`
 	Visibility   model.DaoVisibleT  `json:"visibility"`
+	Avatar       string             `json:"avatar"`
 }
 
 type DaoFollowReq struct {
@@ -80,7 +81,9 @@ func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int)
 		userMap[user.Address] = user
 	}
 	for k, v := range list {
-		list[k].Avatar = userMap[v.Address].Avatar
+		if list[k].Avatar == "" {
+			list[k].Avatar = userMap[v.Address].Avatar
+		}
 	}
 	if len(list) > 0 {
 		total = ds.DaoBookmarkCount(userAddress)

@@ -2,6 +2,7 @@ package conf
 
 import (
 	"log"
+	"os"
 	"time"
 )
 
@@ -81,6 +82,9 @@ func Initialize(suite []string, noDefault bool) {
 	if ChatSetting == nil || ChatSetting.Api == "" {
 		panic("MUST connect with revolt api")
 	}
+
+	// set default timezone
+	_ = os.Setenv("TZ", "UTC")
 
 	setupLogger()
 	setupDBEngine()
