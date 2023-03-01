@@ -23,7 +23,7 @@ LDFLAGS = -X "${MOD_NAME}/pkg/debug.version=${BUILD_VERSION}" \
 all: fmt build conf
 
 conf: conf
-	@cp -rf config.yaml dist/
+	[ -f "dist/config.yaml" ] || cp -rf config.yaml dist/
 
 build:
 	@go mod download
