@@ -112,7 +112,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		var ok bool
 
 		// parse message
-		guessMessage := fmt.Sprintf("%s login FavorTube at %d", param.WalletAddr, param.Timestamp)
+		guessMessage := fmt.Sprintf("%s login FavorDAO at %d", param.WalletAddr, param.Timestamp)
 		switch param.Type {
 		case WalletConnect, MetaMask, OKX:
 			ethMessage := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(guessMessage), guessMessage))
