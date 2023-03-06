@@ -17,10 +17,20 @@ type CommentContent struct {
 	DeletedOn  int64              `json:"deleted_on"       bson:"deleted_on"`
 	IsDel      int                `json:"is_del"           bson:"is_del"`
 	CommentID  primitive.ObjectID `json:"comment_id"       bson:"comment_id"`
-	Address    int64              `json:"address"          bson:"address"`
+	Address    string             `json:"address"          bson:"address"`
 	Content    string             `json:"content"          bson:"content"`
 	Type       PostContentT       `json:"type"             bson:"type"`
 	Sort       int64              `json:"sort"             bson:"sort"`
+}
+
+func (c *CommentContent) PostFormat() *PostContentFormatted {
+	return &PostContentFormatted{
+		ID:      c.ID,
+		Address: c.Address,
+		Content: c.Content,
+		Type:    c.Type,
+		Sort:    c.Sort,
+	}
 }
 
 func (c *CommentContent) Table() string {

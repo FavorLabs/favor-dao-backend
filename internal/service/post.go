@@ -7,9 +7,6 @@ import (
 	"math"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
@@ -17,6 +14,8 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TagType string
@@ -35,11 +34,12 @@ type PostTagsReq struct {
 }
 
 type PostCreationReq struct {
-	Contents   []*PostContentItem `json:"contents" binding:"required"`
-	DaoId      primitive.ObjectID `json:"dao_id"`
-	Tags       []string           `json:"tags" binding:"required"`
+	Contents   []*PostContentItem `json:"contents"`
+	DaoId      primitive.ObjectID `json:"dao_id" binding:"required"`
+	Tags       []string           `json:"tags"`
 	Type       model.PostType     `json:"type"`
-	Users      []string           `json:"users" binding:"required"`
+	RefType    model.PostRefType  `json:"ref_type"`
+	RefId      primitive.ObjectID `json:"ref_id"`
 	Visibility model.PostVisibleT `json:"visibility"`
 }
 
@@ -100,7 +100,10 @@ func tagsFrom(originTags []string) []string {
 // CreatePost 创建文章
 // TODO: 推文+推文内容需要在一个事务中添加，后续优化
 func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model.PostFormatted, err error) {
-	var mediaContents []string
+	var (
+		post          *model.Post
+		mediaContents []string
+	)
 
 	defer func() {
 		if err != nil {
@@ -112,47 +115,113 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 		return
 	}
 
-	tags := tagsFrom(param.Tags)
-	post := &model.Post{
-		Address:    address,
-		DaoId:      param.DaoId,
-		Tags:       strings.Join(tags, ","),
-		Visibility: param.Visibility,
-		Type:       param.Type,
-	}
-	post, err = ds.CreatePost(post)
-	if err != nil {
-		return nil, err
-	}
+	switch param.Type {
+	case model.Retweet, model.RetweetComment:
+		var tags string
 
-	for _, item := range param.Contents {
-		if err := item.Check(); err != nil {
-			// 属性非法
-			logrus.Infof("contents check err: %v", err)
-			continue
+		// check orig content exists
+		switch param.RefType {
+		case model.RefPost:
+			// retweet post MUST exist
+			origPost, err := ds.GetPostByID(param.RefId)
+			if err != nil {
+				return nil, fmt.Errorf("need find post to retweet: %v", err)
+			}
+
+			// if re-post type is retweet, we'll find original post id
+			if origPost.Type == model.Retweet {
+				param.RefId = origPost.RefId
+			}
+
+			tags = origPost.Tags
+		case model.RefComment:
+			_, err = ds.GetCommentByID(param.RefId)
+		case model.RefCommentReply:
+			_, err = ds.GetCommentReplyByID(param.RefId)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("")
 		}
 
-		postContent := &model.PostContent{
-			PostID:  post.ID,
-			Address: address,
-			Content: item.Content,
-			Type:    item.Type,
-			Sort:    item.Sort,
-		}
-		if _, err = ds.CreatePostContent(postContent); err != nil {
+		// create post ref
+		post, err = ds.CreatePost(&model.Post{
+			Address:    address,
+			DaoId:      param.DaoId,
+			Tags:       tags,
+			Visibility: param.Visibility,
+			Type:       param.Type,
+			RefId:      param.RefId,
+			RefType:    param.RefType,
+		})
+		if err != nil {
 			return nil, err
 		}
-	}
 
-	if post.Visibility == model.PostVisitPublic {
-		for _, t := range tags {
-			tag := &model.Tag{
-				Address: address,
-				Tag:     t,
+		if param.Type == model.RetweetComment {
+			if len(param.Contents) < 2 {
+				return nil, fmt.Errorf("empty post content in RetweetComment")
 			}
-			ds.CreateTag(tag)
+			for _, item := range param.Contents[1:] {
+				if err := item.Check(); err != nil {
+					// 属性非法
+					logrus.Infof("contents check err: %v", err)
+					continue
+				}
+
+				postContent := &model.PostContent{
+					PostID:  post.ID,
+					Address: address,
+					Content: item.Content,
+					Type:    item.Type,
+					Sort:    item.Sort,
+				}
+				if _, err = ds.CreatePostContent(postContent); err != nil {
+					return nil, err
+				}
+			}
+		}
+	default:
+		tags := tagsFrom(param.Tags)
+		post, err = ds.CreatePost(&model.Post{
+			Address:    address,
+			DaoId:      param.DaoId,
+			Tags:       strings.Join(tags, ","),
+			Visibility: param.Visibility,
+			Type:       param.Type,
+		})
+		if err != nil {
+			return nil, err
 		}
 
+		for _, item := range param.Contents {
+			if err := item.Check(); err != nil {
+				// 属性非法
+				logrus.Infof("contents check err: %v", err)
+				continue
+			}
+
+			postContent := &model.PostContent{
+				PostID:  post.ID,
+				Address: address,
+				Content: item.Content,
+				Type:    item.Type,
+				Sort:    item.Sort,
+			}
+			if _, err = ds.CreatePostContent(postContent); err != nil {
+				return nil, err
+			}
+		}
+
+		if post.Visibility == model.PostVisitPublic {
+			for _, t := range tags {
+				tag := &model.Tag{
+					Address: address,
+					Tag:     t,
+				}
+				ds.CreateTag(tag)
+			}
+
+		}
 	}
 
 	PushPostToSearch(post)
@@ -394,7 +463,7 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 	return postFormated, nil
 }
 
-func GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error) {
+func GetPostContentByID(id primitive.ObjectID) ([]*model.PostContent, error) {
 	return ds.GetPostContentByID(id)
 }
 

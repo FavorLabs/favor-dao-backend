@@ -17,7 +17,7 @@ type TweetService interface {
 	GetUserPostCollections(address string, offset, limit int) ([]*model.PostCollection, error)
 	GetUserPostCollectionCount(address string) (int64, error)
 	GetPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error)
-	GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error)
+	GetPostContentByID(id primitive.ObjectID) ([]*model.PostContent, error)
 }
 
 type TweetManageService interface {
