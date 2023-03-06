@@ -9,8 +9,8 @@ import (
 )
 
 type PostCollection struct {
-	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Post    *Post              `json:"-" bson:"-"`
+	ID      primitive.ObjectID `json:"id"      bson:"_id,omitempty"`
+	Post    *Post              `json:"-"       bson:"-"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
 }
