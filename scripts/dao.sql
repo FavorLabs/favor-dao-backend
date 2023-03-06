@@ -2,13 +2,15 @@ use dao
 
 db.createCollection("dao");
 db.createCollection("dao_bookmark");
-db.createCollection("user");
+db.createCollection("d_user");
 db.createCollection("tag");
 db.createCollection("post");
 db.createCollection("post_content");
 db.createCollection("post_star");
 db.createCollection("post_collection");
-
+db.createCollection("comment");
+db.createCollection("comment_content");
+db.createCollection("comment_reply");
 
 db.dao.createIndexes([
     {address: 1},
@@ -49,3 +51,18 @@ db.tag.createIndexes([
 db.user.createIndex({"address": 1}, {unique: true})
 
 db.user.createIndex({nickname: "text"}, {unique: true});
+
+db.comment.createIndexes([
+    {post_id: 1},
+    {address: 1}
+]);
+
+db.comment_content.createIndexes([
+    {comment_id: 1},
+    {address: 1}
+]);
+
+db.comment_reply.createIndexes([
+    {comment_id: 1},
+    {address: 1}
+]);

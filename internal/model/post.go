@@ -150,11 +150,7 @@ func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit i
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
-				if query != nil {
-					query = findQuery([]bson.M{query, v})
-				} else {
-					query = findQuery([]bson.M{v})
-				}
+				query = findQuery([]bson.M{query, v})
 			} else {
 				query = findQuery([]bson.M{v})
 			}
@@ -184,11 +180,7 @@ func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error)
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
-				if query != nil {
-					query = findQuery([]bson.M{query, v})
-				} else {
-					query = findQuery([]bson.M{v})
-				}
+				query = findQuery([]bson.M{query, v})
 			} else {
 				query = findQuery([]bson.M{v})
 			}

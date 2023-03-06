@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -38,13 +39,13 @@ const (
 )
 
 type PostContent struct {
-	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ID      primitive.ObjectID `json:"id"      bson:"_id,omitempty"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
 	Content string             `json:"content" bson:"content"`
-	Type    PostContentT       `json:"type" bson:"type"`
-	Sort    int64              `json:"sort" bson:"sort"`
-	IsDel   int                `json:"is_del" bson:"is_del"`
+	Type    PostContentT       `json:"type"    bson:"type"`
+	Sort    int64              `json:"sort"    bson:"sort"`
+	IsDel   int                `json:"is_del"  bson:"is_del"`
 }
 
 type PostContentFormated struct {
@@ -126,11 +127,7 @@ func (p *PostContent) List(db *mongo.Database, conditions *ConditionsT, offset, 
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
-				if query != nil {
-					query = findQuery([]bson.M{query, v})
-				} else {
-					query = findQuery([]bson.M{v})
-				}
+				query = findQuery([]bson.M{query, v})
 			} else {
 				query = findQuery([]bson.M{v})
 			}
