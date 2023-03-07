@@ -158,10 +158,10 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 		}
 
 		if param.Type == model.RetweetComment {
-			if len(param.Contents) < 2 {
+			if len(param.Contents) < 1 {
 				return nil, fmt.Errorf("empty post content in RetweetComment")
 			}
-			for _, item := range param.Contents[1:] {
+			for _, item := range param.Contents {
 				if err := item.Check(); err != nil {
 					// 属性非法
 					logrus.Infof("contents check err: %v", err)
