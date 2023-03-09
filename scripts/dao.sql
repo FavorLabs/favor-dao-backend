@@ -43,8 +43,8 @@ db.post.createIndexes([
     {address: 1}
 ]);
 
+db.tag.createIndex({tag: 1}, {unique: true});
 db.tag.createIndexes([
-    {tag: "text"},
     {address: 1}
 ]);
 

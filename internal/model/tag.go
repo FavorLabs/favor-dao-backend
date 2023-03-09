@@ -44,10 +44,7 @@ func (m *Tag) Table() string {
 }
 
 func (m *Tag) Get(ctx context.Context, db *mongo.Database) (*Tag, error) {
-	if m.ID.IsZero() {
-		return nil, mongo.ErrNoDocuments
-	}
-	filter := bson.D{{"_id", m.ID}, {"is_del", 0}}
+	filter := bson.D{{"tag", m.Tag}}
 	res := db.Collection(m.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
@@ -64,6 +61,7 @@ func (m *Tag) Create(ctx context.Context, db *mongo.Database) (*Tag, error) {
 	now := time.Now().Unix()
 	m.CreatedOn = now
 	m.ModifiedOn = now
+	m.IsDel = 0
 	res, err := db.Collection(m.Table()).InsertOne(ctx, &m)
 	if err != nil {
 		return nil, err

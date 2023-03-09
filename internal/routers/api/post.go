@@ -1,9 +1,10 @@
 package api
 
 import (
+	"strings"
+
 	"favor-dao-backend/internal/model"
 	"go.mongodb.org/mongo-driver/bson"
-	"strings"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/service"
@@ -31,25 +32,13 @@ func GetPostList(c *gin.Context) {
 
 	user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
-	if q.Query == "" && q.Type == "search" {
-		resp, err := service.GetIndexPosts(user, offset, limit)
-		if err != nil {
-			logrus.Errorf("service.GetPostList err: %v\n", err)
-			response.ToErrorResponse(errcode.GetPostsFailed)
-			return
-		}
-
-		response.ToResponseList(resp.Tweets, resp.Total)
-	} else {
-		posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
-
-		if err != nil {
-			logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
-			response.ToErrorResponse(errcode.GetPostsFailed)
-			return
-		}
-		response.ToResponseList(posts, totalRows)
+	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
+	if err != nil {
+		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostsFailed)
+		return
 	}
+	response.ToResponseList(posts, totalRows)
 }
 
 func GetFocusPostList(c *gin.Context) {

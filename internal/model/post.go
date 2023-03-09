@@ -49,6 +49,7 @@ type PostFormatted struct {
 	ModifiedOn      int64                  `json:"modified_on"`
 	LatestRepliedOn int64                  `json:"latest_replied_on"`
 	DaoId           primitive.ObjectID     `json:"daoId"`
+	Dao             *DaoFormatted          `json:"dao"`
 	Address         string                 `json:"address"`
 	User            *UserFormatted         `json:"user"`
 	Contents        []*PostContentFormated `json:"contents"`
@@ -75,6 +76,7 @@ func (p *Post) Format() *PostFormatted {
 	return &PostFormatted{
 		ID:              p.ID,
 		DaoId:           p.DaoId,
+		Dao:             &DaoFormatted{},
 		Address:         p.Address,
 		User:            &UserFormatted{},
 		Contents:        []*PostContentFormated{},

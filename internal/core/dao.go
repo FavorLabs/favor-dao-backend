@@ -17,4 +17,6 @@ type DaoManageService interface {
 	GetDaoBookmarkByAddressAndDaoID(myAddress string, daoId string) (*model.DaoBookmark, error)
 	CreateDaoFollow(myAddress string, daoID string) (*model.DaoBookmark, error)
 	DeleteDaoFollow(d *model.DaoBookmark) error
+	GetDaoCount(conditions *model.ConditionsT) (int64, error)
+	GetDAOs(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error)
 }

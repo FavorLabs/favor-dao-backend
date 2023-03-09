@@ -55,9 +55,11 @@ func newTweetHelpService(db *mongo.Database) core.TweetHelpService {
 func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatted, error) {
 	postIds := make([]primitive.ObjectID, 0, len(posts))
 	addresses := make([]string, 0, len(posts))
+	daoIds := make([]primitive.ObjectID, 0, len(posts))
 	for _, post := range posts {
 		postIds = append(postIds, post.ID)
 		addresses = append(addresses, post.Address)
+		daoIds = append(daoIds, post.DaoId)
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -70,9 +72,19 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 		return nil, err
 	}
 
+	daoS, err := s.getDAOsByIds(daoIds)
+	if err != nil {
+		return nil, err
+	}
+
 	userMap := make(map[string]*model.UserFormatted, len(users))
 	for _, user := range users {
 		userMap[user.Address] = user.Format()
+	}
+
+	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
+	for _, dao := range daoS {
+		daoMap[dao.ID.Hex()] = dao.Format()
 	}
 
 	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormated, len(postContents))
@@ -86,6 +98,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 		postFormatted := post.Format()
 		postFormatted.User = userMap[post.Address]
 		postFormatted.Contents = contentMap[post.ID]
+		postFormatted.Dao = daoMap[post.DaoId.Hex()]
 		postsFormatted = append(postsFormatted, postFormatted)
 	}
 	return postsFormatted, nil
@@ -93,11 +106,15 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 
 // RevampPosts post data shaping repair
 func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.PostFormatted, error) {
-	postIds := make([]primitive.ObjectID, 0, len(posts))
+	postIds := make([]primitive.ObjectID, 0)
 	addresses := make([]string, 0, len(posts))
+	daoIds := make([]primitive.ObjectID, 0, len(posts))
 	for _, post := range posts {
-		postIds = append(postIds, post.ID)
+		if post.Type != model.DAO {
+			postIds = append(postIds, post.ID)
+		}
 		addresses = append(addresses, post.Address)
+		daoIds = append(daoIds, post.DaoId)
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -110,9 +127,19 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 		return nil, err
 	}
 
+	daoS, err := s.getDAOsByIds(daoIds)
+	if err != nil {
+		return nil, err
+	}
+
 	userMap := make(map[string]*model.UserFormatted, len(users))
 	for _, user := range users {
 		userMap[user.Address] = user.Format()
+	}
+
+	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
+	for _, dao := range daoS {
+		daoMap[dao.ID.Hex()] = dao.Format()
 	}
 
 	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormated, len(postContents))
@@ -124,6 +151,7 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 	for _, post := range posts {
 		post.User = userMap[post.Address]
 		post.Contents = contentMap[post.ID]
+		post.Dao = daoMap[post.DaoId.Hex()]
 	}
 	return posts, nil
 }
@@ -139,6 +167,13 @@ func (s *tweetHelpServant) getUsersByAddress(addresses []string) ([]*model.User,
 	user := &model.User{}
 	return user.List(s.db, &model.ConditionsT{
 		"query": bson.M{"address": bson.M{"$in": addresses}},
+	}, 0, 0)
+}
+
+func (s *tweetHelpServant) getDAOsByIds(ids []primitive.ObjectID) ([]*model.Dao, error) {
+	dao := &model.Dao{}
+	return dao.List(s.db, &model.ConditionsT{
+		"query": bson.M{"_id": bson.M{"$in": ids}},
 	}, 0, 0)
 }
 
