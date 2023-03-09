@@ -449,18 +449,23 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// 数据整合
-	postFormated := post.Format()
-	for _, user := range users {
-		postFormated.User = user.Format()
+	dao, err := ds.GetDao(&model.Dao{ID: post.DaoId})
+	if err != nil {
+		return nil, err
 	}
+
+	postFormatted := post.Format()
+	for _, user := range users {
+		postFormatted.User = user.Format()
+	}
+	postFormatted.Dao = dao.Format()
+
 	for _, content := range postContents {
 		if content.PostID == post.ID {
-			postFormated.Contents = append(postFormated.Contents, content.Format())
+			postFormatted.Contents = append(postFormatted.Contents, content.Format())
 		}
 	}
-	return postFormated, nil
+	return postFormatted, nil
 }
 
 func GetPostContentByID(id primitive.ObjectID) ([]*model.PostContent, error) {

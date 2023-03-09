@@ -3,6 +3,9 @@ package api
 import (
 	"strings"
 
+	"favor-dao-backend/internal/model"
+	"go.mongodb.org/mongo-driver/bson"
+
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
@@ -29,25 +32,50 @@ func GetPostList(c *gin.Context) {
 
 	user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
-	if q.Query == "" && q.Type == "search" {
-		resp, err := service.GetIndexPosts(user, offset, limit)
-		if err != nil {
-			logrus.Errorf("service.GetPostList err: %v\n", err)
-			response.ToErrorResponse(errcode.GetPostsFailed)
-			return
-		}
-
-		response.ToResponseList(resp.Tweets, resp.Total)
-	} else {
-		posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
-
-		if err != nil {
-			logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
-			response.ToErrorResponse(errcode.GetPostsFailed)
-			return
-		}
-		response.ToResponseList(posts, totalRows)
+	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
+	if err != nil {
+		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostsFailed)
+		return
 	}
+	response.ToResponseList(posts, totalRows)
+}
+
+func GetFocusPostList(c *gin.Context) {
+	response := app.NewResponse(c)
+	offset, limit := app.GetPageOffset(c)
+	userID, _ := c.Get("address")
+	postTypes := []model.PostType{model.SMS, model.VIDEO}
+	visibilities := []model.PostVisibleT{model.PostVisitPublic}
+
+	daoIds := *service.GetDaoBookmarkListByAddress(userID.(string))
+	if len(daoIds) == 0 {
+		response.ToResponse(nil)
+		return
+	}
+	conditions := model.ConditionsT{
+		"query": bson.M{"dao_id": bson.M{"$in": daoIds},
+			"visibility": bson.M{"$in": visibilities}, "type": bson.M{"$in": postTypes}},
+		"ORDER": bson.M{"_id": -1},
+	}
+	// address
+	resp, err := service.GetPostList(&service.PostListReq{
+		Conditions: &conditions,
+		Offset:     offset,
+		Limit:      limit,
+	})
+	if err != nil {
+		logrus.Errorf("service.GetFocusPostList err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostsFailed)
+		return
+	}
+	count, err := service.GetPostCount(&conditions)
+	if err != nil {
+		logrus.Errorf("service.GetFocusPostList err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostsFailed)
+		return
+	}
+	response.ToResponseList(resp, count)
 }
 
 func GetPost(c *gin.Context) {

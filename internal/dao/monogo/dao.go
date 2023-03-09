@@ -44,6 +44,14 @@ func (s *daoManageServant) DeleteDao(dao *model.Dao) error {
 	return dao.Delete(context.TODO(), s.db)
 }
 
+func (s *daoManageServant) GetDaoCount(conditions *model.ConditionsT) (int64, error) {
+	return (&model.Dao{}).Count(s.db, conditions)
+}
+
+func (s *daoManageServant) GetDAOs(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error) {
+	return (&model.Dao{}).List(s.db, conditions, offset, limit)
+}
+
 func (s *daoManageServant) GetDaoByName(dao *model.Dao) (*model.DaoFormatted, error) {
 	return dao.GetByName(context.TODO(), s.db)
 }
@@ -90,6 +98,11 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 	book := &model.DaoBookmark{Address: userAddress}
 	list = book.GetList(context.TODO(), s.db, pipeline)
 	return
+}
+
+func (s *daoManageServant) GetDaoBookmarkListByAddress(address string) []*model.DaoBookmark {
+	book := &model.DaoBookmark{}
+	return book.FindList(context.TODO(), s.db, bson.M{"address": address})
 }
 
 func (s *daoManageServant) GetDaoBookmarkByAddressAndDaoID(myAddress string, daoId string) (*model.DaoBookmark, error) {

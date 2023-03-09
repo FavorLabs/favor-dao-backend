@@ -53,6 +53,7 @@ func flagParse() {
 func main() {
 	if pushSearch {
 		service.PushPostsToSearch()
+		service.PushDAOsToSearch()
 		return
 	}
 

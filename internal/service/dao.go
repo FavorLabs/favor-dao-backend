@@ -1,11 +1,17 @@
 package service
 
 import (
+	"fmt"
+	"log"
+	"math"
+	"time"
+
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -37,7 +43,7 @@ func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 	return ds.GetDaoByName(dao)
 }
 
-func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *model.DaoFormatted, err error) {
+func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *model.DaoFormatted, err error) {
 	dao := &model.Dao{
 		Address:      userAddress,
 		Name:         param.Name,
@@ -52,18 +58,10 @@ func CreateDao(c *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 	}
 
 	if dao.Visibility == model.DaoVisitPublic {
-		// create first post
-		_, err = CreatePost(c, userAddress, PostCreationReq{
-			Visibility: model.PostVisitPublic,
-			DaoId:      dao.ID,
-			Contents: []*PostContentItem{{
-				Content: "I created a new DAO, welcome to follow!",
-				Type:    model.CONTENT_TYPE_TEXT,
-			}},
-			Tags: []string{"新人报到"},
-		})
+		// push to search
+		_, err = PushDaoToSearch(dao)
 		if err != nil {
-			logrus.Warnf("%s create first post err: %v", userAddress, err)
+			logrus.Warnf("%s when create, push dao to search err: %v", userAddress, err)
 		}
 	}
 
@@ -76,6 +74,15 @@ func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int)
 		total = ds.DaoBookmarkCount(userAddress)
 	}
 	return list, total
+}
+
+func GetDaoBookmarkListByAddress(address string) *[]primitive.ObjectID {
+	list := ds.GetDaoBookmarkListByAddress(address)
+	daoIds := make([]primitive.ObjectID, 0, len(list))
+	for _, l := range list {
+		daoIds = append(daoIds, l.DaoID)
+	}
+	return &daoIds
 }
 
 func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
@@ -93,6 +100,18 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	}
 	if getDao.Address != userAddress {
 		return errcode.NoPermission
+	}
+	if dao.Visibility == model.DaoVisitPublic {
+		// push to search
+		_, err = PushDaoToSearch(dao)
+		if err != nil {
+			logrus.Warnf("%s when update, push dao to search err: %v", userAddress, err)
+		}
+	} else {
+		err = DeleteSearchDao(dao)
+		if err != nil {
+			logrus.Warnf("%s when update, delete dao from search err: %v", userAddress, err)
+		}
 	}
 	return ds.UpdateDao(dao)
 }
@@ -129,4 +148,70 @@ func CreateDaoBookmark(myAddress string, daoId string) (*model.DaoBookmark, erro
 
 func DeleteDaoBookmark(book *model.DaoBookmark) error {
 	return ds.DeleteDaoFollow(book)
+}
+
+func PushDaoToSearch(dao *model.Dao) (bool, error) {
+	contentFormatted := dao.Name + "\n"
+	contentFormatted += dao.Introduction + "\n"
+
+	data := core.DocItems{{
+		"id":               dao.ID,
+		"address":          dao.Address,
+		"dao_id":           dao.ID.Hex(),
+		"view_count":       0,
+		"collection_count": 0,
+		"upvote_count":     0,
+		"member":           0,
+		"visibility":       model.PostVisitPublic, // Only the public dao will enter the search engine
+		"is_top":           0,
+		"is_essence":       0,
+		"content":          contentFormatted,
+		// "tags":              tagMaps,
+		"type":              model.DAO,
+		"created_on":        dao.CreatedOn,
+		"modified_on":       dao.ModifiedOn,
+		"latest_replied_on": time.Now().Unix(),
+	}}
+
+	return ts.AddDocuments(data, dao.ID.Hex())
+}
+
+func DeleteSearchDao(post *model.Dao) error {
+	return ts.DeleteDocuments([]string{fmt.Sprintf("%d", post.ID)})
+}
+
+func PushDAOsToSearch() {
+	splitNum := 1000
+	totalRows, _ := GetDaoCount(&model.ConditionsT{
+		"query": bson.M{"visibility": model.DaoVisitPublic},
+	})
+
+	pages := math.Ceil(float64(totalRows) / float64(splitNum))
+	nums := int(pages)
+
+	for i := 0; i < nums; i++ {
+		posts, _ := GetDaoList(&PostListReq{
+			Conditions: &model.ConditionsT{},
+			Offset:     i * splitNum,
+			Limit:      splitNum,
+		})
+
+		for _, post := range posts {
+			_, err := PushDaoToSearch(post)
+			if err != nil {
+				log.Printf("dao: add document err: %s\n", err)
+				continue
+			}
+			log.Printf("dao: add document success, dao_id: %s\n", post.ID.Hex())
+		}
+	}
+}
+
+func GetDaoCount(conditions *model.ConditionsT) (int64, error) {
+	return ds.GetDaoCount(conditions)
+}
+
+func GetDaoList(req *PostListReq) ([]*model.Dao, error) {
+	posts, err := ds.GetDAOs(req.Conditions, req.Offset, req.Limit)
+	return posts, err
 }

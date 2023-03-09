@@ -62,6 +62,8 @@ func NewRouter() *gin.Engine {
 
 		authApi.GET("/suggest/tags", api.GetSuggestTags)
 
+		authApi.GET("/posts/focus", api.GetFocusPostList)
+
 		privApi.POST("/post", api.CreatePost)
 
 		privApi.DELETE("/post", api.DeletePost)
