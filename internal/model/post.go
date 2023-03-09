@@ -87,6 +87,7 @@ func (p *Post) Format() *PostFormatted {
 		IsEssence:       p.IsEssence,
 		Tags:            tagsMap,
 		Type:            p.Type,
+		CreatedOn:       p.CreatedOn,
 	}
 }
 

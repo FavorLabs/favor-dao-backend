@@ -13,6 +13,7 @@ type DaoManageService interface {
 	UpdateDao(dao *model.Dao) error
 	DaoBookmarkCount(address string) int64
 	GetDaoBookmarkList(userAddress string, q *QueryReq, offset, limit int) (list []*model.DaoFormatted)
+	GetDaoBookmarkListByAddress(address string) []*model.DaoBookmark
 	GetDaoBookmarkByAddressAndDaoID(myAddress string, daoId string) (*model.DaoBookmark, error)
 	CreateDaoFollow(myAddress string, daoID string) (*model.DaoBookmark, error)
 	DeleteDaoFollow(d *model.DaoBookmark) error

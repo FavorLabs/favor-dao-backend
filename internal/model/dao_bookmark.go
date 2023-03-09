@@ -98,17 +98,14 @@ func (m *DaoBookmark) Get(ctx context.Context, db *mongo.Database) (*DaoBookmark
 	return &dao, nil
 }
 
-func (m *DaoBookmark) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*DaoBookmark, err error) {
+func (m *DaoBookmark) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*DaoBookmark) {
 	cur, err := db.Collection(m.Table()).Find(ctx, filter)
 	if err != nil {
 		return
 	}
 	var res []*DaoBookmark
-	err = cur.All(ctx, &res)
-	if err != nil {
-		return
-	}
-	return res, nil
+	cur.All(ctx, &res)
+	return res
 }
 
 func (m *DaoBookmark) GetList(ctx context.Context, db *mongo.Database, pipeline interface{}) (list []*DaoFormatted) {
