@@ -34,7 +34,8 @@ var (
 type PostType int
 
 const (
-	SMS PostType = iota
+	DAO PostType = iota - 1
+	SMS
 	VIDEO
 )
 

@@ -90,6 +90,66 @@ func (m *Dao) Update(ctx context.Context, db *mongo.Database) error {
 	return nil
 }
 
+func (m *Dao) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) {
+
+	var query bson.M
+	if m.Address != "" {
+		query = bson.M{"address": m.Address}
+	}
+	for k, v := range *conditions {
+		if k != "ORDER" {
+			if query != nil {
+				query = findQuery([]bson.M{query, v})
+			} else {
+				query = findQuery([]bson.M{v})
+			}
+		}
+	}
+	count, err := db.Collection(m.Table()).CountDocuments(context.TODO(), query)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (m *Dao) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Dao, error) {
+	var (
+		posts  []*Dao
+		err    error
+		cursor *mongo.Cursor
+		query  bson.M
+	)
+	if m.Address != "" {
+		query = bson.M{"address": m.Address}
+	}
+	finds := make([]*options.FindOptions, 0, 3)
+	finds = append(finds, options.Find().SetSkip(int64(offset)))
+	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	for k, v := range *conditions {
+		if k != "ORDER" {
+			if query != nil {
+				query = findQuery([]bson.M{query, v})
+			} else {
+				query = findQuery([]bson.M{v})
+			}
+		} else {
+			finds = append(finds, options.Find().SetSort(v))
+		}
+	}
+	if cursor, err = db.Collection(m.Table()).Find(context.TODO(), query, finds...); err != nil {
+		return nil, err
+	}
+	for cursor.Next(context.TODO()) {
+		var post Dao
+		if cursor.Decode(&post) != nil {
+			return nil, err
+		}
+		posts = append(posts, &post)
+	}
+	return posts, nil
+}
+
 func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	if m.ID.IsZero() {
 		return nil, mongo.ErrNoDocuments

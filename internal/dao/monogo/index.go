@@ -48,9 +48,6 @@ func (s *indexPostsServant) IndexPosts(user *model.User, offset int, limit int) 
 	if user == nil {
 		predicates["query"] = bson.M{"visibility": model.PostVisitPublic}
 	} else {
-		//friendIds, _ := s.ams.BeFriendIds(user.Address)
-		//friendIds = append(friendIds, user.Address)
-		//predicates["visibility = ? OR (visibility = ? AND user_id = ?) OR (visibility = ? AND user_id IN ?)"] = args
 		predicates["query"] = bson.M{"visibility": model.PostVisitPublic,
 			"$or": bson.M{"visibility": model.PostVisitPrivate, "address": user.Address}}
 	}
