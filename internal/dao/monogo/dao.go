@@ -92,6 +92,11 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 	return
 }
 
+func (s *daoManageServant) GetDaoBookmarkListByAddress(address string) []*model.DaoBookmark {
+	book := &model.DaoBookmark{}
+	return book.FindList(context.TODO(), s.db, bson.M{"address": address})
+}
+
 func (s *daoManageServant) GetDaoBookmarkByAddressAndDaoID(myAddress string, daoId string) (*model.DaoBookmark, error) {
 	book := &model.DaoBookmark{}
 	res, err := book.GetByAddress(context.TODO(), s.db, myAddress, daoId)

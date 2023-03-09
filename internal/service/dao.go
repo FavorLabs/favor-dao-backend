@@ -91,6 +91,15 @@ func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int)
 	return list, total
 }
 
+func GetDaoBookmarkListByAddress(address string) *[]primitive.ObjectID {
+	list := ds.GetDaoBookmarkListByAddress(address)
+	daoIds := make([]primitive.ObjectID, 0, len(list))
+	for _, l := range list {
+		daoIds = append(daoIds, l.DaoID)
+	}
+	return &daoIds
+}
+
 func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	dao := &model.Dao{
 		ID:           param.Id,
