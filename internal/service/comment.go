@@ -3,7 +3,9 @@ package service
 import (
 	"time"
 
+	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/errcode"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -101,9 +103,12 @@ func CreatePostComment(address string, param CommentCreationReq) (comment *model
 
 	// 加载Post
 	post, err := ds.GetPostByID(param.PostID)
-
 	if err != nil {
 		return nil, err
+	}
+
+	if post.CommentCount >= conf.AppSetting.MaxCommentCount {
+		return nil, errcode.MaxCommentCount
 	}
 
 	comment = &model.Comment{
@@ -129,6 +134,8 @@ func CreatePostComment(address string, param CommentCreationReq) (comment *model
 		}
 	}
 
+	// 更新Post回复数
+	post.CommentCount++
 	post.LatestRepliedOn = time.Now().Unix()
 	if err := ds.UpdatePost(post); err != nil {
 		return nil, err
@@ -148,6 +155,8 @@ func DeletePostComment(comment *model.Comment) error {
 	// 加载post
 	post, err := ds.GetPostByID(comment.PostID)
 	if err == nil {
+		// 更新post回复数
+		post.CommentCount--
 		if err := ds.UpdatePost(post); err != nil {
 			return err
 		}
@@ -167,6 +176,10 @@ func createPostPreHandler(commentID primitive.ObjectID) (*model.Post, error) {
 	post, err := ds.GetPostByID(comment.PostID)
 	if err != nil {
 		return nil, err
+	}
+
+	if post.CommentCount >= conf.AppSetting.MaxCommentCount {
+		return nil, errcode.MaxCommentCount
 	}
 
 	return post, nil
@@ -194,6 +207,7 @@ func CreatePostCommentReply(commentID primitive.ObjectID, content string, addres
 	}
 
 	// 更新Post回复数
+	post.CommentCount++
 	post.LatestRepliedOn = time.Now().Unix()
 	if err := ds.UpdatePost(post); err != nil {
 		return nil, err
@@ -227,6 +241,8 @@ func DeletePostCommentReply(reply *model.CommentReply) error {
 		return err
 	}
 
+	// 更新Post回复数
+	post.CommentCount--
 	post.LatestRepliedOn = time.Now().Unix()
 	if err := ds.UpdatePost(post); err != nil {
 		return err

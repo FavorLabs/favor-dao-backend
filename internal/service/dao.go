@@ -161,6 +161,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		"view_count":       0,
 		"collection_count": 0,
 		"upvote_count":     0,
+		"comment_count":    0,
 		"member":           0,
 		"visibility":       model.PostVisitPublic, // Only the public dao will enter the search engine
 		"is_top":           0,

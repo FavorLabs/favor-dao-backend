@@ -35,6 +35,7 @@ type Post struct {
 	ViewCount       int64              `json:"view_count"        bson:"view_count"`
 	CollectionCount int64              `json:"collection_count"  bson:"collection_count"`
 	UpvoteCount     int64              `json:"upvote_count"      bson:"upvote_count"`
+	CommentCount    int64              `json:"comment_count"     bson:"comment_count"`
 	Member          int                `json:"member"            bson:"member"`
 	Visibility      PostVisibleT       `json:"visibility"        bson:"visibility"`
 	IsTop           int                `json:"is_top"            bson:"is_top"`
@@ -59,6 +60,7 @@ type PostFormatted struct {
 	ViewCount       int64                  `json:"view_count"`
 	CollectionCount int64                  `json:"collection_count"`
 	UpvoteCount     int64                  `json:"upvote_count"`
+	CommentCount    int64                  `json:"comment_count"`
 	Visibility      PostVisibleT           `json:"visibility"`
 	IsTop           int                    `json:"is_top"`
 	IsEssence       int                    `json:"is_essence"`
@@ -88,6 +90,7 @@ func (p *Post) Format() *PostFormatted {
 		ViewCount:       p.ViewCount,
 		CollectionCount: p.CollectionCount,
 		UpvoteCount:     p.UpvoteCount,
+		CommentCount:    p.CommentCount,
 		Visibility:      p.Visibility,
 		IsTop:           p.IsTop,
 		IsEssence:       p.IsEssence,
