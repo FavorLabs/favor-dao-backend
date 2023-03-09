@@ -48,7 +48,7 @@ type PostFormatted struct {
 	CreatedOn       int64                  `json:"created_on"`
 	ModifiedOn      int64                  `json:"modified_on"`
 	LatestRepliedOn int64                  `json:"latest_replied_on"`
-	DaoId           primitive.ObjectID     `json:"daoId"`
+	DaoId           primitive.ObjectID     `json:"dao_id"`
 	Dao             *DaoFormatted          `json:"dao"`
 	Address         string                 `json:"address"`
 	User            *UserFormatted         `json:"user"`
