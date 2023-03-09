@@ -19,6 +19,8 @@ type DaoCreationReq struct {
 	Name         string            `json:"name"          binding:"required"`
 	Introduction string            `json:"introduction"`
 	Visibility   model.DaoVisibleT `json:"visibility"`
+	Avatar       string            `json:"avatar"`
+	Banner       string            `json:"banner"`
 }
 
 type DaoUpdateReq struct {
@@ -27,6 +29,7 @@ type DaoUpdateReq struct {
 	Introduction string             `json:"introduction"`
 	Visibility   model.DaoVisibleT  `json:"visibility"`
 	Avatar       string             `json:"avatar"`
+	Banner       string             `json:"banner"`
 }
 
 type DaoFollowReq struct {
@@ -46,6 +49,8 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 		Name:         param.Name,
 		Visibility:   param.Visibility,
 		Introduction: param.Introduction,
+		Avatar:       param.Avatar,
+		Banner:       param.Banner,
 	}
 	res, err := ds.CreateDao(dao)
 	if err != nil {
@@ -65,24 +70,6 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 
 func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted, total int64) {
 	list = ds.GetDaoBookmarkList(userAddress, q, offset, limit)
-	// get avatar
-	var addresses []string
-	for _, v := range list {
-		addresses = append(addresses, v.Address)
-	}
-	users, err := ds.GetUsersByAddresses(addresses)
-	if err != nil {
-		return
-	}
-	userMap := make(map[string]*model.User, len(users))
-	for _, user := range users {
-		userMap[user.Address] = user
-	}
-	for k, v := range list {
-		if list[k].Avatar == "" {
-			list[k].Avatar = userMap[v.Address].Avatar
-		}
-	}
 	if len(list) > 0 {
 		total = ds.DaoBookmarkCount(userAddress)
 	}
@@ -104,6 +91,8 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 		Name:         param.Name,
 		Visibility:   param.Visibility,
 		Introduction: param.Introduction,
+		Avatar:       param.Avatar,
+		Banner:       param.Banner,
 	}
 	getDao, err := ds.GetDao(dao)
 	if err != nil {
@@ -172,6 +161,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		"view_count":       0,
 		"collection_count": 0,
 		"upvote_count":     0,
+		"comment_count":    0,
 		"member":           0,
 		"visibility":       model.PostVisitPublic, // Only the public dao will enter the search engine
 		"is_top":           0,

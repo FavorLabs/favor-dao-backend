@@ -23,6 +23,8 @@ type dataServant struct {
 	core.TweetService
 	core.TweetManageService
 	core.TweetHelpService
+	core.CommentService
+	core.CommentManageService
 	core.UserManageService
 	core.DaoManageService
 }
@@ -47,13 +49,15 @@ func NewDataService() (core.DataService, core.VersionInfo) {
 	logrus.Infof("use %s as cache index service by version: %s", v.Name(), v.Version())
 
 	ds := &dataServant{
-		IndexPostsService:  c,
-		TopicService:       newTopicService(db),
-		TweetService:       newTweetService(db),
-		TweetManageService: newTweetManageService(db, c),
-		TweetHelpService:   newTweetHelpService(db),
-		UserManageService:  newUserManageService(db),
-		DaoManageService:   newDaoManageService(db),
+		IndexPostsService:    c,
+		TopicService:         newTopicService(db),
+		TweetService:         newTweetService(db),
+		TweetManageService:   newTweetManageService(db, c),
+		TweetHelpService:     newTweetHelpService(db),
+		CommentService:       newCommentService(db),
+		CommentManageService: newCommentManageService(db),
+		UserManageService:    newUserManageService(db),
+		DaoManageService:     newDaoManageService(db),
 	}
 	return ds, ds
 }

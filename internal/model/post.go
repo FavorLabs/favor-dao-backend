@@ -35,12 +35,15 @@ type Post struct {
 	ViewCount       int64              `json:"view_count"        bson:"view_count"`
 	CollectionCount int64              `json:"collection_count"  bson:"collection_count"`
 	UpvoteCount     int64              `json:"upvote_count"      bson:"upvote_count"`
+	CommentCount    int64              `json:"comment_count"     bson:"comment_count"`
 	Member          int                `json:"member"            bson:"member"`
 	Visibility      PostVisibleT       `json:"visibility"        bson:"visibility"`
 	IsTop           int                `json:"is_top"            bson:"is_top"`
 	IsEssence       int                `json:"is_essence"        bson:"is_essence"`
 	Tags            string             `json:"tags"              bson:"tags"`
 	Type            PostType           `json:"type"              bson:"type"`
+	RefId           primitive.ObjectID `json:"ref_id"            bson:"ref_id"`
+	RefType         PostRefType        `json:"ref_type"          bson:"ref_type"`
 }
 
 type PostFormatted struct {
@@ -52,16 +55,19 @@ type PostFormatted struct {
 	Dao             *DaoFormatted          `json:"dao"`
 	Address         string                 `json:"address"`
 	User            *UserFormatted         `json:"user"`
-	Contents        []*PostContentFormated `json:"contents"`
+	Contents        []*PostContentFormatted `json:"contents"`
 	Member          int                    `json:"member"`
 	ViewCount       int64                  `json:"view_count"`
 	CollectionCount int64                  `json:"collection_count"`
 	UpvoteCount     int64                  `json:"upvote_count"`
+	CommentCount    int64                  `json:"comment_count"`
 	Visibility      PostVisibleT           `json:"visibility"`
 	IsTop           int                    `json:"is_top"`
 	IsEssence       int                    `json:"is_essence"`
 	Tags            map[string]int8        `json:"tags"`
 	Type            PostType               `json:"type"`
+	RefId           primitive.ObjectID      `json:"ref_id"`
+	RefType         PostRefType             `json:"ref_type"`
 }
 
 func (p *Post) table() string {
@@ -79,17 +85,20 @@ func (p *Post) Format() *PostFormatted {
 		Dao:             &DaoFormatted{},
 		Address:         p.Address,
 		User:            &UserFormatted{},
-		Contents:        []*PostContentFormated{},
+		Contents:        []*PostContentFormatted{},
 		Member:          p.Member,
 		ViewCount:       p.ViewCount,
 		CollectionCount: p.CollectionCount,
 		UpvoteCount:     p.UpvoteCount,
+		CommentCount:    p.CommentCount,
 		Visibility:      p.Visibility,
 		IsTop:           p.IsTop,
 		IsEssence:       p.IsEssence,
 		Tags:            tagsMap,
 		Type:            p.Type,
 		CreatedOn:       p.CreatedOn,
+		RefId:           p.RefId,
+		RefType:         p.RefType,
 	}
 }
 

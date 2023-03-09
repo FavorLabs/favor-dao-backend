@@ -54,9 +54,13 @@ func newTweetHelpService(db *mongo.Database) core.TweetHelpService {
 // MergePosts post data integration
 func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatted, error) {
 	postIds := make([]primitive.ObjectID, 0, len(posts))
+	refItems := make(map[primitive.ObjectID]model.PostRefType, 0)
 	addresses := make([]string, 0, len(posts))
 	daoIds := make([]primitive.ObjectID, 0, len(posts))
 	for _, post := range posts {
+		if post.Type == model.Retweet || post.Type == model.RetweetComment {
+			refItems[post.RefId] = post.RefType
+		}
 		postIds = append(postIds, post.ID)
 		addresses = append(addresses, post.Address)
 		daoIds = append(daoIds, post.DaoId)
@@ -87,7 +91,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 		daoMap[dao.ID.Hex()] = dao.Format()
 	}
 
-	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormated, len(postContents))
+	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormatted, len(postContents))
 	for _, content := range postContents {
 		contentMap[content.PostID] = append(contentMap[content.PostID], content.Format())
 	}
@@ -97,8 +101,45 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 	for _, post := range posts {
 		postFormatted := post.Format()
 		postFormatted.User = userMap[post.Address]
-		postFormatted.Contents = contentMap[post.ID]
 		postFormatted.Dao = daoMap[post.DaoId.Hex()]
+
+		if content, ok := contentMap[post.ID]; ok {
+			postFormatted.Contents = content
+		}
+
+		switch post.RefType {
+		case model.RefPost:
+			refContents, err := s.getPostContentsByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
+			for i := range refContentsFormatted {
+				refContentsFormatted[i] = refContents[i].Format()
+			}
+			postFormatted.Contents = append(postFormatted.Contents, refContentsFormatted...)
+		case model.RefComment:
+			refComments, err := s.getCommentContentsByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
+			for i := range refCommentsFormatted {
+				refCommentsFormatted[i] = refComments[i].PostFormat()
+			}
+			postFormatted.Contents = append(postFormatted.Contents, refCommentsFormatted...)
+		case model.RefCommentReply:
+			refReplies, err := s.getCommentRepliesByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refReliesFormatted := make([]*model.PostContentFormatted, len(refReplies))
+			for i := range refReliesFormatted {
+				refReliesFormatted[i] = refReplies[i].PostFormat()
+			}
+			postFormatted.Contents = append(postFormatted.Contents, refReliesFormatted...)
+		}
+
 		postsFormatted = append(postsFormatted, postFormatted)
 	}
 	return postsFormatted, nil
@@ -106,10 +147,14 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 
 // RevampPosts post data shaping repair
 func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.PostFormatted, error) {
-	postIds := make([]primitive.ObjectID, 0)
+	postIds := make([]primitive.ObjectID, 0, len(posts))
+	refItems := make(map[primitive.ObjectID]model.PostRefType, 0)
 	addresses := make([]string, 0, len(posts))
 	daoIds := make([]primitive.ObjectID, 0, len(posts))
 	for _, post := range posts {
+		if post.Type == model.Retweet || post.Type == model.RetweetComment {
+			refItems[post.RefId] = post.RefType
+		}
 		if post.Type != model.DAO {
 			postIds = append(postIds, post.ID)
 		}
@@ -142,7 +187,7 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 		daoMap[dao.ID.Hex()] = dao.Format()
 	}
 
-	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormated, len(postContents))
+	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormatted, len(postContents))
 	for _, content := range postContents {
 		contentMap[content.PostID] = append(contentMap[content.PostID], content.Format())
 	}
@@ -150,8 +195,44 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 	// data integration
 	for _, post := range posts {
 		post.User = userMap[post.Address]
-		post.Contents = contentMap[post.ID]
 		post.Dao = daoMap[post.DaoId.Hex()]
+
+		if content, ok := contentMap[post.ID]; ok {
+			post.Contents = content
+		}
+
+		switch post.RefType {
+		case model.RefPost:
+			refContents, err := s.getPostContentsByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
+			for i := range refContentsFormatted {
+				refContentsFormatted[i] = refContents[i].Format()
+			}
+			post.Contents = append(post.Contents, refContentsFormatted...)
+		case model.RefComment:
+			refComments, err := s.getCommentContentsByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
+			for i := range refCommentsFormatted {
+				refCommentsFormatted[i] = refComments[i].PostFormat()
+			}
+			post.Contents = append(post.Contents, refCommentsFormatted...)
+		case model.RefCommentReply:
+			refReplies, err := s.getCommentRepliesByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refReliesFormatted := make([]*model.PostContentFormatted, len(refReplies))
+			for i := range refReliesFormatted {
+				refReliesFormatted[i] = refReplies[i].PostFormat()
+			}
+			post.Contents = append(post.Contents, refReliesFormatted...)
+		}
 	}
 	return posts, nil
 }
@@ -159,6 +240,27 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 func (s *tweetHelpServant) getPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {
 	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
 		"query": bson.M{"post_id": bson.M{"$in": ids}},
+		"ORDER": bson.M{"sort": 1},
+	}, 0, 0)
+}
+
+func (s *tweetHelpServant) getPostContentsByID(id primitive.ObjectID) ([]*model.PostContent, error) {
+	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
+		"query": bson.M{"post_id": id},
+		"ORDER": bson.M{"sort": 1},
+	}, 0, 0)
+}
+
+func (s *tweetHelpServant) getCommentContentsByID(id primitive.ObjectID) ([]*model.CommentContent, error) {
+	return (&model.CommentContent{}).List(s.db, &model.ConditionsT{
+		"query": bson.M{"comment_id": id},
+		"ORDER": bson.M{"sort": 1},
+	}, 0, 0)
+}
+
+func (s *tweetHelpServant) getCommentRepliesByID(id primitive.ObjectID) ([]*model.CommentReply, error) {
+	return (&model.CommentReply{}).List(s.db, &model.ConditionsT{
+		"query": bson.M{"_id": id},
 		"ORDER": bson.M{"sort": 1},
 	}, 0, 0)
 }
@@ -414,8 +516,9 @@ func (s *tweetServant) GetPostContentsByIDs(ids []primitive.ObjectID) ([]*model.
 	}, 0, 0)
 }
 
-func (s *tweetServant) GetPostContentByID(id primitive.ObjectID) (*model.PostContent, error) {
-	return (&model.PostContent{
-		ID: id,
-	}).Get(s.db)
+func (s *tweetServant) GetPostContentByID(id primitive.ObjectID) ([]*model.PostContent, error) {
+	return (&model.PostContent{}).List(s.db, &model.ConditionsT{
+		"query": bson.M{"post_id": id},
+		"ORDER": bson.M{"sort": 1},
+	}, 0, 0)
 }

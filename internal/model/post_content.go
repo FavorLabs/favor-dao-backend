@@ -37,6 +37,16 @@ const (
 	DAO PostType = iota - 1
 	SMS
 	VIDEO
+	Retweet
+	RetweetComment
+)
+
+type PostRefType int
+
+const (
+	RefPost PostRefType = iota
+	RefComment
+	RefCommentReply
 )
 
 type PostContent struct {
@@ -49,7 +59,7 @@ type PostContent struct {
 	IsDel   int                `json:"is_del"  bson:"is_del"`
 }
 
-type PostContentFormated struct {
+type PostContentFormatted struct {
 	ID      primitive.ObjectID `json:"id"`
 	PostID  primitive.ObjectID `json:"post_id"`
 	Address string             `json:"address"`
@@ -73,7 +83,6 @@ func (p *PostContent) DeleteByPostId(db *mongo.Database, postId primitive.Object
 }
 
 func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId primitive.ObjectID) (contents []string, err error) {
-
 	filter := bson.D{
 		{"is_del", 0},
 		{"post_id", postId},
@@ -101,8 +110,8 @@ func (p *PostContent) Create(db *mongo.Database) (*PostContent, error) {
 	return p, err
 }
 
-func (p *PostContent) Format() *PostContentFormated {
-	return &PostContentFormated{
+func (p *PostContent) Format() *PostContentFormatted {
+	return &PostContentFormatted{
 		ID:      p.ID,
 		PostID:  p.PostID,
 		Address: p.Address,

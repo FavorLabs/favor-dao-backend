@@ -182,7 +182,7 @@ func GetUserPosts(c *gin.Context) {
 		}
 		postTypes = append(postTypes, model.PostType(int(p)))
 	} else {
-		postTypes = append(postTypes, model.SMS, model.VIDEO)
+		postTypes = append(postTypes, model.SMS, model.VIDEO, model.Retweet, model.RetweetComment)
 	}
 	conditions := model.ConditionsT{
 		"query": bson.M{"address": user.Address,

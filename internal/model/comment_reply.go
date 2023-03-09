@@ -43,6 +43,14 @@ func (c *CommentReply) Format() *CommentReplyFormatted {
 	}
 }
 
+func (c *CommentReply) PostFormat() *PostContentFormatted {
+	return &PostContentFormatted{
+		ID:      c.ID,
+		Address: c.Address,
+		Content: c.Content,
+	}
+}
+
 func (c *CommentReply) Table() string {
 	return "comment_reply"
 }

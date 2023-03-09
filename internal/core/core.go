@@ -8,6 +8,9 @@ type DataService interface {
 	TweetManageService
 	TweetHelpService
 
+	CommentService
+	CommentManageService
+
 	UserManageService
 
 	DaoManageService
