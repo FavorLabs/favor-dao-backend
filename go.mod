@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/afocus/captcha v0.0.0-20191010092841-4bd1f21c8868
 	github.com/allegro/bigcache/v3 v3.1.0
+	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/fatih/color v1.14.1
 	github.com/gin-contrib/cors v1.4.0
@@ -14,6 +15,7 @@ require (
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/goccy/go-json v0.10.0
 	github.com/gofrs/uuid v4.4.0+incompatible
+	github.com/gogf/gf v1.16.9
 	github.com/jaevor/go-nanoid v1.3.0
 	github.com/json-iterator/go v1.1.12
 	github.com/meilisearch/meilisearch-go v0.23.0
@@ -30,7 +32,6 @@ require (
 require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect
