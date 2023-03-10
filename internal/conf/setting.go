@@ -57,6 +57,10 @@ type AppSettingS struct {
 	MaxPageSize           int
 }
 
+type ExternalAppSettingS struct {
+	UseBucket string
+}
+
 type CacheIndexSettingS struct {
 	MaxUpdateQPS int
 	MinWorker    int
