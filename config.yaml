@@ -61,7 +61,7 @@ MongoDB:
   Username:
   Password:
   Host: 192.168.100.250:21718
-  DBName: dao
+  DBName: daoTest
 Redis:
   Host: 192.168.100.250:63091
   Password: redis

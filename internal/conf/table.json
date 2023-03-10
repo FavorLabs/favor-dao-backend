@@ -1,0 +1,147 @@
+[
+  {
+    "TableName": "dao",
+    "Indexes": [
+      [
+        {
+          "address": 1
+        }
+      ]
+    ],
+    "UniqueIndexes": [
+      {
+        "name": "text"
+      }
+    ]
+  },
+  {
+    "TableName": "dao_bookmark",
+    "Indexes": [
+      [
+        {
+          "dao_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "post_collection",
+    "Indexes": [
+      [
+        {
+          "post_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "post_content",
+    "Indexes": [
+      [
+        {
+          "post_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "post_star",
+    "Indexes": [
+      [
+        {
+          "post_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "post",
+    "Indexes": [
+      [
+        {
+          "dao_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "tag",
+    "Indexes": [
+      [
+        {
+          "address": 1
+        }
+      ]
+    ],
+    "UniqueIndexes": [
+      {
+        "tag": "text"
+      }
+    ]
+  },
+  {
+    "TableName": "user",
+    "UniqueIndexes": [
+      {
+        "address": 1
+      },
+      {
+        "nickname": "text"
+      }
+    ]
+  },
+  {
+    "TableName": "comment",
+    "Indexes": [
+      [
+        {
+          "post_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "comment_content",
+    "Indexes": [
+      [
+        {
+          "comment_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "comment_reply",
+    "Indexes": [
+      [
+        {
+          "comment_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  }
+]

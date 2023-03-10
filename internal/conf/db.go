@@ -2,6 +2,7 @@ package conf
 
 import (
 	"context"
+	"log"
 	"sync"
 
 	"github.com/go-redis/redis/v8"
@@ -22,7 +23,13 @@ func MustMongoDB() *mongo.Database {
 	once.Do(func() {
 		var err error
 		if db, err = newDBEngine(); err != nil {
+			log.Println(err)
 			logrus.Fatalf("new mongo db failed: %s", err)
+		}
+		// init index
+		if err = CreateTableIndex(); err != nil {
+			log.Println(err)
+			logrus.Fatalf("mongo db create index failed: %s", err)
 		}
 	})
 	return db
