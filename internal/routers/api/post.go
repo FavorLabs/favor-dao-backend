@@ -50,7 +50,7 @@ func GetFocusPostList(c *gin.Context) {
 
 	daoIds := *service.GetDaoBookmarkListByAddress(userID.(string))
 	if len(daoIds) == 0 {
-		response.ToResponse(nil)
+		response.ToResponseList([]*model.PostFormatted{}, 0)
 		return
 	}
 	conditions := model.ConditionsT{

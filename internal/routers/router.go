@@ -43,6 +43,8 @@ func NewRouter() *gin.Engine {
 		noAuthApi.GET("/post/comments", api.GetPostComments)
 
 		noAuthApi.GET("/user/posts", api.GetUserPosts)
+
+		noAuthApi.GET("/dao/posts", api.GetDaoPosts)
 	}
 
 	authApi := r.Group("/").Use(middleware.Session())

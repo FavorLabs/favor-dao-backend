@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"unicode/utf8"
 
@@ -197,6 +198,59 @@ func GetUserPosts(c *gin.Context) {
 	})
 	if err != nil {
 		logrus.Errorf("service.GetPostList err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostsFailed)
+		return
+	}
+	totalRows, _ := service.GetPostCount(&conditions)
+
+	response.ToResponseList(posts, totalRows)
+}
+
+func GetDaoPosts(c *gin.Context) {
+	response := app.NewResponse(c)
+	daoId := c.Query("daoId")
+	postType := c.Query("type")
+
+	daoInfo, err := service.GetDao(daoId)
+	id, err := primitive.ObjectIDFromHex(daoId)
+	if err != nil {
+		logrus.Errorf("service.GetDaoPosts err: %v\n", err)
+		response.ToErrorResponse(errcode.NoExistUserAddress)
+		return
+	}
+
+	visibilities := []model.PostVisibleT{model.PostVisitPublic}
+	if u, exists := c.Get("USER"); exists {
+		self := u.(*model.User)
+		if self.Address == daoInfo.Address {
+			visibilities = append(visibilities, model.PostVisitPrivate)
+		}
+	}
+	var postTypes []model.PostType
+	if postType != "" {
+		p, err := strconv.ParseInt(postType, 10, 0)
+		if err != nil {
+			logrus.Errorf("service.GetDaoPosts err: %v\n", err)
+			response.ToErrorResponse(errcode.GetPostsFailed)
+			return
+		}
+		postTypes = append(postTypes, model.PostType(int(p)))
+	} else {
+		postTypes = append(postTypes, model.SMS, model.VIDEO)
+	}
+	conditions := model.ConditionsT{
+		"query": bson.M{"dao_id": id,
+			"visibility": bson.M{"$in": visibilities}, "type": bson.M{"$in": postTypes}},
+		"ORDER": bson.M{"_id": -1},
+	}
+
+	posts, err := service.GetPostList(&service.PostListReq{
+		Conditions: &conditions,
+		Offset:     (app.GetPage(c) - 1) * app.GetPageSize(c),
+		Limit:      app.GetPageSize(c),
+	})
+	if err != nil {
+		logrus.Errorf("service.GetDaoPosts err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostsFailed)
 		return
 	}
