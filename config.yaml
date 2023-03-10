@@ -4,6 +4,8 @@ App:
   DefaultContextTimeout: 60
   DefaultPageSize: 10
   MaxPageSize: 100
+External:
+  UseBucket: bucketname
 Server:
   RunMode: debug
   HttpIp: 0.0.0.0

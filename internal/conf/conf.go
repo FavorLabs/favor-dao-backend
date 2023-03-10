@@ -18,6 +18,7 @@ var (
 	MongoDBSetting          *MongoDBSettingS
 	ServerSetting           *ServerSettingS
 	AppSetting              *AppSettingS
+	ExternalAppSetting      *ExternalAppSettingS
 	CacheIndexSetting       *CacheIndexSettingS
 	SimpleCacheIndexSetting *SimpleCacheIndexSettingS
 	BigCacheIndexSetting    *BigCacheIndexSettingS
@@ -43,6 +44,7 @@ func setupSetting(suite []string, noDefault bool) error {
 
 	objects := map[string]interface{}{
 		"App":              &AppSetting,
+		"External":         &ExternalAppSetting,
 		"Server":           &ServerSetting,
 		"CacheIndex":       &CacheIndexSetting,
 		"SimpleCacheIndex": &SimpleCacheIndexSetting,

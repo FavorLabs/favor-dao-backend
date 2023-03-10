@@ -27,6 +27,9 @@ func Version(c *gin.Context) {
 	response := app.NewResponse(c)
 	response.ToResponse(gin.H{
 		"BuildInfo": debug.ReadBuildInfo(),
+		"Settings": gin.H{
+			"Bucket": conf.ExternalAppSetting.UseBucket,
+		},
 	})
 }
 
