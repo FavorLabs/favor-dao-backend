@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"time"
@@ -178,7 +177,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 }
 
 func DeleteSearchDao(post *model.Dao) error {
-	return ts.DeleteDocuments([]string{fmt.Sprintf("%d", post.ID)})
+	return ts.DeleteDocuments([]string{post.ID.Hex()})
 }
 
 func PushDAOsToSearch() {

@@ -557,7 +557,7 @@ func PushPostToSearch(post *model.Post) {
 }
 
 func DeleteSearchPost(post *model.Post) error {
-	return ts.DeleteDocuments([]string{fmt.Sprintf("%d", post.ID)})
+	return ts.DeleteDocuments([]string{post.ID.Hex()})
 }
 
 func PushPostsToSearch() {

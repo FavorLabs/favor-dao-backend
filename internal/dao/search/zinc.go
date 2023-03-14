@@ -60,6 +60,7 @@ func (s *zincTweetSearchServant) AddDocuments(data core.DocItems, primaryKey ...
 func (s *zincTweetSearchServant) DeleteDocuments(identifiers []string) error {
 	for _, id := range identifiers {
 		if err := s.client.DelDoc(s.indexName, id); err != nil {
+			logrus.Errorf("deleteDocuments %s error: %s", id, err)
 			return err
 		}
 	}

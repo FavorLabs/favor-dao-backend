@@ -95,7 +95,7 @@
     ]
   },
   {
-    "TableName": "user",
+    "TableName": "d_user",
     "UniqueIndexes": [
       {
         "address": 1
