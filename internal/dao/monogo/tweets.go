@@ -53,17 +53,17 @@ func newTweetHelpService(db *mongo.Database) core.TweetHelpService {
 
 // MergePosts post data integration
 func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatted, error) {
-	postIds := make([]primitive.ObjectID, 0, len(posts))
+	postIds := make([]primitive.ObjectID, len(posts))
 	refItems := make(map[primitive.ObjectID]model.PostRefType, 0)
-	addresses := make([]string, 0, len(posts))
-	daoIds := make([]primitive.ObjectID, 0, len(posts))
-	for _, post := range posts {
+	addresses := make([]string, len(posts))
+	daoIds := make([]primitive.ObjectID, len(posts))
+	for i, post := range posts {
 		if post.Type == model.Retweet || post.Type == model.RetweetComment {
 			refItems[post.RefId] = post.RefType
 		}
-		postIds = append(postIds, post.ID)
-		addresses = append(addresses, post.Address)
-		daoIds = append(daoIds, post.DaoId)
+		daoIds[i] = post.DaoId
+		postIds[i] = post.ID
+		addresses[i] = post.Address
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -97,8 +97,8 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 	}
 
 	// data integration
-	postsFormatted := make([]*model.PostFormatted, 0, len(posts))
-	for _, post := range posts {
+	postsFormatted := make([]*model.PostFormatted, len(posts))
+	for i, post := range posts {
 		postFormatted := post.Format()
 		postFormatted.User = userMap[post.Address]
 		postFormatted.Dao = daoMap[post.DaoId.Hex()]
@@ -140,7 +140,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 			postFormatted.Contents = append(postFormatted.Contents, refReliesFormatted...)
 		}
 
-		postsFormatted = append(postsFormatted, postFormatted)
+		postsFormatted[i] = postFormatted
 	}
 	return postsFormatted, nil
 }

@@ -38,11 +38,11 @@ func GetPostComments(postID primitive.ObjectID, sort string, sortVal, offset, li
 		return nil, 0, err
 	}
 
-	var addresses []string
-	var commentIDs []primitive.ObjectID
-	for _, comment := range comments {
-		addresses = append(addresses, comment.Address)
-		commentIDs = append(commentIDs, comment.ID)
+	addresses := make([]string, len(comments))
+	commentIDs := make([]primitive.ObjectID, len(comments))
+	for i, comment := range comments {
+		addresses[i] = comment.Address
+		commentIDs[i] = comment.ID
 	}
 
 	users, err := ds.GetUsersByAddresses(addresses)
@@ -60,8 +60,8 @@ func GetPostComments(postID primitive.ObjectID, sort string, sortVal, offset, li
 		return nil, 0, err
 	}
 
-	var commentsFormatted []*model.CommentFormatted
-	for _, comment := range comments {
+	commentsFormatted := make([]*model.CommentFormatted, len(comments))
+	for i, comment := range comments {
 		commentFormatted := comment.Format()
 		for _, content := range contents {
 			if content.CommentID == comment.ID {
@@ -79,7 +79,7 @@ func GetPostComments(postID primitive.ObjectID, sort string, sortVal, offset, li
 			}
 		}
 
-		commentsFormatted = append(commentsFormatted, commentFormatted)
+		commentsFormatted[i] = commentFormatted
 	}
 
 	// 获取总量
