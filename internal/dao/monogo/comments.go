@@ -73,9 +73,9 @@ func (s *commentServant) GetCommentRepliesByID(ids []primitive.ObjectID) ([]*mod
 		return nil, err
 	}
 
-	var addresses []string
-	for _, reply := range replies {
-		addresses = append(addresses, reply.Address)
+	addresses := make([]string, len(replies))
+	for i, reply := range replies {
+		addresses[i] = reply.Address
 	}
 
 	var users []*model.User
@@ -89,8 +89,8 @@ func (s *commentServant) GetCommentRepliesByID(ids []primitive.ObjectID) ([]*mod
 		}
 	}
 
-	var repliesFormatted []*model.CommentReplyFormatted
-	for _, reply := range replies {
+	repliesFormatted := make([]*model.CommentReplyFormatted, len(replies))
+	for i, reply := range replies {
 		replyFormatted := reply.Format()
 		for _, user := range users {
 			if reply.Address == user.Address {
@@ -98,7 +98,7 @@ func (s *commentServant) GetCommentRepliesByID(ids []primitive.ObjectID) ([]*mod
 			}
 		}
 
-		repliesFormatted = append(repliesFormatted, replyFormatted)
+		repliesFormatted[i] = replyFormatted
 	}
 
 	return repliesFormatted, nil

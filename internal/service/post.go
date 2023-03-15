@@ -363,9 +363,15 @@ func CreatePostView(postID primitive.ObjectID) error {
 	if err != nil {
 		return err
 	}
+
+	// 更新Post观看数
 	post.ViewCount++
-	err = ds.UpdatePost(post)
-	return err
+	ds.UpdatePost(post)
+
+	// 更新索引
+	PushPostToSearch(post)
+
+	return nil
 }
 
 func GetPostView(postID primitive.ObjectID) (int64, error) {
