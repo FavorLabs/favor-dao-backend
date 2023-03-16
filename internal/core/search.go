@@ -10,18 +10,21 @@ const (
 	SearchTypeAddress SearchType = "address"
 )
 
-type SearchType string
+type (
+	SearchType string
 
-type QueryReq struct {
-	Query      string
-	Visibility []model.PostVisibleT
-	Type       SearchType
-}
+	QueryReq struct {
+		Query      string
+		Visibility []PostVisibleT
+		Type       string
+		Search     SearchType
+	}
 
-type QueryResp struct {
-	Items []*model.PostFormatted
-	Total int64
-}
+	QueryResp struct {
+		Items []*PostFormatted
+		Total int64
+	}
+)
 
 type DocItems []map[string]interface{}
 

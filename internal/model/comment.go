@@ -79,7 +79,9 @@ func (c *Comment) List(db *mongo.Database, conditions *ConditionsT, offset, limi
 	if !c.PostID.IsZero() {
 		query = bson.M{"post_id": c.PostID}
 	}
-
+	if len(*conditions) == 0 {
+		query = findQuery([]bson.M{query})
+	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {

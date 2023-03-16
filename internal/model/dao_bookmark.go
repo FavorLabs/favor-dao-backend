@@ -99,31 +99,37 @@ func (m *DaoBookmark) Get(ctx context.Context, db *mongo.Database) (*DaoBookmark
 }
 
 func (m *DaoBookmark) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*DaoBookmark) {
-	cur, err := db.Collection(m.Table()).Find(ctx, filter)
+	cursor, err := db.Collection(m.Table()).Find(ctx, filter)
 	if err != nil {
 		return
 	}
-	var res []*DaoBookmark
-	cur.All(ctx, &res)
-	return res
+	list = []*DaoBookmark{}
+	for cursor.Next(context.TODO()) {
+		var t DaoBookmark
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, &t)
+	}
+	return
 }
 
 func (m *DaoBookmark) GetList(ctx context.Context, db *mongo.Database, pipeline interface{}) (list []*DaoFormatted) {
-	cur, err := db.Collection(m.Table()).Aggregate(ctx, pipeline)
+	list = []*DaoFormatted{}
+	cursor, err := db.Collection(m.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return
 	}
 	type tmp struct {
 		Dao *Dao `bson:"dao"`
 	}
-	var a []*tmp
-	err = cur.All(ctx, &a)
-	if err != nil {
-		return
-	}
-	list = []*DaoFormatted{}
-	for _, v := range a {
-		list = append(list, v.Dao.Format())
+
+	for cursor.Next(context.TODO()) {
+		var t tmp
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, t.Dao.Format())
 	}
 	return
 }

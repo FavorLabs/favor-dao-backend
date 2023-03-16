@@ -7,6 +7,7 @@ import (
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -76,7 +77,7 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 	}
 	dao := &model.Dao{}
 	if q.Query != "" {
-		if q.Type == "address" {
+		if q.Search == "address" {
 			query[dao.Table()+".address"] = q.Query
 		} else {
 			query[dao.Table()+".name"] = bson.M{"$regex": q.Query}
@@ -114,26 +115,49 @@ func (s *daoManageServant) GetDaoBookmarkByAddressAndDaoID(myAddress string, dao
 	return res, nil
 }
 
-func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string) (*model.DaoBookmark, error) {
+func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string) (out *model.DaoBookmark, err error) {
 	id, err := primitive.ObjectIDFromHex(daoID)
 	if err != nil {
 		return nil, err
 	}
-	book := &model.DaoBookmark{Address: myAddress, DaoID: id}
-	oldBook, err := book.GetByAddress(context.TODO(), s.db, myAddress, daoID, true)
-	if err != nil {
-		return book.Create(context.TODO(), s.db)
-	}
-	oldBook.IsDel = 0
-	oldBook.ModifiedOn = time.Now().Unix()
-	oldBook.DeletedOn = 0
-	err = oldBook.Update(context.TODO(), s.db)
-	if err != nil {
-		return nil, err
-	}
-	return oldBook, nil
+
+	err = util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		dao, err := (&model.Dao{ID: id, IsDel: 1}).Get(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		dao.FollowCount++
+		err = dao.Update(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		// update book
+		book := &model.DaoBookmark{Address: myAddress, DaoID: id}
+		out, err = book.GetByAddress(context.TODO(), s.db, myAddress, daoID, true)
+		if err != nil {
+			out, err = book.Create(context.TODO(), s.db)
+		} else {
+			out.IsDel = 0
+			out.ModifiedOn = time.Now().Unix()
+			out.DeletedOn = 0
+			err = out.Update(context.TODO(), s.db)
+		}
+		return err
+	})
+	return
 }
 
 func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark) error {
-	return d.Delete(context.TODO(), s.db)
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		dao, err := (&model.Dao{ID: d.DaoID, IsDel: 1}).Get(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		dao.FollowCount--
+		err = dao.Update(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		return d.Delete(ctx, s.db)
+	})
 }

@@ -127,7 +127,39 @@ func GetDao(daoId string) (*model.DaoFormatted, error) {
 	if err != nil {
 		return nil, err
 	}
-	return res.Format(), nil
+	out := res.Format()
+	out.LastPosts = []*model.PostFormatted{}
+	// sms
+	conditions := model.ConditionsT{
+		"query": bson.M{
+			"dao_id":     dao.ID,
+			"visibility": model.PostVisitPublic,
+			"type":       model.SMS,
+		},
+		"ORDER": bson.M{"_id": -1},
+	}
+	resp, _ := GetPostList(&PostListReq{
+		Conditions: &conditions,
+		Offset:     0,
+		Limit:      1,
+	})
+	out.LastPosts = append(out.LastPosts, resp...)
+	// video
+	conditions2 := model.ConditionsT{
+		"query": bson.M{
+			"dao_id":     dao.ID,
+			"visibility": model.PostVisitPublic,
+			"type":       model.VIDEO,
+		},
+		"ORDER": bson.M{"_id": -1},
+	}
+	resp2, _ := GetPostList(&PostListReq{
+		Conditions: &conditions2,
+		Offset:     0,
+		Limit:      1,
+	})
+	out.LastPosts = append(out.LastPosts, resp2...)
+	return out, nil
 }
 
 func GetMyDaoList(address string) ([]*model.DaoFormatted, error) {
@@ -196,13 +228,13 @@ func PushDAOsToSearch() {
 			Limit:      splitNum,
 		})
 
-		for _, post := range posts {
-			_, err := PushDaoToSearch(post)
+		for _, dao := range posts {
+			_, err := PushDaoToSearch(dao)
 			if err != nil {
 				log.Printf("dao: add document err: %s\n", err)
 				continue
 			}
-			log.Printf("dao: add document success, dao_id: %s\n", post.ID.Hex())
+			log.Printf("dao: add document success, dao_id: %s\n", dao.ID.Hex())
 		}
 	}
 }

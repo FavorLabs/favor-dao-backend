@@ -39,8 +39,11 @@ func (s *meiliTweetSearchServant) IndexName() string {
 }
 
 func (s *meiliTweetSearchServant) AddDocuments(data core.DocItems, primaryKey ...string) (bool, error) {
+	if len(data) == 0 {
+		return true, nil
+	}
 	if _, err := s.index.AddDocuments(data, primaryKey...); err != nil {
-		logrus.Errorf("meiliTweetSearchServant.AddDocuments error: %v", err)
+		logrus.Errorf("meiliTweetSearchServant.AddDocuments error: %s", err)
 		return false, err
 	}
 	return true, nil
@@ -49,19 +52,19 @@ func (s *meiliTweetSearchServant) AddDocuments(data core.DocItems, primaryKey ..
 func (s *meiliTweetSearchServant) DeleteDocuments(identifiers []string) error {
 	task, err := s.index.DeleteDocuments(identifiers)
 	if err != nil {
-		logrus.Errorf("meiliTweetSearchServant.DeleteDocuments error: %v", err)
+		logrus.Errorf("meiliTweetSearchServant.DeleteDocuments error: %s", err)
 		return err
 	}
-	logrus.Debugf("meiliTweetSearchServant.DeleteDocuments task: %+v", task)
+	logrus.Debugf("meiliTweetSearchServant.DeleteDocuments task: (taskUID:%d, indexUID:%s, status:%s)", task.TaskUID, task.IndexUID, task.Status)
 	return nil
 }
 
 func (s *meiliTweetSearchServant) Search(user *model.User, q *core.QueryReq, offset, limit int) (resp *core.QueryResp, err error) {
-	if q.Type == core.SearchTypeDefault && q.Query != "" {
+	if q.Search == core.SearchTypeDefault && q.Query != "" {
 		resp, err = s.queryByContent(user, q, offset, limit)
-	} else if q.Type == core.SearchTypeTag && q.Query != "" {
+	} else if q.Search == core.SearchTypeTag && q.Query != "" {
 		resp, err = s.queryByTag(user, q, offset, limit)
-	} else if q.Type == core.SearchTypeAddress && q.Query != "" {
+	} else if q.Search == core.SearchTypeAddress && q.Query != "" {
 		resp, err = s.queryByAddress(user, q, offset, limit)
 	} else {
 		resp, err = s.queryAny(user, offset, limit)
@@ -72,7 +75,7 @@ func (s *meiliTweetSearchServant) Search(user *model.User, q *core.QueryReq, off
 	}
 
 	logrus.Debugf("meiliTweetSearchServant.Search type:%s query:%s resp Hits:%d NbHits:%d offset: %d limit:%d ", q.Type, q.Query, len(resp.Items), resp.Total, offset, limit)
-	s.filterResp(user, resp)
+	s.filterResp(user, resp, q)
 	return
 }
 

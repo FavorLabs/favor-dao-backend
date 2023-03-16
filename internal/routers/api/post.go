@@ -20,14 +20,15 @@ func GetPostList(c *gin.Context) {
 	response := app.NewResponse(c)
 
 	q := &core.QueryReq{
-		Query: c.Query("query"),
-		Type:  "search",
+		Query:  c.Query("query"),
+		Search: "search",
+		Type:   c.Query("type"),
 	}
 	if c.Query("type") == "tag" {
-		q.Type = "tag"
+		q.Search = "tag"
 	}
 	if strings.HasPrefix(q.Query, "0x") {
-		q.Type = "address"
+		q.Search = "address"
 	}
 
 	user, _ := userFrom(c)

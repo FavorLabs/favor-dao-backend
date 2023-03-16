@@ -34,9 +34,13 @@ func Session() gin.HandlerFunc {
 			if err != nil {
 				ecode = errcode.UnauthorizedTokenError
 			} else {
-				user, _ := service.GetUserByAddress(session.WalletAddr)
-				c.Set("USER", user)
-				c.Set("address", user.Address)
+				user, err := service.GetUserByAddress(session.WalletAddr)
+				if err != nil {
+					ecode = errcode.UnauthorizedAuthNotExist
+				} else {
+					c.Set("USER", user)
+					c.Set("address", user.Address)
+				}
 			}
 		} else {
 			ecode = errcode.UnauthorizedTokenError
