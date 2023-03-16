@@ -18,11 +18,11 @@ func GetDaos(c *gin.Context) {
 	response := app.NewResponse(c)
 
 	q := &core.QueryReq{
-		Query: c.Query("query"),
-		Type:  "search",
+		Query:  c.Query("query"),
+		Search: "search",
 	}
 	if strings.HasPrefix(q.Query, "0x") {
-		q.Type = "address"
+		q.Search = "address"
 	}
 
 	user, _ := userFrom(c)

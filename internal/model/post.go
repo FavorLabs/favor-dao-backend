@@ -47,25 +47,25 @@ type Post struct {
 }
 
 type PostFormatted struct {
-	ID              primitive.ObjectID     `json:"id"`
-	CreatedOn       int64                  `json:"created_on"`
-	ModifiedOn      int64                  `json:"modified_on"`
-	LatestRepliedOn int64                  `json:"latest_replied_on"`
-	DaoId           primitive.ObjectID     `json:"dao_id"`
-	Dao             *DaoFormatted          `json:"dao"`
-	Address         string                 `json:"address"`
-	User            *UserFormatted         `json:"user"`
+	ID              primitive.ObjectID      `json:"id"`
+	CreatedOn       int64                   `json:"created_on"`
+	ModifiedOn      int64                   `json:"modified_on"`
+	LatestRepliedOn int64                   `json:"latest_replied_on"`
+	DaoId           primitive.ObjectID      `json:"dao_id"`
+	Dao             *DaoFormatted           `json:"dao"`
+	Address         string                  `json:"address"`
+	User            *UserFormatted          `json:"user"`
 	Contents        []*PostContentFormatted `json:"contents"`
-	Member          int                    `json:"member"`
-	ViewCount       int64                  `json:"view_count"`
-	CollectionCount int64                  `json:"collection_count"`
-	UpvoteCount     int64                  `json:"upvote_count"`
-	CommentCount    int64                  `json:"comment_count"`
-	Visibility      PostVisibleT           `json:"visibility"`
-	IsTop           int                    `json:"is_top"`
-	IsEssence       int                    `json:"is_essence"`
-	Tags            map[string]int8        `json:"tags"`
-	Type            PostType               `json:"type"`
+	Member          int                     `json:"member"`
+	ViewCount       int64                   `json:"view_count"`
+	CollectionCount int64                   `json:"collection_count"`
+	UpvoteCount     int64                   `json:"upvote_count"`
+	CommentCount    int64                   `json:"comment_count"`
+	Visibility      PostVisibleT            `json:"visibility"`
+	IsTop           int                     `json:"is_top"`
+	IsEssence       int                     `json:"is_essence"`
+	Tags            map[string]int8         `json:"tags"`
+	Type            PostType                `json:"type"`
 	RefId           primitive.ObjectID      `json:"ref_id"`
 	RefType         PostRefType             `json:"ref_type"`
 }
@@ -146,7 +146,6 @@ func (p *Post) Get(db *mongo.Database) (*Post, error) {
 }
 
 func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Post, error) {
-
 	var (
 		posts  []*Post
 		err    error
@@ -159,6 +158,9 @@ func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit i
 	finds := make([]*options.FindOptions, 0, 3)
 	finds = append(finds, options.Find().SetSkip(int64(offset)))
 	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	if len(*conditions) == 0 {
+		query = findQuery([]bson.M{query})
+	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {

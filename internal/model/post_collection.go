@@ -94,7 +94,9 @@ func (p *PostCollection) List(db *mongo.Database, conditions *ConditionsT, offse
 		queries = append(queries, bson.M{"address": p.Address})
 	}
 	queries = append(queries, bson.M{"post.visibility": PostVisitPrivate})
-
+	if len(*conditions) == 0 {
+		query = findQuery([]bson.M{query})
+	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			queries = append(queries, v)

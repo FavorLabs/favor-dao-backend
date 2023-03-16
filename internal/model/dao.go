@@ -31,16 +31,19 @@ type Dao struct {
 	Introduction string             `json:"introduction"     bson:"introduction"`
 	Avatar       string             `json:"avatar"           bson:"avatar"`
 	Banner       string             `json:"banner"           bson:"banner"`
+	FollowCount  int64              `json:"Follow_count"     bson:"Follow_count"`
 }
 
 type DaoFormatted struct {
-	ID           string      `json:"id"`
-	Address      string      `json:"address"`
-	Name         string      `json:"name"`
-	Introduction string      `json:"introduction"`
-	Visibility   DaoVisibleT `json:"visibility"`
-	Avatar       string      `json:"avatar"`
-	Banner       string      `json:"banner"`
+	ID           string           `json:"id"`
+	Address      string           `json:"address"`
+	Name         string           `json:"name"`
+	Introduction string           `json:"introduction"`
+	Visibility   DaoVisibleT      `json:"visibility"`
+	Avatar       string           `json:"avatar"`
+	Banner       string           `json:"banner"`
+	FollowCount  int64            `json:"follow_count"`
+	LastPosts    []*PostFormatted `json:"last_posts"`
 }
 
 func (m *Dao) Format() *DaoFormatted {
@@ -52,6 +55,8 @@ func (m *Dao) Format() *DaoFormatted {
 		Visibility:   m.Visibility,
 		Avatar:       m.Avatar,
 		Banner:       m.Banner,
+		FollowCount:  m.FollowCount,
+		LastPosts:    []*PostFormatted{},
 	}
 }
 
@@ -129,6 +134,9 @@ func (m *Dao) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 	finds := make([]*options.FindOptions, 0, 3)
 	finds = append(finds, options.Find().SetSkip(int64(offset)))
 	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	if len(*conditions) == 0 {
+		query = findQuery([]bson.M{query})
+	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
@@ -157,7 +165,10 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	if m.ID.IsZero() {
 		return nil, mongo.ErrNoDocuments
 	}
-	filter := bson.D{{"_id", m.ID}, {"is_del", 0}}
+	filter := bson.D{{"_id", m.ID}}
+	if m.IsDel == 0 {
+		filter = append(filter, bson.E{Key: "is_del", Value: 0})
+	}
 	res := db.Collection(m.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
@@ -186,20 +197,18 @@ func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted,
 
 func (m *Dao) GetListByAddress(ctx context.Context, db *mongo.Database) (list []*DaoFormatted, err error) {
 	filter := bson.M{"address": m.Address, "is_del": 0}
-	cur, err := db.Collection(m.Table()).Find(ctx, filter)
+	cursor, err := db.Collection(m.Table()).Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	var dao []*Dao
-	err = cur.All(ctx, &dao)
-	if err != nil {
-		return nil, err
+	for cursor.Next(context.TODO()) {
+		var t Dao
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, t.Format())
 	}
-	list = []*DaoFormatted{}
-	for _, v := range dao {
-		list = append(list, v.Format())
-	}
-	return list, nil
+	return
 }
 
 func (m *Dao) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword string, offset, limit int) (list []*Dao, err error) {
@@ -212,14 +221,16 @@ func (m *Dao) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword
 	finds := make([]*options.FindOptions, 0, 2)
 	finds = append(finds, options.Find().SetSkip(int64(offset)))
 	finds = append(finds, options.Find().SetLimit(int64(limit)))
-	cur, err := db.Collection(m.Table()).Find(ctx, filter, finds...)
+	cursor, err := db.Collection(m.Table()).Find(ctx, filter, finds...)
 	if err != nil {
 		return
 	}
-	var res []*Dao
-	err = cur.All(ctx, &res)
-	if err != nil {
-		return
+	for cursor.Next(context.TODO()) {
+		var t Dao
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, &t)
 	}
-	return res, nil
+	return
 }

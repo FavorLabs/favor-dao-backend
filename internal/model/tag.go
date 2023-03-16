@@ -139,6 +139,9 @@ func (m *Tag) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 	finds := make([]*options.FindOptions, 0, 3)
 	finds = append(finds, options.Find().SetSkip(int64(offset)))
 	finds = append(finds, options.Find().SetLimit(int64(limit)))
+	if len(*conditions) == 0 {
+		query = findQuery([]bson.M{query})
+	}
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {

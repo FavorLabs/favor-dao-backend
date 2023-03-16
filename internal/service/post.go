@@ -508,14 +508,6 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	return posts, resp.Total, nil
 }
 
-func GetPostListFromSearchByQuery(user *model.User, query string, offset, limit int) ([]*model.PostFormatted, int64, error) {
-	q := &core.QueryReq{
-		Query: query,
-		Type:  "search",
-	}
-	return GetPostListFromSearch(user, q, offset, limit)
-}
-
 func PushPostToSearch(post *model.Post) {
 	postFormatted := post.Format()
 	postFormatted.User = &model.UserFormatted{

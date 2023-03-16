@@ -38,6 +38,9 @@ func (s *zincTweetSearchServant) IndexName() string {
 }
 
 func (s *zincTweetSearchServant) AddDocuments(data core.DocItems, primaryKey ...string) (bool, error) {
+	if len(data) == 0 {
+		return true, nil
+	}
 	buf := make(core.DocItems, 0, len(data)+1)
 	if len(primaryKey) > 0 {
 		buf = append(buf, map[string]types.Any{
@@ -68,11 +71,11 @@ func (s *zincTweetSearchServant) DeleteDocuments(identifiers []string) error {
 }
 
 func (s *zincTweetSearchServant) Search(user *model.User, q *core.QueryReq, offset, limit int) (resp *core.QueryResp, err error) {
-	if q.Type == core.SearchTypeDefault && q.Query != "" {
+	if q.Search == core.SearchTypeDefault && q.Query != "" {
 		resp, err = s.queryByContent(user, q, offset, limit)
-	} else if q.Type == core.SearchTypeTag && q.Query != "" {
+	} else if q.Search == core.SearchTypeTag && q.Query != "" {
 		resp, err = s.queryByTag(user, q, offset, limit)
-	} else if q.Type == core.SearchTypeAddress && q.Query != "" {
+	} else if q.Search == core.SearchTypeAddress && q.Query != "" {
 		resp, err = s.queryByAddress(user, q, offset, limit)
 	} else {
 		resp, err = s.queryAny(user, offset, limit)
@@ -83,7 +86,7 @@ func (s *zincTweetSearchServant) Search(user *model.User, q *core.QueryReq, offs
 	}
 
 	logrus.Debugf("zincTweetSearchServant.Search type:%s query:%s resp Hits:%d NbHits:%d offset: %d limit:%d ", q.Type, q.Query, len(resp.Items), resp.Total, offset, limit)
-	s.filterResp(user, resp)
+	s.filterResp(user, resp, q)
 	return
 }
 
