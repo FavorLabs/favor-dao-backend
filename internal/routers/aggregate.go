@@ -11,8 +11,9 @@ import (
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
-	"favor-dao-backend/internal/routers/api"
 	"favor-dao-backend/internal/service"
+	"favor-dao-backend/pkg/app"
+	"favor-dao-backend/pkg/errcode"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -23,24 +24,35 @@ var chatClient = &http.Client{}
 
 type requestResponseWriter struct {
 	gin.ResponseWriter
+	reset    bool
 	request  []byte
 	response *bytes.Buffer
 }
 
-func (r requestResponseWriter) Write(b []byte) (int, error) {
-	r.response.Write(b)
-	return r.ResponseWriter.Write(b)
+func (r *requestResponseWriter) Flush() {
+	r.reset = false
+	r.ResponseWriter.Write(r.response.Bytes())
+}
+
+func (r *requestResponseWriter) Write(b []byte) (int, error) {
+	if r.reset {
+		r.response.Reset()
+	}
+
+	return r.response.Write(b)
 }
 
 var cachedBodyKey = "cached-body"
 
 func cacheResponse(c *gin.Context) {
-	w := &requestResponseWriter{request: make([]byte, c.Request.ContentLength), response: &bytes.Buffer{}, ResponseWriter: c.Writer}
-	buf, _ := io.ReadAll(c.Request.Body)
-	copy(w.request, buf)
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(buf))
-	c.Writer = w
-	c.Set(cachedBodyKey, w)
+	if _, exists := c.Get(cachedBodyKey); !exists {
+		w := &requestResponseWriter{request: make([]byte, c.Request.ContentLength), response: &bytes.Buffer{}, ResponseWriter: c.Writer}
+		buf, _ := io.ReadAll(c.Request.Body)
+		copy(w.request, buf)
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(buf))
+		c.Writer = w
+		c.Set(cachedBodyKey, w)
+	}
 	c.Next()
 }
 
@@ -66,16 +78,12 @@ func createRequest(c *gin.Context, method, url string, json []byte) (*http.Reque
 	return req, nil
 }
 
-func chatLogin(c *gin.Context) (string, bool) {
+func chatLogin(bodyWriter *requestResponseWriter) (string, bool) {
 	req, _ := http.NewRequest(http.MethodGet, chatApi("onboard/hello"), nil)
 	var body struct {
 		Data struct {
 			Token string `json:"token"`
 		} `json:"data"`
-	}
-	var bodyWriter *requestResponseWriter
-	if val, _ := c.Get(cachedBodyKey); val != nil {
-		bodyWriter = val.(*requestResponseWriter)
 	}
 	_ = json.Unmarshal(bodyWriter.response.Bytes(), &body)
 	req.Header.Set("X-Session-Token", body.Data.Token)
@@ -95,6 +103,7 @@ func chatLogin(c *gin.Context) (string, bool) {
 		} else {
 			logrus.Errorf("chatLogin: %s", string(respBody))
 		}
+		bodyWriter.reset = true
 		return body.Data.Token, true
 	}
 	return "", false
@@ -103,22 +112,19 @@ func chatLogin(c *gin.Context) (string, bool) {
 func recoverChatLogin(c *gin.Context, token string) {
 	// clean user session
 	_ = conf.Redis.Del(c, fmt.Sprintf("token_%s", token))
+	app.NewResponse(c).ToErrorResponse(errcode.UnauthorizedTokenError)
 }
 
 type createServer struct {
 	Name string `json:"name"`
 }
 
-func chatCreateServer(c *gin.Context) (string, bool) {
+func chatCreateServer(c *gin.Context, bodyWriter *requestResponseWriter) (string, bool) {
 	var body struct {
 		Data struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
 		}
-	}
-	var bodyWriter *requestResponseWriter
-	if val, _ := c.Get(cachedBodyKey); val != nil {
-		bodyWriter = val.(*requestResponseWriter)
 	}
 	_ = json.Unmarshal(bodyWriter.response.Bytes(), &body)
 	jsonStr, _ := json.Marshal(createServer{
@@ -141,6 +147,7 @@ func chatCreateServer(c *gin.Context) (string, bool) {
 		} else {
 			logrus.Fatalf("chatCreateServer: %s", string(respBody))
 		}
+		bodyWriter.reset = true
 		return body.Data.ID, true
 	}
 	return "", false
@@ -155,14 +162,11 @@ func recoverChatCreateServer(c *gin.Context, daoId string) {
 	if err := dao.Delete(c, conf.MustMongoDB()); err != nil {
 		logrus.Errorf("recoverChatCreateServer: delete dao: %s", err)
 	}
+	app.NewResponse(c).ToErrorResponse(errcode.CreateDaoFailed)
 }
 
-func chatJoinOrLeaveServer(c *gin.Context) bool {
+func chatJoinOrLeaveServer(c *gin.Context, bodyWriter *requestResponseWriter) (string, bool) {
 	params := service.DaoFollowReq{}
-	var bodyWriter *requestResponseWriter
-	if val, _ := c.Get(cachedBodyKey); val != nil {
-		bodyWriter = val.(*requestResponseWriter)
-	}
 	_ = json.Unmarshal(bodyWriter.request, &params)
 	var body struct {
 		Data struct {
@@ -177,7 +181,7 @@ func chatJoinOrLeaveServer(c *gin.Context) bool {
 	dao, err := service.GetDao(params.DaoID)
 	if err != nil {
 		logrus.Errorf("chatJoinOrLeaveServer: getDao(%s): %s", params.DaoID, err)
-		return true
+		return params.DaoID, true
 	}
 	if body.Data.Status {
 		req, _ = createRequest(c, http.MethodPost, fmt.Sprintf("invites/%s", dao.Name), nil)
@@ -188,7 +192,7 @@ func chatJoinOrLeaveServer(c *gin.Context) bool {
 	resp, err := chatClient.Do(req)
 	if err != nil {
 		logrus.Errorf("chatJoinOrLeaveServer: doRequest: %s", err)
-		return true
+		return params.DaoID, true
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -200,33 +204,53 @@ func chatJoinOrLeaveServer(c *gin.Context) bool {
 		} else {
 			logrus.Errorf("chatJoinOrLeaveServer: %s", string(respBody))
 		}
-		return true
+		bodyWriter.reset = true
+		return params.DaoID, true
 	}
-	return false
+	return params.DaoID, false
+}
+
+func recoverChatBookmark(c *gin.Context, daoId string) {
+	// remove created dao
+	id, _ := primitive.ObjectIDFromHex(daoId)
+	book := &model.DaoBookmark{ID: id}
+	if err := book.Delete(c, conf.MustMongoDB()); err != nil {
+		logrus.Errorf("recoverChatCreateServer: delete dao: %s", err)
+	}
+	app.NewResponse(c).ToResponse(gin.H{
+		"status": false,
+	})
 }
 
 func Aggregate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+		var bodyWriter *requestResponseWriter
+		if val, _ := c.Get(cachedBodyKey); val != nil {
+			bodyWriter = val.(*requestResponseWriter)
+		}
+
+		defer bodyWriter.Flush()
+
 		if c.Writer.Status() == http.StatusOK {
 			switch strings.TrimPrefix(c.Request.URL.Path, "/v1") {
 			case "/auth/login_hello":
-				token, failed := chatLogin(c)
+				token, failed := chatLogin(bodyWriter)
 				if failed {
 					recoverChatLogin(c, token)
 				}
 			case "/dao_server":
 				if c.Request.Method == http.MethodPost {
-					id, failed := chatCreateServer(c)
+					id, failed := chatCreateServer(c, bodyWriter)
 					if failed {
 						recoverChatCreateServer(c, id)
 					}
 				}
 			case "/dao/bookmark_server":
 				if c.Request.Method == http.MethodPost {
-					failed := chatJoinOrLeaveServer(c)
+					id, failed := chatJoinOrLeaveServer(c, bodyWriter)
 					if failed {
-						api.ActionDaoBookmark(c)
+						recoverChatBookmark(c, id)
 					}
 				}
 			}
