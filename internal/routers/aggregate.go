@@ -228,9 +228,8 @@ func Aggregate() gin.HandlerFunc {
 		var bodyWriter *requestResponseWriter
 		if val, _ := c.Get(cachedBodyKey); val != nil {
 			bodyWriter = val.(*requestResponseWriter)
+			defer bodyWriter.Flush()
 		}
-
-		defer bodyWriter.Flush()
 
 		if c.Writer.Status() == http.StatusOK {
 			switch strings.TrimPrefix(c.Request.URL.Path, "/v1") {
