@@ -77,11 +77,10 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 	}
 	dao := &model.Dao{}
 	if q.Query != "" {
-		if q.Search == "address" {
-			query[dao.Table()+".address"] = q.Query
-		} else {
-			query[dao.Table()+".name"] = bson.M{"$regex": q.Query}
-		}
+		query[dao.Table()+".name"] = bson.M{"$regex": q.Query}
+	}
+	if len(q.Addresses) > 0 {
+		query[dao.Table()+".address"] = bson.M{"$in": q.Addresses}
 	}
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{

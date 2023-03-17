@@ -4,6 +4,7 @@ import "favor-dao-backend/internal/model"
 
 type (
 	User                 = model.User
+	Dao                  = model.Dao
 	Post                 = model.Post
 	ConditionsT          = model.ConditionsT
 	PostFormatted        = model.PostFormatted
@@ -11,6 +12,16 @@ type (
 	PostContentFormatted = model.PostContentFormatted
 )
 
+const (
+	PostVisitPublic  = model.PostVisitPublic
+	PostVisitPrivate = model.PostVisitPrivate
+)
+
+var (
+	AllQueryPostType = []model.PostType{model.SMS, model.VIDEO, model.Retweet, model.RetweetComment}
+)
+
 type (
 	PostVisibleT = model.PostVisibleT
+	PostType     = model.PostType
 )

@@ -62,4 +62,5 @@ var (
 	GetDaoFailed             = NewError(80002, "获取DAO失败")
 	UpdateDaoFailed          = NewError(80003, "更新DAO失败")
 	CreateDaoNameDuplication = NewError(80004, "DAO name duplication")
+	NoExistDao               = NewError(80005, "DAO not found")
 )

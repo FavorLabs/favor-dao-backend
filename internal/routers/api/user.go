@@ -3,11 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"strconv"
 	"unicode/utf8"
 
 	"favor-dao-backend/internal/conf"
+	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
@@ -15,7 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/oklog/ulid/v2"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func Login(c *gin.Context) {
@@ -158,104 +156,57 @@ func GetUserProfile(c *gin.Context) {
 func GetUserPosts(c *gin.Context) {
 	response := app.NewResponse(c)
 	address := c.Query("address")
-	postType := c.Query("type")
-	user, err := service.GetUserByAddress(address)
-	if err != nil {
-		logrus.Errorf("service.GetUserByAddress err: %v\n", err)
-		response.ToErrorResponse(errcode.NoExistUserAddress)
-		return
-	}
+	q := parseQueryReq(c)
 
+	if len(q.Type) == 0 {
+		q.Type = core.AllQueryPostType
+	}
 	visibilities := []model.PostVisibleT{model.PostVisitPublic}
-	if u, exists := c.Get("USER"); exists {
-		self := u.(*model.User)
-		if self.Address == user.Address {
-			visibilities = append(visibilities, model.PostVisitPrivate)
-		}
+	my, ok := userFrom(c)
+	if ok && my.Address == address {
+		q.Visibility = append(visibilities, model.PostVisitPrivate)
 	}
-	var postTypes []model.PostType
-	if postType != "" {
-		p, err := strconv.ParseInt(postType, 10, 0)
-		if err != nil {
-			logrus.Errorf("service.GetUserPosts err: %v\n", err)
-			response.ToErrorResponse(errcode.GetPostsFailed)
-			return
-		}
-		postTypes = append(postTypes, model.PostType(int(p)))
-	} else {
-		postTypes = append(postTypes, model.SMS, model.VIDEO, model.Retweet, model.RetweetComment)
-	}
-	conditions := model.ConditionsT{
-		"query": bson.M{"address": user.Address,
-			"visibility": bson.M{"$in": visibilities}, "type": bson.M{"$in": postTypes}},
-		"ORDER": bson.M{"_id": -1},
-	}
+	offset, limit := app.GetPageOffset(c)
 
-	posts, err := service.GetPostList(&service.PostListReq{
-		Conditions: &conditions,
-		Offset:     (app.GetPage(c) - 1) * app.GetPageSize(c),
-		Limit:      app.GetPageSize(c),
-	})
+	// Contains my private when query address it's me
+	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
 	if err != nil {
-		logrus.Errorf("service.GetPostList err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostsFailed)
+		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
+		response.ToResponseList([]*model.PostFormatted{}, 0)
 		return
 	}
-	totalRows, _ := service.GetPostCount(&conditions)
-
 	response.ToResponseList(posts, totalRows)
 }
 
 func GetDaoPosts(c *gin.Context) {
 	response := app.NewResponse(c)
 	daoId := c.Query("daoId")
-	postType := c.Query("type")
-
 	daoInfo, err := service.GetDao(daoId)
-	id, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
 		logrus.Errorf("service.GetDaoPosts err: %v\n", err)
-		response.ToErrorResponse(errcode.NoExistUserAddress)
+		response.ToErrorResponse(errcode.NoExistDao)
 		return
 	}
 
+	q := parseQueryReq(c)
+
+	if len(q.Type) == 0 {
+		q.Type = core.AllQueryPostType
+	}
 	visibilities := []model.PostVisibleT{model.PostVisitPublic}
-	if u, exists := c.Get("USER"); exists {
-		self := u.(*model.User)
-		if self.Address == daoInfo.Address {
-			visibilities = append(visibilities, model.PostVisitPrivate)
-		}
+	my, ok := userFrom(c)
+	if ok && my.Address == daoInfo.Address {
+		q.Visibility = append(visibilities, model.PostVisitPrivate)
 	}
-	var postTypes []model.PostType
-	if postType != "" {
-		p, err := strconv.ParseInt(postType, 10, 0)
-		if err != nil {
-			logrus.Errorf("service.GetDaoPosts err: %v\n", err)
-			response.ToErrorResponse(errcode.GetPostsFailed)
-			return
-		}
-		postTypes = append(postTypes, model.PostType(int(p)))
-	} else {
-		postTypes = append(postTypes, model.SMS, model.VIDEO)
-	}
-	conditions := model.ConditionsT{
-		"query": bson.M{"dao_id": id,
-			"visibility": bson.M{"$in": visibilities}, "type": bson.M{"$in": postTypes}},
-		"ORDER": bson.M{"_id": -1},
-	}
+	offset, limit := app.GetPageOffset(c)
 
-	posts, err := service.GetPostList(&service.PostListReq{
-		Conditions: &conditions,
-		Offset:     (app.GetPage(c) - 1) * app.GetPageSize(c),
-		Limit:      app.GetPageSize(c),
-	})
+	// Contains dao private when query dao it's me
+	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
 	if err != nil {
-		logrus.Errorf("service.GetDaoPosts err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostsFailed)
+		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
+		response.ToResponseList([]*model.PostFormatted{}, 0)
 		return
 	}
-	totalRows, _ := service.GetPostCount(&conditions)
-
 	response.ToResponseList(posts, totalRows)
 }
 

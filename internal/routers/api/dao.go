@@ -18,11 +18,10 @@ func GetDaos(c *gin.Context) {
 	response := app.NewResponse(c)
 
 	q := &core.QueryReq{
-		Query:  c.Query("query"),
-		Search: "search",
+		Query: c.Query("query"),
 	}
 	if strings.HasPrefix(q.Query, "0x") {
-		q.Search = "address"
+		q.Addresses = []string{q.Query}
 	}
 
 	user, _ := userFrom(c)
@@ -85,7 +84,7 @@ func GetDao(c *gin.Context) {
 	daoId := convert.StrTo(c.Query("dao_id")).String()
 	response := app.NewResponse(c)
 
-	dao, err := service.GetDao(daoId)
+	dao, err := service.GetDaoFormatted(daoId)
 	if err != nil {
 		logrus.Errorf("service.GetDao err: %v\n", err)
 		response.ToErrorResponse(errcode.GetDaoFailed)

@@ -3,40 +3,63 @@ package api
 import (
 	"strings"
 
-	"favor-dao-backend/internal/model"
-	"go.mongodb.org/mongo-driver/bson"
-
 	"favor-dao-backend/internal/core"
+	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
+	"github.com/gogf/gf/util/gconv"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetPostList(c *gin.Context) {
-	response := app.NewResponse(c)
-
+func parseQueryReq(c *gin.Context) *core.QueryReq {
 	q := &core.QueryReq{
-		Query:  c.Query("query"),
-		Search: "search",
-		Type:   c.Query("type"),
+		Query: c.Query("query"),
+		Tag:   c.Query("tag"),
 	}
-	if c.Query("type") == "tag" {
-		q.Search = "tag"
+	types := c.Query("type")
+	if types != "" {
+		for _, v := range strings.Split(types, ",") {
+			if v != "" {
+				q.Type = append(q.Type, core.PostType(gconv.Int(v)))
+			}
+		}
+	}
+	addresses := c.Query("address")
+	if addresses != "" {
+		for _, v := range strings.Split(addresses, ",") {
+			if v != "" {
+				q.Addresses = append(q.Addresses, v)
+			}
+		}
+	}
+	daoIDs := c.Query("daoId")
+	if daoIDs != "" {
+		for _, v := range strings.Split(daoIDs, ",") {
+			if v != "" {
+				q.DaoIDs = append(q.DaoIDs, v)
+			}
+		}
 	}
 	if strings.HasPrefix(q.Query, "0x") {
-		q.Search = "address"
+		q.Addresses = append(q.Addresses, q.Query)
 	}
+	return q
+}
 
-	user, _ := userFrom(c)
+func GetPostList(c *gin.Context) {
+	response := app.NewResponse(c)
+	q := parseQueryReq(c)
+	// user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
-	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
+	// only public
+	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
 	if err != nil {
 		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostsFailed)
+		response.ToResponseList([]*model.PostFormatted{}, 0)
 		return
 	}
 	response.ToResponseList(posts, totalRows)
@@ -44,39 +67,27 @@ func GetPostList(c *gin.Context) {
 
 func GetFocusPostList(c *gin.Context) {
 	response := app.NewResponse(c)
+	q := parseQueryReq(c)
+	user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
-	userID, _ := c.Get("address")
-	postTypes := []model.PostType{model.SMS, model.VIDEO}
-	visibilities := []model.PostVisibleT{model.PostVisitPublic}
-
-	daoIds := *service.GetDaoBookmarkListByAddress(userID.(string))
+	if len(q.Type) == 0 {
+		q.Type = core.AllQueryPostType
+	}
+	daoIds := service.GetDaoBookmarkIDsByAddress(user.Address)
 	if len(daoIds) == 0 {
 		response.ToResponseList([]*model.PostFormatted{}, 0)
 		return
 	}
-	conditions := model.ConditionsT{
-		"query": bson.M{"dao_id": bson.M{"$in": daoIds},
-			"visibility": bson.M{"$in": visibilities}, "type": bson.M{"$in": postTypes}},
-		"ORDER": bson.M{"_id": -1},
-	}
-	// address
-	resp, err := service.GetPostList(&service.PostListReq{
-		Conditions: &conditions,
-		Offset:     offset,
-		Limit:      limit,
-	})
+	q.DaoIDs = daoIds
+
+	// only public
+	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
 	if err != nil {
-		logrus.Errorf("service.GetFocusPostList err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostsFailed)
+		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
+		response.ToResponseList([]*model.PostFormatted{}, 0)
 		return
 	}
-	count, err := service.GetPostCount(&conditions)
-	if err != nil {
-		logrus.Errorf("service.GetFocusPostList err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostsFailed)
-		return
-	}
-	response.ToResponseList(resp, count)
+	response.ToResponseList(posts, totalRows)
 }
 
 func GetPost(c *gin.Context) {
@@ -88,7 +99,7 @@ func GetPost(c *gin.Context) {
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
-	postFormated, err := service.GetPost(postId)
+	postFormatted, err := service.GetPost(postId)
 
 	if err != nil {
 		logrus.Errorf("service.GetPost err: %v\n", err)
@@ -96,7 +107,7 @@ func GetPost(c *gin.Context) {
 		return
 	}
 
-	response.ToResponse(postFormated)
+	response.ToResponse(postFormatted)
 }
 
 func CreatePost(c *gin.Context) {

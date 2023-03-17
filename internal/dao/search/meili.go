@@ -1,6 +1,7 @@
 package search
 
 import (
+	"errors"
 	"fmt"
 
 	"favor-dao-backend/internal/core"
@@ -59,104 +60,32 @@ func (s *meiliTweetSearchServant) DeleteDocuments(identifiers []string) error {
 	return nil
 }
 
-func (s *meiliTweetSearchServant) Search(user *model.User, q *core.QueryReq, offset, limit int) (resp *core.QueryResp, err error) {
-	if q.Search == core.SearchTypeDefault && q.Query != "" {
-		resp, err = s.queryByContent(user, q, offset, limit)
-	} else if q.Search == core.SearchTypeTag && q.Query != "" {
-		resp, err = s.queryByTag(user, q, offset, limit)
-	} else if q.Search == core.SearchTypeAddress && q.Query != "" {
-		resp, err = s.queryByAddress(user, q, offset, limit)
-	} else {
-		resp, err = s.queryAny(user, offset, limit)
-	}
+func (s *meiliTweetSearchServant) Search(q *core.QueryReq, offset, limit int) (resp *core.QueryResp, err error) {
+	resp, err = s.queryAny(q, offset, limit)
 	if err != nil {
-		logrus.Errorf("meiliTweetSearchServant.search searchType:%s query:%s error:%v", q.Type, q.Query, err)
+		logrus.Errorf("meiliTweetSearchServant.search query:%v error:%v", q, err)
 		return
 	}
 
-	logrus.Debugf("meiliTweetSearchServant.Search type:%s query:%s resp Hits:%d NbHits:%d offset: %d limit:%d ", q.Type, q.Query, len(resp.Items), resp.Total, offset, limit)
-	s.filterResp(user, resp, q)
+	logrus.Debugf("meiliTweetSearchServant.Search query:%v resp Hits:%d NbHits:%d offset: %d limit:%d ", q, len(resp.Items), resp.Total, offset, limit)
 	return
 }
 
-func (s *meiliTweetSearchServant) queryByContent(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
+func (s *meiliTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
 	request := &meilisearch.SearchRequest{
 		Offset: int64(offset),
 		Limit:  int64(limit),
 		Sort:   []string{"is_top:desc", "modified_on:desc"},
 	}
-
-	filter := s.filterList(user)
+	// todo
+	return nil, errors.New("not support")
+	filter := s.filterList(nil)
 	if len(filter) > 0 {
 		request.Filter = filter
 	}
 
 	// logrus.Debugf("meiliTweetSearchServant.queryByContent query:%s request%+v", q.Query, request)
 	resp, err := s.index.Search(q.Query, request)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.postsFrom(resp)
-}
-
-func (s *meiliTweetSearchServant) queryByTag(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
-	request := &meilisearch.SearchRequest{
-		Offset: int64(offset),
-		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "modified_on:desc"},
-	}
-
-	filter := s.filterList(user)
-	tagFilter := []string{"tags." + q.Query + "=1"}
-	if len(filter) > 0 {
-		request.Filter = [][]string{tagFilter, {filter}}
-	} else {
-		request.Filter = tagFilter
-	}
-
-	// logrus.Debugf("meiliTweetSearchServant.queryByTag query:%s request%+v", q.Query, request)
-	resp, err := s.index.Search("#"+q.Query, request)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.postsFrom(resp)
-}
-
-func (s *meiliTweetSearchServant) queryByAddress(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
-	request := &meilisearch.SearchRequest{
-		Offset: int64(offset),
-		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "modified_on:desc"},
-	}
-
-	filter := s.filterList(user)
-	request.Filter = filter
-	request.AttributesToRetrieve = []string{"address"}
-
-	// logrus.Debugf("meiliTweetSearchServant.queryByContent query:%s request%+v", q.Query, request)
-	resp, err := s.index.Search(q.Query, request)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.postsFrom(resp)
-}
-
-func (s *meiliTweetSearchServant) queryAny(user *model.User, offset, limit int) (*core.QueryResp, error) {
-	request := &meilisearch.SearchRequest{
-		Offset: int64(offset),
-		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "modified_on:desc"},
-	}
-
-	filter := s.filterList(user)
-	if len(filter) > 0 {
-		request.Filter = filter
-	}
-
-	resp, err := s.index.Search("", request)
 	if err != nil {
 		return nil, err
 	}
