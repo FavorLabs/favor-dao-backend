@@ -72,25 +72,26 @@ func (s *meiliTweetSearchServant) Search(q *core.QueryReq, offset, limit int) (r
 }
 
 func (s *meiliTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
-	request := &meilisearch.SearchRequest{
-		Offset: int64(offset),
-		Limit:  int64(limit),
-		Sort:   []string{"is_top:desc", "modified_on:desc"},
-	}
-	// todo
 	return nil, errors.New("not support")
-	filter := s.filterList(nil)
-	if len(filter) > 0 {
-		request.Filter = filter
-	}
-
-	// logrus.Debugf("meiliTweetSearchServant.queryByContent query:%s request%+v", q.Query, request)
-	resp, err := s.index.Search(q.Query, request)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.postsFrom(resp)
+	// request := &meilisearch.SearchRequest{
+	// 	Offset: int64(offset),
+	// 	Limit:  int64(limit),
+	// 	Sort:   []string{"is_top:desc", "modified_on:desc"},
+	// }
+	// // todo
+	// return nil, errors.New("not support")
+	// filter := s.filterList(nil)
+	// if len(filter) > 0 {
+	// 	request.Filter = filter
+	// }
+	//
+	// // logrus.Debugf("meiliTweetSearchServant.queryByContent query:%s request%+v", q.Query, request)
+	// resp, err := s.index.Search(q.Query, request)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	//
+	// return s.postsFrom(resp)
 }
 
 func (s *meiliTweetSearchServant) filterList(user *model.User) string {
