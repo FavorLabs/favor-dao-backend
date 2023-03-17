@@ -101,7 +101,11 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	}
 	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 	if len(*conditions) == 0 {
-		query = findQuery([]bson.M{query})
+		if query != nil {
+			query = findQuery([]bson.M{query})
+		} else {
+			query = bson.M{"is_del": 0}
+		}
 	}
 	for k, v := range *conditions {
 		if k != "ORDER" {

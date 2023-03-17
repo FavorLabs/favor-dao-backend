@@ -70,83 +70,80 @@ func (s *zincTweetSearchServant) DeleteDocuments(identifiers []string) error {
 	return nil
 }
 
-func (s *zincTweetSearchServant) Search(user *model.User, q *core.QueryReq, offset, limit int) (resp *core.QueryResp, err error) {
-	if q.Search == core.SearchTypeDefault && q.Query != "" {
-		resp, err = s.queryByContent(user, q, offset, limit)
-	} else if q.Search == core.SearchTypeTag && q.Query != "" {
-		resp, err = s.queryByTag(user, q, offset, limit)
-	} else if q.Search == core.SearchTypeAddress && q.Query != "" {
-		resp, err = s.queryByAddress(user, q, offset, limit)
-	} else {
-		resp, err = s.queryAny(user, offset, limit)
-	}
+func (s *zincTweetSearchServant) Search(q *core.QueryReq, offset, limit int) (resp *core.QueryResp, err error) {
+	resp, err = s.queryAny(q, offset, limit)
 	if err != nil {
-		logrus.Errorf("zincTweetSearchServant.search searchType:%s query:%s error:%v", q.Type, q.Query, err)
+		logrus.Errorf("zincTweetSearchServant.search query:%v error:%v", q, err)
 		return
 	}
 
-	logrus.Debugf("zincTweetSearchServant.Search type:%s query:%s resp Hits:%d NbHits:%d offset: %d limit:%d ", q.Type, q.Query, len(resp.Items), resp.Total, offset, limit)
-	s.filterResp(user, resp, q)
+	logrus.Debugf("zincTweetSearchServant.Search query:%v resp Hits:%d NbHits:%d offset: %d limit:%d ", q, len(resp.Items), resp.Total, offset, limit)
 	return
 }
 
-func (s *zincTweetSearchServant) queryByContent(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
-	resp, err := s.client.EsQuery(s.indexName, map[string]types.Any{
-		"query": map[string]types.Any{
+func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
+	must := types.AnySlice{}
+	if len(q.Type) > 0 {
+		must = append(must, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"type": q.Type,
+			},
+		})
+	}
+	if len(q.DaoIDs) > 0 {
+		must = append(must, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"dao_id": q.DaoIDs,
+			},
+		})
+	}
+	if len(q.Addresses) > 0 {
+		must = append(must, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"address": q.Addresses,
+			},
+		})
+	}
+	if len(q.Visibility) == 0 {
+		must = append(must, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"visibility": types.AnySlice{core.PostVisitPublic}, // default public
+			},
+		})
+	} else {
+		must = append(must, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"visibility": q.Visibility,
+			},
+		})
+	}
+	if q.Tag != "" {
+		must = append(must, map[string]types.Any{
+			"term": map[string]types.Any{
+				"tags." + q.Tag: 1,
+			},
+		})
+	}
+	if q.Query != "" {
+		must = append(must, map[string]types.Any{
 			"match_phrase": map[string]types.Any{
 				"content": q.Query,
 			},
-		},
-		"sort": []string{"-is_top", "-modified_on"},
-		"from": offset,
-		"size": limit,
-	})
-	if err != nil {
-		return nil, err
+		})
 	}
-	return s.postsFrom(resp)
-}
-
-func (s *zincTweetSearchServant) queryByTag(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
-	resp, err := s.client.ApiQuery(s.indexName, map[string]types.Any{
-		"search_type": "querystring",
-		"query": map[string]types.Any{
-			"term": "tags." + q.Query + ":1",
-		},
-		"sort_fields": []string{"-is_top", "-modified_on"},
-		"from":        offset,
-		"max_results": limit,
-	})
-	if err != nil {
-		return nil, err
+	query := map[string]types.Any{}
+	if len(must) == 0 {
+		query["match_all"] = map[string]string{}
+	} else {
+		query["bool"] = map[string]types.Any{
+			"must": must,
+		}
 	}
-	return s.postsFrom(resp)
-}
-
-func (s *zincTweetSearchServant) queryByAddress(user *model.User, q *core.QueryReq, offset, limit int) (*core.QueryResp, error) {
-	resp, err := s.client.ApiQuery(s.indexName, map[string]types.Any{
-		"search_type": "querystring",
-		"query": map[string]types.Any{
-			"term": "address:" + q.Query,
-		},
-		"sort_fields": []string{"-is_top", "-modified_on"},
-		"from":        offset,
-		"max_results": limit,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return s.postsFrom(resp)
-}
-
-func (s *zincTweetSearchServant) queryAny(user *model.User, offset, limit int) (*core.QueryResp, error) {
 	queryMap := map[string]types.Any{
-		"query": map[string]types.Any{
-			"match_all": map[string]string{},
-		},
-		"sort": []string{"-is_top", "-modified_on"},
-		"from": offset,
-		"size": limit,
+		"query": query,
+		"sort":  []string{"-is_top", "-modified_on"},
+		"from":  offset,
+		"size":  limit,
 	}
 	resp, err := s.client.EsQuery(s.indexName, queryMap)
 	if err != nil {

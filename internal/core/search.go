@@ -1,23 +1,15 @@
 package core
 
-import (
-	"favor-dao-backend/internal/model"
-)
-
-const (
-	SearchTypeDefault SearchType = "search"
-	SearchTypeTag     SearchType = "tag"
-	SearchTypeAddress SearchType = "address"
-)
-
 type (
 	SearchType string
 
 	QueryReq struct {
 		Query      string
 		Visibility []PostVisibleT
-		Type       string
-		Search     SearchType
+		Type       []PostType
+		DaoIDs     []string
+		Addresses  []string
+		Tag        string
 	}
 
 	QueryResp struct {
@@ -33,5 +25,5 @@ type TweetSearchService interface {
 	IndexName() string
 	AddDocuments(documents DocItems, primaryKey ...string) (bool, error)
 	DeleteDocuments(identifiers []string) error
-	Search(user *model.User, q *QueryReq, offset, limit int) (*QueryResp, error)
+	Search(q *QueryReq, offset, limit int) (*QueryResp, error)
 }

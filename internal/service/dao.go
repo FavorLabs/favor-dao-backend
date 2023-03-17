@@ -75,13 +75,22 @@ func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int)
 	return list, total
 }
 
-func GetDaoBookmarkListByAddress(address string) *[]primitive.ObjectID {
+func GetDaoBookmarkListByAddress(address string) []primitive.ObjectID {
 	list := ds.GetDaoBookmarkListByAddress(address)
 	daoIds := make([]primitive.ObjectID, 0, len(list))
 	for _, l := range list {
 		daoIds = append(daoIds, l.DaoID)
 	}
-	return &daoIds
+	return daoIds
+}
+
+func GetDaoBookmarkIDsByAddress(address string) []string {
+	list := ds.GetDaoBookmarkListByAddress(address)
+	daoIds := make([]string, 0, len(list))
+	for _, l := range list {
+		daoIds = append(daoIds, l.DaoID.Hex())
+	}
+	return daoIds
 }
 
 func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
@@ -115,7 +124,18 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	return ds.UpdateDao(dao)
 }
 
-func GetDao(daoId string) (*model.DaoFormatted, error) {
+func GetDao(daoId string) (*core.Dao, error) {
+	id, err := primitive.ObjectIDFromHex(daoId)
+	if err != nil {
+		return nil, err
+	}
+	dao := &model.Dao{
+		ID: id,
+	}
+	return ds.GetDao(dao)
+}
+
+func GetDaoFormatted(daoId string) (*model.DaoFormatted, error) {
 	id, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
 		return nil, err

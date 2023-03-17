@@ -70,7 +70,11 @@ func (c *CommentReply) List(db *mongo.Database, conditions *ConditionsT, offset,
 		query = bson.M{"comment_id": c.CommentID}
 	}
 	if len(*conditions) == 0 {
-		query = findQuery([]bson.M{query})
+		if query != nil {
+			query = findQuery([]bson.M{query})
+		} else {
+			query = bson.M{"is_del": 0}
+		}
 	}
 	for k, v := range *conditions {
 		if k != "ORDER" {

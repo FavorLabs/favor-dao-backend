@@ -178,7 +178,7 @@ func chatJoinOrLeaveServer(c *gin.Context, bodyWriter *requestResponseWriter) (s
 		req *http.Request
 		err error
 	)
-	dao, err := service.GetDao(params.DaoID)
+	dao, err := service.GetDaoFormatted(params.DaoID)
 	if err != nil {
 		logrus.Errorf("chatJoinOrLeaveServer: getDao(%s): %s", params.DaoID, err)
 		return params.DaoID, true

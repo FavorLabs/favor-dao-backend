@@ -496,8 +496,8 @@ func GetPostCount(conditions *model.ConditionsT) (int64, error) {
 	return ds.GetPostCount(conditions)
 }
 
-func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
-	resp, err := ts.Search(user, q, offset, limit)
+func GetPostListFromSearch(q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
+	resp, err := ts.Search(q, offset, limit)
 	if err != nil {
 		return nil, 0, err
 	}
