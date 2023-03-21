@@ -146,6 +146,7 @@ func ActionDaoBookmark(c *gin.Context) {
 	}
 
 	if err != nil {
+		logrus.Errorf("api.ActionDaoBookmark err: %s", err)
 		response.ToErrorResponse(errcode.NoPermission)
 		return
 	}
