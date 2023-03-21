@@ -193,3 +193,13 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	}
 	return count.Count, err
 }
+
+func (p *PostStar) CountByAddress(db *mongo.Database, address string) (int64, error) {
+	var count int64
+	count, err := db.Collection(p.table()).CountDocuments(context.TODO(), bson.M{"address": address})
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

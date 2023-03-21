@@ -11,4 +11,7 @@ type UserManageService interface {
 	CreateUser(user *model.User) (*model.User, error)
 	UpdateUser(user *model.User) error
 	IsFriend(userAddress, friendAddress string) bool
+	GetMyPostStartCount(address string) int64
+	GetMyDaoMarkCount(address string) int64
+	GetMyCommentCount(address string) int64
 }

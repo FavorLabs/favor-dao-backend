@@ -85,6 +85,28 @@ func GetUserInfo(c *gin.Context) {
 	})
 }
 
+func GetUserStatistic(c *gin.Context) {
+	param := service.AuthRequest{}
+	response := app.NewResponse(c)
+
+	if username, exists := c.Get("address"); exists {
+		param.UserAddress = username.(string)
+	}
+
+	user, err := service.GetUserInfo(&param)
+
+	if err != nil {
+		response.ToErrorResponse(errcode.UnauthorizedAuthNotExist)
+		return
+	}
+
+	response.ToResponse(gin.H{
+		"comment_count": service.GetMyCommentCount(user.Address),
+		"upvote_count":  service.GetMyPostStartCount(user.Address),
+		"dao_count":     service.GetMyDaoMarkCount(user.Address),
+	})
+}
+
 func ChangeNickname(c *gin.Context) {
 	param := service.ChangeNicknameReq{}
 	response := app.NewResponse(c)

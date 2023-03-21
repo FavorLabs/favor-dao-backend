@@ -294,3 +294,15 @@ func checkPermission(user *model.User, targetUserAddress string) *errcode.Error 
 	}
 	return nil
 }
+
+func GetMyPostStartCount(address string) int64 {
+	return ds.GetMyPostStartCount(address)
+}
+
+func GetMyDaoMarkCount(address string) int64 {
+	return ds.GetMyDaoMarkCount(address)
+}
+
+func GetMyCommentCount(address string) int64 {
+	return ds.GetMyCommentCount(address)
+}

@@ -2,8 +2,10 @@ package monogo
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
@@ -61,4 +63,33 @@ func (s *userManageServant) UpdateUser(user *model.User) error {
 func (s *userManageServant) IsFriend(userAddress string, friendAddress string) bool {
 	// just true now
 	return true
+}
+
+func (s *userManageServant) GetMyPostStartCount(address string) int64 {
+	start := &model.PostStar{}
+	total, err := start.CountByAddress(s.db, address)
+	if err != nil {
+		logrus.Errorf("userManageServant.GetMyPostStartCount err: %s", err)
+		return 0
+	}
+	return total
+}
+
+func (s *userManageServant) GetMyDaoMarkCount(address string) int64 {
+	dao := &model.DaoBookmark{Address: address}
+	total := dao.CountMark(context.TODO(), s.db)
+	return total
+}
+
+func (s *userManageServant) GetMyCommentCount(address string) int64 {
+	conditions := &model.ConditionsT{
+		"query": bson.M{"address": address},
+	}
+
+	count, err := (&model.Comment{}).Count(s.db, conditions)
+	if err != nil {
+		logrus.Errorf("userManageServant.GetMyCommentCount err: %s", err)
+		return 0
+	}
+	return count
 }
