@@ -139,9 +139,13 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 			"must": must,
 		}
 	}
+	sort := types.AnySlice{}
+	sort = append(sort, map[string]types.Any{
+		"created_on": "desc",
+	})
 	queryMap := map[string]types.Any{
 		"query": query,
-		"sort":  []string{"-created_on"},
+		"sort":  sort,
 		"from":  offset,
 		"size":  limit,
 	}
