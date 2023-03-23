@@ -141,7 +141,7 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 	}
 	queryMap := map[string]types.Any{
 		"query": query,
-		"sort":  []string{"-is_top", "-modified_on"},
+		"sort":  []string{"-created_on"},
 		"from":  offset,
 		"size":  limit,
 	}
