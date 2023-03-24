@@ -21,7 +21,8 @@ func GetPostComments(c *gin.Context) {
 		return
 	}
 
-	contents, totalRows, err := service.GetPostComments(postId, "_id", 1, 0, 0)
+	offset, limit := app.GetPageOffset(c)
+	contents, totalRows, err := service.GetPostComments(postId, "_id", 1, offset, limit)
 
 	if err != nil {
 		logrus.Errorf("service.GetPostComments err: %v\n", err)
