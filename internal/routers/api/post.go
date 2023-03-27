@@ -22,9 +22,13 @@ func parseQueryReq(c *gin.Context) *core.QueryReq {
 	}
 	types := c.Query("type")
 	if types != "" {
-		for _, v := range strings.Split(types, ",") {
-			if v != "" {
-				q.Type = append(q.Type, core.PostType(gconv.Int(v)))
+		if types == "post" {
+			q.Type = core.AllQueryPostType
+		} else {
+			for _, v := range strings.Split(types, ",") {
+				if v != "" {
+					q.Type = append(q.Type, core.PostType(gconv.Int(v)))
+				}
 			}
 		}
 	}
