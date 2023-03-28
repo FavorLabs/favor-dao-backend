@@ -67,6 +67,11 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 	return res.Format(), nil
 }
 
+func DeleteDao(_ *gin.Context, daoId string) error {
+	id, _ := primitive.ObjectIDFromHex(daoId)
+	return ds.DeleteDao(&model.Dao{ID: id})
+}
+
 func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted, total int64) {
 	list = ds.GetDaoBookmarkList(userAddress, q, offset, limit)
 	if len(list) > 0 {

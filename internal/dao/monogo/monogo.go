@@ -7,6 +7,7 @@ package monogo
 import (
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
+	corechat "favor-dao-backend/internal/core/chat"
 	"favor-dao-backend/internal/dao/cache"
 	"github.com/Masterminds/semver/v3"
 	"github.com/sirupsen/logrus"
@@ -27,6 +28,7 @@ type dataServant struct {
 	core.CommentManageService
 	core.UserManageService
 	core.DaoManageService
+	corechat.ManageService
 }
 
 func NewDataService() (core.DataService, core.VersionInfo) {
@@ -58,6 +60,7 @@ func NewDataService() (core.DataService, core.VersionInfo) {
 		CommentManageService: newCommentManageService(db),
 		UserManageService:    newUserManageService(db),
 		DaoManageService:     newDaoManageService(db),
+		ManageService:        newChatManageServant(db),
 	}
 	return ds, ds
 }

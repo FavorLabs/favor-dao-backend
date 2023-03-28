@@ -3,6 +3,8 @@ package conf
 import (
 	"log"
 	"os"
+	"reflect"
+	"strings"
 	"time"
 )
 
@@ -81,15 +83,31 @@ func Initialize(suite []string, noDefault bool) {
 		log.Fatalf("init.setupSetting err: %v", err)
 	}
 
-	if ChatSetting == nil || ChatSetting.Api == "" {
-		panic("MUST connect with revolt api")
-	}
+	CheckSetting(ChatSetting, "appid", "region", "apikey")
+	CheckSetting(EthSetting, "endpoint")
 
 	// set default timezone
 	_ = os.Setenv("TZ", "UTC")
 
 	setupLogger()
 	setupDBEngine()
+}
+
+func CheckSetting(i interface{}, keys ...string) {
+	rv := reflect.ValueOf(i)
+
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+
+	for _, key := range keys {
+		f := rv.FieldByNameFunc(func(s string) bool {
+			return strings.ToLower(s) == key
+		})
+		if f.IsZero() {
+			log.Fatalf("%s.%s must be filled", rv.Type().Name(), key)
+		}
+	}
 }
 
 // Cfg get value by key if exist

@@ -29,7 +29,7 @@ func Session() gin.HandlerFunc {
 
 		raw, err := redis.Get(c, fmt.Sprintf("token_%s", token)).Bytes()
 		if err == nil {
-			var session app.Session
+			var session service.Session
 			err = json.Unmarshal(raw, &session)
 			if err != nil {
 				ecode = errcode.UnauthorizedTokenError

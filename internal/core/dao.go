@@ -11,6 +11,7 @@ type DaoManageService interface {
 	GetMyDaoList(dao *model.Dao) ([]*model.DaoFormatted, error)
 	CreateDao(dao *model.Dao) (*model.Dao, error)
 	UpdateDao(dao *model.Dao) error
+	DeleteDao(dao *model.Dao) error
 	DaoBookmarkCount(address string) int64
 	GetDaoBookmarkList(userAddress string, q *QueryReq, offset, limit int) (list []*model.DaoFormatted)
 	GetDaoBookmarkListByAddress(address string) []*model.DaoBookmark

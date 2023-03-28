@@ -105,9 +105,9 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		}
 
 		// check valid timestamp
-		if time.Now().After(time.UnixMilli(param.Timestamp).Add(time.Minute)) {
-			return nil, errcode.UnauthorizedTokenTimeout
-		}
+		//if time.Now().After(time.UnixMilli(param.Timestamp).Add(time.Minute)) {
+		//	return nil, errcode.UnauthorizedTokenTimeout
+		//}
 
 		var ok bool
 

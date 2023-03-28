@@ -1,6 +1,7 @@
 package service
 
 import (
+	"favor-dao-backend/pkg/comet"
 	"fmt"
 
 	"favor-dao-backend/internal/conf"
@@ -11,9 +12,10 @@ import (
 )
 
 var (
-	ds  core.DataService
-	ts  core.TweetSearchService
-	eth *ethclient.Client
+	ds   core.DataService
+	ts   core.TweetSearchService
+	eth  *ethclient.Client
+	chat *comet.ChatGateway
 )
 
 func Initialize() {
@@ -26,6 +28,7 @@ func Initialize() {
 		panic(fmt.Sprintf("dial eth: %s", err))
 	}
 	eth = client
+	chat = comet.New(conf.ChatSetting.AppId, conf.ChatSetting.Region, conf.ChatSetting.ApiKey)
 }
 
 func persistMediaContents(contents []*PostContentItem) (items []string, err error) {

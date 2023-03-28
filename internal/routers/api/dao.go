@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"favor-dao-backend/internal/model"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -46,11 +47,24 @@ func CreateDao(c *gin.Context) {
 		response.ToErrorResponse(errcode.CreateDaoNameDuplication)
 		return
 	}
-	userAddress, _ := c.Get("address")
-	dao, err := service.CreateDao(c, userAddress.(string), param)
 
+	user, _ := c.Get("USER")
+	userAddress, _ := c.Get("address")
+
+	dao, err := service.CreateDao(c, userAddress.(string), param)
 	if err != nil {
 		logrus.Errorf("service.CreateDao err: %v\n", err)
+		response.ToErrorResponse(errcode.CreateDaoFailed)
+		return
+	}
+
+	// Also create chat group related dao
+	u := user.(*model.User)
+	err = service.CreateChatGroup(u.ID, dao.ID, dao.Name, dao.Avatar, dao.Introduction)
+	if err != nil {
+		_ = service.DeleteDao(c, dao.ID)
+
+		logrus.Errorf("service.CreateGroup err: %v\n", err)
 		response.ToErrorResponse(errcode.CreateDaoFailed)
 		return
 	}
@@ -132,6 +146,7 @@ func ActionDaoBookmark(c *gin.Context) {
 		return
 	}
 
+	user, _ := c.Get("USER")
 	address, _ := c.Get("address")
 
 	status := false
@@ -147,6 +162,20 @@ func ActionDaoBookmark(c *gin.Context) {
 
 	if err != nil {
 		logrus.Errorf("api.ActionDaoBookmark err: %s", err)
+		response.ToErrorResponse(errcode.NoPermission)
+		return
+	}
+
+	u := user.(*model.User)
+	err = service.JoinOrLeaveGroup(u.ID, param.DaoID, status, c.GetHeader("X-Session-Token"))
+	if err != nil {
+		if status {
+			_ = service.DeleteDaoBookmark(book)
+		} else {
+			_, _ = service.CreateDaoBookmark(address.(string), param.DaoID)
+		}
+
+		logrus.Errorf("service.JoinOrLeaveGroup err: %s", err)
 		response.ToErrorResponse(errcode.NoPermission)
 		return
 	}
