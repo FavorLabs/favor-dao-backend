@@ -74,7 +74,6 @@ type PostContentItem struct {
 	Sort    int64              `json:"sort"  binding:"required"`
 }
 
-// Check 检查PostContentItem属性
 func (p *PostContentItem) Check() error {
 	// 检查链接是否合法
 	if p.Type == model.CONTENT_TYPE_LINK {
@@ -89,7 +88,6 @@ func (p *PostContentItem) Check() error {
 func tagsFrom(originTags []string) []string {
 	tags := make([]string, 0, len(originTags))
 	for _, tag := range originTags {
-		// TODO: 优化tag有效性检测
 		if tag = strings.TrimSpace(tag); len(tag) > 0 {
 			tags = append(tags, tag)
 		}
@@ -97,8 +95,6 @@ func tagsFrom(originTags []string) []string {
 	return tags
 }
 
-// CreatePost 创建文章
-// TODO: 推文+推文内容需要在一个事务中添加，后续优化
 func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model.PostFormatted, err error) {
 	var (
 		post          *model.Post
@@ -291,10 +287,9 @@ func VisiblePost(user *model.User, postId primitive.ObjectID, visibility model.P
 
 	if err = ds.VisiblePost(post, visibility); err != nil {
 		logrus.Warnf("update post failure: %v", err)
-		return errcode.VisblePostFailed
+		return errcode.VisiblePostFailed
 	}
 
-	// 推送Search
 	post.Visibility = visibility
 	PushPostToSearch(post)
 
@@ -306,13 +301,11 @@ func GetPostStar(postID primitive.ObjectID, address string) (*model.PostStar, er
 }
 
 func CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar, error) {
-	// 加载Post
 	post, err := ds.GetPostByID(postID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 私密post不可操作
 	if post.Visibility == model.PostVisitPrivate {
 		return nil, errors.New("no permision")
 	}
@@ -322,11 +315,9 @@ func CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar,
 		return nil, err
 	}
 
-	// 更新Post点赞数
 	post.UpvoteCount++
 	ds.UpdatePost(post)
 
-	// 更新索引
 	PushPostToSearch(post)
 
 	return star, nil

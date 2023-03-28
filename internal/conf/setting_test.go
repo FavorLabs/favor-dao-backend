@@ -1,6 +1,10 @@
 package conf
 
 import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -111,4 +115,29 @@ func TestUse(t *testing.T) {
 			t.Errorf("CfgIf(%s) want %t got %t", exp, res, ok)
 		}
 	}
+}
+
+func TestCfgIf(t *testing.T) {
+	url := "https://235461af0053efb9.apiclient-us.cometchat.io/v3/groups/1/members"
+
+	payload := strings.NewReader("{\"participants\":[\"0x123\"]}")
+
+	req, _ := http.NewRequest("POST", url, payload)
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("content-type", "application/json")
+	// req.Header.Add("apikey", "e50156f5ab1294f3f1f67bf685d1a08e9245eea7")
+	req.Header.Add("appid", "235461af0053efb9")
+	// req.Header.Add("apikey", "0x123_1679885131ab2597f14afcae5319c22c89402ecf")
+	req.Header.Add("authToken", "0x123_1679885131ab2597f14afcae5319c22c89402ecf")
+	// req.Header.Add("resource", "false")
+	// req.Header.Add("sdk", "android@3.0.12")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	fmt.Println(res)
+	fmt.Println(string(body))
 }
