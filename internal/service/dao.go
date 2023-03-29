@@ -51,6 +51,7 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		Introduction: param.Introduction,
 		Avatar:       param.Avatar,
 		Banner:       param.Banner,
+		FollowCount:  1, // default owner joined
 	}
 	res, err := ds.CreateDao(dao, chatAction)
 	if err != nil {

@@ -40,6 +40,19 @@ func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(*model.Dao)
 		if err != nil {
 			return err
 		}
+		book := &model.DaoBookmark{Address: newDao.Address, DaoID: newDao.ID}
+		out, err := book.GetByAddress(ctx, s.db, newDao.Address, newDao.ID.Hex(), true)
+		if err != nil {
+			out, err = book.Create(ctx, s.db)
+		} else {
+			out.IsDel = 0
+			out.ModifiedOn = time.Now().Unix()
+			out.DeletedOn = 0
+			err = out.Update(ctx, s.db)
+		}
+		if err != nil {
+			return err
+		}
 		groupId, err := chatAction(dao)
 		if err != nil {
 			return err
