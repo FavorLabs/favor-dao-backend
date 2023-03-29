@@ -59,6 +59,7 @@ type AppSettingS struct {
 
 type ExternalAppSettingS struct {
 	UseBucket string
+	Region    string
 	NetworkID int
 }
 

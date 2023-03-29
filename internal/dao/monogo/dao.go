@@ -2,12 +2,12 @@ package monogo
 
 import (
 	"context"
-	chatModel "favor-dao-backend/internal/model/chat"
 	"strings"
 	"time"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	chatModel "favor-dao-backend/internal/model/chat"
 	"favor-dao-backend/pkg/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -170,7 +170,7 @@ func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string, chatA
 			out.DeletedOn = 0
 			err = out.Update(ctx, s.db)
 		}
-		groupId, err := chatAction(ctx, dao.Name)
+		groupId, err := chatAction(ctx, dao.ID.Hex())
 		if err != nil {
 			return err
 		}
@@ -202,7 +202,7 @@ func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func
 		if err != nil {
 			return err
 		}
-		groupId, err := chatAction(ctx, dao.Name)
+		groupId, err := chatAction(ctx, dao.ID.Hex())
 		if err != nil {
 			return err
 		}

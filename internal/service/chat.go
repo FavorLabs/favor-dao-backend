@@ -3,13 +3,15 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"favor-dao-backend/internal/conf"
-	"favor-dao-backend/pkg/comet"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+
+	"favor-dao-backend/internal/conf"
+	"favor-dao-backend/pkg/comet"
+	"github.com/cespare/xxhash/v2"
 )
 
 type Session struct {
@@ -18,15 +20,33 @@ type Session struct {
 	WalletAddr   string `json:"wallet_addr"`
 }
 
-func userId(address string) string {
-	address = strings.TrimPrefix(address, "0x")
+func genId(id string) string {
+	return strconv.FormatUint(
+		xxhash.Sum64String(fmt.Sprintf("%s-%d-%s", conf.ExternalAppSetting.Region, conf.ExternalAppSetting.NetworkID, id)),
+		10,
+	)
+}
 
-	return fmt.Sprintf("%d%s", conf.ExternalAppSetting.NetworkID, address)
+func userId(address string) string {
+	return genId(strings.TrimPrefix(address, "0x"))
+}
+
+func groupId(id string) string {
+	return genId(fmt.Sprintf("group_%s", id))
+}
+
+func networkTag() string {
+	return fmt.Sprintf("net_%d", conf.ExternalAppSetting.NetworkID)
+}
+
+func regionTag() string {
+	return fmt.Sprintf("region_%s", conf.ExternalAppSetting.Region)
 }
 
 func CreateChatUser(address, name, avatar string) (string, error) {
 	cUid := userId(address)
 	resp, err := chat.Scoped().Users().Create(cUid, name, &comet.UserCreateOption{
+		Tags:        []string{regionTag(), networkTag()},
 		Avatar:      fmt.Sprintf("http://%s", strings.TrimPrefix(avatar, "http://")),
 		ReturnToken: true,
 	})
@@ -52,24 +72,18 @@ func CreateChatUser(address, name, avatar string) (string, error) {
 	return token.AuthToken, nil
 }
 
-func groupId(name string) string {
-	hashId := xxhash.Sum64String(fmt.Sprintf("group_%s", name))
-	return fmt.Sprintf("%d%d", conf.ExternalAppSetting.NetworkID, hashId)
-}
-
-func networkTag() string {
-	return fmt.Sprintf("net_%d", conf.ExternalAppSetting.NetworkID)
-}
-
-func CreateChatGroup(address, name, icon, desc string) (string, error) {
+func CreateChatGroup(address, id, name, icon, desc string) (string, error) {
 	uid := userId(address)
-	gid := groupId(name)
+	gid := groupId(id)
 
-	_, err := chat.Scoped().Perform(uid).Groups().Create(groupId(name), name, comet.PublicGroup, &comet.GroupCreateOption{
+	_, err := chat.Scoped().Perform(uid).Groups().Create(gid, name, comet.PublicGroup, &comet.GroupCreateOption{
 		Owner: address,
 		Icon:  icon,
 		Desc:  desc,
-		Tags:  []string{networkTag(), fmt.Sprintf("DAO%s", name)},
+		Tags: []string{
+			regionTag(),
+			networkTag(),
+			fmt.Sprintf("DAO%s", name)},
 	})
 	if err != nil {
 		return gid, err
@@ -78,8 +92,8 @@ func CreateChatGroup(address, name, icon, desc string) (string, error) {
 	return gid, nil
 }
 
-func JoinOrLeaveGroup(ctx context.Context, daoName string, joinOrLeave bool, token string) (string, error) {
-	groupId := groupId(daoName)
+func JoinOrLeaveGroup(ctx context.Context, daoId string, joinOrLeave bool, token string) (string, error) {
+	groupId := groupId(daoId)
 
 	url := fmt.Sprintf("https://%s.apiclient-%s.cometchat.io/v3/groups/%s/members", conf.ChatSetting.AppId, conf.ChatSetting.Region, groupId)
 

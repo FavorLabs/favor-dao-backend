@@ -52,7 +52,7 @@ func CreateDao(c *gin.Context) {
 	userAddress, _ := c.Get("address")
 
 	dao, err := service.CreateDao(c, userAddress.(string), param, func(dao *model.Dao) (string, error) {
-		return service.CreateChatGroup(dao.Address, dao.Name, dao.Avatar, dao.Introduction)
+		return service.CreateChatGroup(dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
 	})
 	if err != nil {
 		logrus.Errorf("service.CreateDao err: %v\n", err)
@@ -144,14 +144,14 @@ func ActionDaoBookmark(c *gin.Context) {
 	book, err := service.GetDaoBookmark(address.(string), param.DaoID)
 	if err != nil {
 		// create follow
-		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, daoName string) (string, error) {
-			return service.JoinOrLeaveGroup(ctx, daoName, true, token)
+		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, daoId string) (string, error) {
+			return service.JoinOrLeaveGroup(ctx, daoId, true, token)
 		})
 		status = true
 	} else {
 		// cancel follow
-		err = service.DeleteDaoBookmark(book, func(ctx context.Context, daoName string) (string, error) {
-			return service.JoinOrLeaveGroup(ctx, daoName, false, token)
+		err = service.DeleteDaoBookmark(book, func(ctx context.Context, daoId string) (string, error) {
+			return service.JoinOrLeaveGroup(ctx, daoId, false, token)
 		})
 	}
 
