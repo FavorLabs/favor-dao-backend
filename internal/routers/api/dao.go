@@ -1,11 +1,12 @@
 package api
 
 import (
+	"context"
 	"errors"
-	"favor-dao-backend/internal/model"
 	"strings"
 
 	"favor-dao-backend/internal/core"
+	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
 	"favor-dao-backend/pkg/convert"
@@ -48,23 +49,13 @@ func CreateDao(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("USER")
 	userAddress, _ := c.Get("address")
 
-	dao, err := service.CreateDao(c, userAddress.(string), param)
+	dao, err := service.CreateDao(c, userAddress.(string), param, func(dao *model.Dao) (string, error) {
+		return service.CreateChatGroup(dao.Address, dao.Name, dao.Avatar, dao.Introduction)
+	})
 	if err != nil {
 		logrus.Errorf("service.CreateDao err: %v\n", err)
-		response.ToErrorResponse(errcode.CreateDaoFailed)
-		return
-	}
-
-	// Also create chat group related dao
-	u := user.(*model.User)
-	err = service.CreateChatGroup(u.ID, dao.ID, dao.Name, dao.Avatar, dao.Introduction)
-	if err != nil {
-		_ = service.DeleteDao(c, dao.ID)
-
-		logrus.Errorf("service.CreateGroup err: %v\n", err)
 		response.ToErrorResponse(errcode.CreateDaoFailed)
 		return
 	}
@@ -146,36 +137,26 @@ func ActionDaoBookmark(c *gin.Context) {
 		return
 	}
 
-	user, _ := c.Get("USER")
 	address, _ := c.Get("address")
+	token := c.GetHeader("X-Session-Token")
 
 	status := false
 	book, err := service.GetDaoBookmark(address.(string), param.DaoID)
 	if err != nil {
 		// create follow
-		_, err = service.CreateDaoBookmark(address.(string), param.DaoID)
+		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, daoName string) (string, error) {
+			return service.JoinOrLeaveGroup(ctx, daoName, true, token)
+		})
 		status = true
 	} else {
 		// cancel follow
-		err = service.DeleteDaoBookmark(book)
+		err = service.DeleteDaoBookmark(book, func(ctx context.Context, daoName string) (string, error) {
+			return service.JoinOrLeaveGroup(ctx, daoName, false, token)
+		})
 	}
 
 	if err != nil {
 		logrus.Errorf("api.ActionDaoBookmark err: %s", err)
-		response.ToErrorResponse(errcode.NoPermission)
-		return
-	}
-
-	u := user.(*model.User)
-	err = service.JoinOrLeaveGroup(u.ID, param.DaoID, status, c.GetHeader("X-Session-Token"))
-	if err != nil {
-		if status {
-			_ = service.DeleteDaoBookmark(book)
-		} else {
-			_, _ = service.CreateDaoBookmark(address.(string), param.DaoID)
-		}
-
-		logrus.Errorf("service.JoinOrLeaveGroup err: %s", err)
 		response.ToErrorResponse(errcode.NoPermission)
 		return
 	}

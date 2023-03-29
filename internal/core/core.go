@@ -1,7 +1,5 @@
 package core
 
-import "favor-dao-backend/internal/core/chat"
-
 type DataService interface {
 	TopicService
 	IndexPostsService
@@ -16,5 +14,4 @@ type DataService interface {
 	UserManageService
 
 	DaoManageService
-	chat.ManageService
 }

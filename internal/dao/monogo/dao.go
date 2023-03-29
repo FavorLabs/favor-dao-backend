@@ -2,6 +2,7 @@ package monogo
 
 import (
 	"context"
+	chatModel "favor-dao-backend/internal/model/chat"
 	"strings"
 	"time"
 
@@ -33,8 +34,36 @@ func (s *daoManageServant) GetDaoByKeyword(keyword string) ([]*model.Dao, error)
 	return dao.FindListByKeyword(context.TODO(), s.db, keyword, 0, 6)
 }
 
-func (s *daoManageServant) CreateDao(dao *model.Dao) (*model.Dao, error) {
-	return dao.Create(context.TODO(), s.db)
+func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(*model.Dao) (string, error)) (*model.Dao, error) {
+	err := util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		newDao, err := dao.Create(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		groupId, err := chatAction(dao)
+		if err != nil {
+			return err
+		}
+		group := &chatModel.Group{
+			ID: chatModel.GroupID{
+				DaoID:   newDao.ID,
+				GroupID: groupId,
+				OwnerID: newDao.Address,
+			},
+		}
+		_, err = group.Create(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		dao.ID = newDao.ID
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return dao, nil
 }
 
 func (s *daoManageServant) UpdateDao(dao *model.Dao) error {
@@ -114,7 +143,7 @@ func (s *daoManageServant) GetDaoBookmarkByAddressAndDaoID(myAddress string, dao
 	return res, nil
 }
 
-func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string) (out *model.DaoBookmark, err error) {
+func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string, chatAction func(context.Context, string) (string, error)) (out *model.DaoBookmark, err error) {
 	id, err := primitive.ObjectIDFromHex(daoID)
 	if err != nil {
 		return nil, err
@@ -132,21 +161,33 @@ func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string) (out 
 		}
 		// update book
 		book := &model.DaoBookmark{Address: myAddress, DaoID: id}
-		out, err = book.GetByAddress(context.TODO(), s.db, myAddress, daoID, true)
+		out, err = book.GetByAddress(ctx, s.db, myAddress, daoID, true)
 		if err != nil {
-			out, err = book.Create(context.TODO(), s.db)
+			out, err = book.Create(ctx, s.db)
 		} else {
 			out.IsDel = 0
 			out.ModifiedOn = time.Now().Unix()
 			out.DeletedOn = 0
-			err = out.Update(context.TODO(), s.db)
+			err = out.Update(ctx, s.db)
 		}
+		groupId, err := chatAction(ctx, dao.Name)
+		if err != nil {
+			return err
+		}
+		group := &chatModel.Group{
+			ID: chatModel.GroupID{
+				DaoID:   dao.ID,
+				GroupID: groupId,
+				OwnerID: myAddress,
+			},
+		}
+		_, err = group.Create(ctx, s.db)
 		return err
 	})
 	return
 }
 
-func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark) error {
+func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func(context.Context, string) (string, error)) error {
 	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		dao, err := (&model.Dao{ID: d.DaoID, IsDel: 1}).Get(ctx, s.db)
 		if err != nil {
@@ -157,6 +198,21 @@ func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark) error {
 		if err != nil {
 			return err
 		}
-		return d.Delete(ctx, s.db)
+		err = d.Delete(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		groupId, err := chatAction(ctx, dao.Name)
+		if err != nil {
+			return err
+		}
+		group := &chatModel.Group{
+			ID: chatModel.GroupID{
+				DaoID:   d.DaoID,
+				GroupID: groupId,
+				OwnerID: d.Address,
+			},
+		}
+		return group.Delete(ctx, s.db)
 	})
 }

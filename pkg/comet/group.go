@@ -102,6 +102,28 @@ func (g *GroupScoped) Create(gid, name string, typ GroupType, opt *GroupCreateOp
 	return &response.Data.Group, nil
 }
 
+func (g *GroupScoped) Get(gid string) (*Group, error) {
+	g.setScope("groups", gid)
+
+	req, err := buildRequest(g.setMethod(http.MethodGet))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data struct {
+			Group
+		} `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Data.Group, nil
+}
+
 func (g *GroupScoped) Members(gid string) *GroupMemberScoped {
 	g.setScope("groups", gid)
 	g.setScope("members", "")

@@ -7,11 +7,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Group struct {
-	ID      primitive.ObjectID `json:"id"       bson:"_id,omitempty"`
+type GroupID struct {
 	DaoID   primitive.ObjectID `json:"dao_id"   bson:"dao_id"`
+	GroupID string             `json:"group_id" bson:"group_id"`
 	OwnerID string             `json:"owner_id" bson:"owner_id"`
-	GroupID string
+}
+
+type Group struct {
+	ID GroupID `json:"id"       bson:"_id,omitempty"`
 }
 
 func (m *Group) Table() string {
@@ -23,8 +26,12 @@ func (m *Group) Create(ctx context.Context, db *mongo.Database) (*Group, error) 
 	if err != nil {
 		return nil, err
 	}
-	m.ID = res.InsertedID.(primitive.ObjectID)
-	return m, nil
+	var g Group
+	resMap := res.InsertedID.(primitive.D).Map()
+	g.ID.DaoID = resMap["dao_id"].(primitive.ObjectID)
+	g.ID.GroupID = resMap["group_id"].(string)
+	g.ID.OwnerID = resMap["owner_id"].(string)
+	return &g, nil
 }
 
 func (m *Group) Delete(ctx context.Context, db *mongo.Database) error {
@@ -34,21 +41,4 @@ func (m *Group) Delete(ctx context.Context, db *mongo.Database) error {
 		return res.Err()
 	}
 	return nil
-}
-
-func (m *Group) RelatedDao(ctx context.Context, db *mongo.Database) (*Group, error) {
-	if m.DaoID.IsZero() {
-		return nil, mongo.ErrNoDocuments
-	}
-	filter := bson.D{{"dao_id", m.DaoID}}
-	res := db.Collection(m.Table()).FindOne(ctx, filter)
-	if res.Err() != nil {
-		return nil, res.Err()
-	}
-	var dao Group
-	err := res.Decode(&dao)
-	if err != nil {
-		return nil, err
-	}
-	return &dao, nil
 }
