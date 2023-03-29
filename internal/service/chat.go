@@ -83,7 +83,8 @@ func CreateChatGroup(address, id, name, icon, desc string) (string, error) {
 		Tags: []string{
 			regionTag(),
 			networkTag(),
-			fmt.Sprintf("DAO%s", name)},
+			fmt.Sprintf("DAO%s", name),
+		},
 	})
 	if err != nil {
 		return gid, err
@@ -159,12 +160,18 @@ func JoinOrLeaveGroup(ctx context.Context, daoId string, joinOrLeave bool, token
 	return groupId, nil
 }
 
-func ListChatGroups(address, name string, page, perPage int) ([]comet.Group, error) {
-	uid := userId(address)
+func ListChatGroups(daoId string, page, perPage int) ([]comet.Group, error) {
+	dao, err := GetDao(daoId)
+	if err != nil {
+		return nil, err
+	}
+
+	uid := userId(dao.Address)
 
 	// TODO make sure return sames with logged list in database
 	return chat.Scoped().Perform(uid).Groups().List(comet.GroupListOption{
-		Tags:      []string{networkTag(), fmt.Sprintf("DAO%s", name)},
+		Tags:      []string{regionTag(), networkTag(), fmt.Sprintf("DAO%s", dao.Name)},
+		Type:      "public",
 		HasJoined: true,
 		SortBy:    "createdAt",
 		SortOrder: "desc",

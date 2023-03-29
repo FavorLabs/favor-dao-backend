@@ -11,17 +11,16 @@ import (
 func GetChatGroups(c *gin.Context) {
 	response := app.NewResponse(c)
 
-	daoName := c.Query("dao_name")
-	if daoName == "" {
+	daoId := c.Query("dao_id")
+	if daoId == "" {
 		response.ToErrorResponse(errcode.GetDaoFailed)
 		return
 	}
 
-	address, _ := c.Get("address")
 	page := app.GetPage(c)
 	perPage := app.GetPageSize(c)
 
-	resp, err := service.ListChatGroups(address.(string), daoName, page, perPage)
+	resp, err := service.ListChatGroups(daoId, page, perPage)
 	if err != nil {
 		logrus.Errorf("service.ListChatGroups err: %v\n", err)
 		response.ToErrorResponse(errcode.GetCollectionsFailed)
