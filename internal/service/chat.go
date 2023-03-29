@@ -27,7 +27,7 @@ func userId(address string) string {
 func CreateChatUser(address, name, avatar string) (string, error) {
 	cUid := userId(address)
 	resp, err := chat.Scoped().Users().Create(cUid, name, &comet.UserCreateOption{
-		//Avatar:      avatar,
+		Avatar:      fmt.Sprintf("http://%s", strings.TrimPrefix(avatar, "http://")),
 		ReturnToken: true,
 	})
 	if err != nil {
@@ -57,13 +57,19 @@ func groupId(name string) string {
 	return fmt.Sprintf("%d%d", conf.ExternalAppSetting.NetworkID, hashId)
 }
 
+func networkTag() string {
+	return fmt.Sprintf("net_%d", conf.ExternalAppSetting.NetworkID)
+}
+
 func CreateChatGroup(address, name, icon, desc string) (string, error) {
-	cUid := userId(address)
+	uid := userId(address)
 	gid := groupId(name)
-	_, err := chat.Scoped().Perform(cUid).Groups().Create(groupId(name), name, comet.PublicGroup, &comet.GroupCreateOption{
+
+	_, err := chat.Scoped().Perform(uid).Groups().Create(groupId(name), name, comet.PublicGroup, &comet.GroupCreateOption{
 		Owner: address,
 		Icon:  icon,
 		Desc:  desc,
+		Tags:  []string{networkTag(), fmt.Sprintf("DAO%s", name)},
 	})
 	if err != nil {
 		return gid, err
@@ -137,4 +143,18 @@ func JoinOrLeaveGroup(ctx context.Context, daoName string, joinOrLeave bool, tok
 	}
 
 	return groupId, nil
+}
+
+func ListChatGroups(address, name string, page, perPage int) ([]comet.Group, error) {
+	uid := userId(address)
+
+	// TODO make sure return sames with logged list in database
+	return chat.Scoped().Perform(uid).Groups().List(comet.GroupListOption{
+		Tags:      []string{networkTag(), fmt.Sprintf("DAO%s", name)},
+		HasJoined: true,
+		SortBy:    "createdAt",
+		SortOrder: "desc",
+		Page:      page,
+		PerPage:   perPage,
+	})
 }

@@ -102,6 +102,9 @@ func NewRouter() *gin.Engine {
 		authApi.PUT("/dao", api.UpdateDao)
 		authApi.GET("/dao/bookmark", api.GetDaoBookmark)
 		authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
+
+		// chat
+		authApi.GET("/chat/groups", api.GetChatGroups)
 	}
 
 	// default 404

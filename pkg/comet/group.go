@@ -18,19 +18,21 @@ const (
 )
 
 type Group struct {
-	GID            string    `json:"guid"`
-	Name           string    `json:"name"`
-	Type           GroupType `json:"type"`
-	Icon           string    `json:"icon"`
-	Desc           string    `json:"description"`
-	Scope          string    `json:"scope"`
-	Owner          string    `json:"owner"`
-	Tags           []string  `json:"tags"`
-	MembersCount   int       `json:"membersCount"`
-	JoinedAt       int       `json:"joinedAt"`
-	HasJoined      bool      `json:"hasJoined"`
-	CreatedAt      int       `json:"createdAt"`
-	ConversationId string    `json:"conversationId"`
+	GID                string    `json:"guid"`
+	Name               string    `json:"name"`
+	Type               GroupType `json:"type"`
+	Icon               string    `json:"icon,omitempty"`
+	Desc               string    `json:"description,omitempty"`
+	Scope              string    `json:"scope,omitempty"`
+	Owner              string    `json:"owner"`
+	Tags               []string  `json:"tags,omitempty"`
+	MembersCount       int       `json:"membersCount"`
+	JoinedAt           int       `json:"joinedAt,omitempty"`
+	HasJoined          bool      `json:"hasJoined,omitempty"`
+	CreatedAt          int       `json:"createdAt"`
+	UpdatedAt          int       `json:"updatedAt,omitempty"`
+	ConversationId     string    `json:"conversationId"`
+	OnlineMembersCount int       `json:"onlineMembersCount,omitempty"`
 }
 
 type groupInfo struct {
@@ -100,6 +102,40 @@ func (g *GroupScoped) Create(gid, name string, typ GroupType, opt *GroupCreateOp
 	}
 
 	return &response.Data.Group, nil
+}
+
+type GroupListOption struct {
+	SearchKey string
+	SearchIn  []string
+	SortBy    string
+	SortOrder string
+	PerPage   int
+	Affix     string
+	UpdatedAt int
+	WithTags  bool
+	Tags      []string
+	Type      string
+	Types     []string
+	Page      int
+	HasJoined bool
+}
+
+func (g *GroupScoped) List(opt GroupListOption) ([]Group, error) {
+	req, err := buildRequest(g.setQueries(opt).setMethod(http.MethodGet))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data []Group `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Data, nil
 }
 
 func (g *GroupScoped) Get(gid string) (*Group, error) {

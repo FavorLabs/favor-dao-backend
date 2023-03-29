@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"reflect"
 	"strings"
 )
 
@@ -21,10 +23,10 @@ type ChatGateway struct {
 }
 
 func New(appId, region, apiKey string) *ChatGateway {
-	url := fmt.Sprintf(ApiGateway, appId, region, ApiVersion)
+	baseUrl := fmt.Sprintf(ApiGateway, appId, region, ApiVersion)
 
 	return &ChatGateway{
-		baseUrl: url,
+		baseUrl: baseUrl,
 		apiKey:  apiKey,
 	}
 }
@@ -33,6 +35,7 @@ func (c *ChatGateway) Scoped() *Scoped {
 	req := &chatRequest{
 		url:    c.baseUrl,
 		scopes: make([][]string, 0),
+		query:  make(url.Values),
 		header: make(http.Header),
 	}
 
@@ -71,6 +74,7 @@ type chatRequest struct {
 	scopes  [][]string
 	method  string
 	rawBody []byte
+	query   url.Values
 	header  http.Header
 }
 
@@ -103,7 +107,54 @@ func (r *chatRequest) setMethod(method string) *chatRequest {
 }
 
 func (r *chatRequest) setHeader(key, value string) *chatRequest {
+	if value == "" {
+		return r
+	}
 	r.header.Set(key, value)
+	return r
+}
+
+func (r *chatRequest) setQuery(key, value string) *chatRequest {
+	if value == "" {
+		return r
+	}
+	if r.query.Get(key) == "" {
+		r.query.Set(key, value)
+	} else {
+		r.query.Add(key, value)
+	}
+	return r
+}
+
+func (r *chatRequest) setQueries(values interface{}) *chatRequest {
+	rv := reflect.ValueOf(values)
+	if rv.Kind() != reflect.Struct {
+		return r
+	}
+	num := rv.NumField()
+	rt := rv.Type()
+	for i := 0; i < num; i++ {
+		f := rv.Field(i)
+		name := rt.Field(i).Name
+		switch f.Kind() {
+		case reflect.String:
+			r.setQuery(name, f.String())
+		case reflect.Array, reflect.Slice:
+			if f.Len() > 0 && f.Index(0).Kind() == reflect.String {
+				for j := 0; j < f.Len(); j++ {
+					r.setQuery(name, f.Index(j).String())
+				}
+			}
+		default:
+			toStr := f.MethodByName("String")
+			if toStr.IsValid() {
+				retVals := toStr.Call([]reflect.Value{})
+				if len(retVals) == 1 && retVals[0].Kind() == reflect.String {
+					r.setQuery(name, retVals[0].String())
+				}
+			}
+		}
+	}
 	return r
 }
 
@@ -112,24 +163,25 @@ type apiBuilder interface {
 	getBody() []byte
 	getMethod() string
 	getHeader() http.Header
+	getQuery() url.Values
 }
 
 func (r *chatRequest) getUrl() string {
-	var url strings.Builder
+	var urlStr strings.Builder
 
-	url.WriteString(r.url)
-	url.WriteByte('/')
+	urlStr.WriteString(r.url)
+	urlStr.WriteByte('/')
 
 	for _, scope := range r.scopes {
-		url.WriteString(scope[0])
-		url.WriteByte('/')
+		urlStr.WriteString(scope[0])
+		urlStr.WriteByte('/')
 		if scope[1] != "" {
-			url.WriteString(scope[1])
-			url.WriteByte('/')
+			urlStr.WriteString(scope[1])
+			urlStr.WriteByte('/')
 		}
 	}
 
-	return strings.TrimRight(url.String(), "/")
+	return strings.TrimRight(urlStr.String(), "/")
 }
 
 func (r *chatRequest) getBody() []byte {
@@ -144,6 +196,10 @@ func (r *chatRequest) getHeader() http.Header {
 	return r.header
 }
 
+func (r *chatRequest) getQuery() url.Values {
+	return r.query
+}
+
 func buildRequest(builder apiBuilder) (*http.Request, error) {
 	var body io.Reader
 	if rawBody := builder.getBody(); rawBody != nil {
@@ -155,8 +211,12 @@ func buildRequest(builder apiBuilder) (*http.Request, error) {
 		return nil, err
 	}
 
-	if header := builder.getHeader(); header != nil {
+	if header := builder.getHeader(); len(header) != 0 {
 		req.Header = header
+	}
+
+	if query := builder.getQuery(); len(query) != 0 {
+		req.URL.RawQuery = query.Encode()
 	}
 
 	return req, nil
@@ -220,4 +280,22 @@ func doRequest(request *http.Request, body interface{}) error {
 	}
 
 	return json.Unmarshal(rawBody, body)
+}
+
+type Meta struct {
+	Pagination Pagination `json:"pagination"`
+	Cursor     Cursor     `json:"cursor"`
+}
+
+type Pagination struct {
+	Total       int `json:"total"`
+	Count       int `json:"count"`
+	PerPage     int `json:"per_page"`
+	CurrentPage int `json:"current_page"`
+	TotalPages  int `json:"total_pages"`
+}
+
+type Cursor struct {
+	UpdatedAt int    `json:"updated_at"`
+	Affix     string `json:"affix"`
 }
