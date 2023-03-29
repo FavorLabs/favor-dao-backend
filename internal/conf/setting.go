@@ -59,6 +59,8 @@ type AppSettingS struct {
 
 type ExternalAppSettingS struct {
 	UseBucket string
+	Region    string
+	NetworkID int
 }
 
 type CacheIndexSettingS struct {
@@ -101,7 +103,9 @@ type EthSettingS struct {
 }
 
 type ChatSettingS struct {
-	Api string
+	ApiKey string
+	AppId  string
+	Region string
 }
 
 type TweetSearchS struct {

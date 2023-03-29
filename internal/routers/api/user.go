@@ -33,9 +33,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := app.GenerateToken()
+	// Create user and auth token by chat
+	token, err := service.CreateChatUser(user.Address, user.Nickname, user.Avatar)
 	if err != nil {
-		logrus.Errorf("app.GenerateToken err: %v", err)
+		logrus.Errorf("service.GenerateToken err: %v", err)
 		response.ToErrorResponse(errcode.UnauthorizedTokenGenerate)
 		return
 	}
@@ -46,7 +47,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	session, _ := json.Marshal(app.Session{
+	session, _ := json.Marshal(service.Session{
 		ID:           ulid.Make().String(),
 		FriendlyName: c.DefaultQuery("name", "UnknownDevice"),
 		WalletAddr:   param.WalletAddr,

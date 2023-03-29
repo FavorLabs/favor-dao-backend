@@ -6,6 +6,8 @@ App:
   MaxPageSize: 100
 External:
   UseBucket: bucketname
+  Region: regionname
+  NetworkID: 19
 Server:
   RunMode: debug
   HttpIp: 0.0.0.0
@@ -71,4 +73,6 @@ Redis:
 Eth:
   Endpoint: "https://node.wallet.unipass.id/polygon-mumbai"
 Chat:
-  Api: "http://192.168.100.250:8000"
+  AppId: ""
+  Region: ""
+  ApiKey: ""

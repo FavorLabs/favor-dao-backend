@@ -7,13 +7,15 @@ import (
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/comet"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var (
-	ds  core.DataService
-	ts  core.TweetSearchService
-	eth *ethclient.Client
+	ds   core.DataService
+	ts   core.TweetSearchService
+	eth  *ethclient.Client
+	chat *comet.ChatGateway
 )
 
 func Initialize() {
@@ -26,6 +28,7 @@ func Initialize() {
 		panic(fmt.Sprintf("dial eth: %s", err))
 	}
 	eth = client
+	chat = comet.New(conf.ChatSetting.AppId, conf.ChatSetting.Region, conf.ChatSetting.ApiKey)
 }
 
 func persistMediaContents(contents []*PostContentItem) (items []string, err error) {

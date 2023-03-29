@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"strings"
 
 	"favor-dao-backend/internal/core"
+	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
 	"favor-dao-backend/pkg/convert"
@@ -46,9 +48,12 @@ func CreateDao(c *gin.Context) {
 		response.ToErrorResponse(errcode.CreateDaoNameDuplication)
 		return
 	}
-	userAddress, _ := c.Get("address")
-	dao, err := service.CreateDao(c, userAddress.(string), param)
 
+	userAddress, _ := c.Get("address")
+
+	dao, err := service.CreateDao(c, userAddress.(string), param, func(dao *model.Dao) (string, error) {
+		return service.CreateChatGroup(dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+	})
 	if err != nil {
 		logrus.Errorf("service.CreateDao err: %v\n", err)
 		response.ToErrorResponse(errcode.CreateDaoFailed)
@@ -133,16 +138,21 @@ func ActionDaoBookmark(c *gin.Context) {
 	}
 
 	address, _ := c.Get("address")
+	token := c.GetHeader("X-Session-Token")
 
 	status := false
 	book, err := service.GetDaoBookmark(address.(string), param.DaoID)
 	if err != nil {
 		// create follow
-		_, err = service.CreateDaoBookmark(address.(string), param.DaoID)
+		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, daoId string) (string, error) {
+			return service.JoinOrLeaveGroup(ctx, daoId, true, token)
+		})
 		status = true
 	} else {
 		// cancel follow
-		err = service.DeleteDaoBookmark(book)
+		err = service.DeleteDaoBookmark(book, func(ctx context.Context, daoId string) (string, error) {
+			return service.JoinOrLeaveGroup(ctx, daoId, false, token)
+		})
 	}
 
 	if err != nil {

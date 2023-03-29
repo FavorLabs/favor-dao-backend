@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"log"
 	"math"
 	"time"
@@ -42,7 +43,7 @@ func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 	return ds.GetDaoByName(dao)
 }
 
-func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *model.DaoFormatted, err error) {
+func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAction func(*model.Dao) (string, error)) (_ *model.DaoFormatted, err error) {
 	dao := &model.Dao{
 		Address:      userAddress,
 		Name:         param.Name,
@@ -51,7 +52,7 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 		Avatar:       param.Avatar,
 		Banner:       param.Banner,
 	}
-	res, err := ds.CreateDao(dao)
+	res, err := ds.CreateDao(dao, chatAction)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +66,11 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq) (_ *mod
 	}
 
 	return res.Format(), nil
+}
+
+func DeleteDao(_ *gin.Context, daoId string) error {
+	id, _ := primitive.ObjectIDFromHex(daoId)
+	return ds.DeleteDao(&model.Dao{ID: id})
 }
 
 func GetDaoBookmarkList(userAddress string, q *core.QueryReq, offset, limit int) (list []*model.DaoFormatted, total int64) {
@@ -193,12 +199,12 @@ func GetDaoBookmark(userAddress string, daoId string) (*model.DaoBookmark, error
 	return ds.GetDaoBookmarkByAddressAndDaoID(userAddress, daoId)
 }
 
-func CreateDaoBookmark(myAddress string, daoId string) (*model.DaoBookmark, error) {
-	return ds.CreateDaoFollow(myAddress, daoId)
+func CreateDaoBookmark(myAddress string, daoId string, chatAction func(context.Context, string) (string, error)) (*model.DaoBookmark, error) {
+	return ds.CreateDaoFollow(myAddress, daoId, chatAction)
 }
 
-func DeleteDaoBookmark(book *model.DaoBookmark) error {
-	return ds.DeleteDaoFollow(book)
+func DeleteDaoBookmark(book *model.DaoBookmark, chatAction func(context.Context, string) (string, error)) error {
+	return ds.DeleteDaoFollow(book, chatAction)
 }
 
 func PushDaoToSearch(dao *model.Dao) (bool, error) {
