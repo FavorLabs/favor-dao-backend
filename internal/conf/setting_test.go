@@ -2,7 +2,7 @@ package conf
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -135,8 +135,10 @@ func TestCfgIf(t *testing.T) {
 
 	res, _ := http.DefaultClient.Do(req)
 
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	defer func() {
+		_ = res.Body.Close()
+	}()
+	body, _ := io.ReadAll(res.Body)
 
 	fmt.Println(res)
 	fmt.Println(string(body))
