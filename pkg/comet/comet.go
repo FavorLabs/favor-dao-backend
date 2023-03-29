@@ -284,7 +284,7 @@ func doRequest(request *http.Request, body interface{}) error {
 
 type Meta struct {
 	Pagination Pagination `json:"pagination"`
-	Cursor     Cursor     `json:"cursor"`
+	Cursor     Cursor     `json:"cursor,omitempty"`
 }
 
 type Pagination struct {
