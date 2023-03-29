@@ -31,7 +31,7 @@ type Dao struct {
 	Introduction string             `json:"introduction"     bson:"introduction"`
 	Avatar       string             `json:"avatar"           bson:"avatar"`
 	Banner       string             `json:"banner"           bson:"banner"`
-	FollowCount  int64              `json:"Follow_count"     bson:"Follow_count"`
+	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
 }
 
 type DaoFormatted struct {
