@@ -1,13 +1,13 @@
 package service
 
 import (
-	"favor-dao-backend/pkg/comet"
 	"fmt"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/comet"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
