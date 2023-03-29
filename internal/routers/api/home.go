@@ -28,7 +28,9 @@ func Version(c *gin.Context) {
 	response.ToResponse(gin.H{
 		"BuildInfo": debug.ReadBuildInfo(),
 		"Settings": gin.H{
-			"Bucket": conf.ExternalAppSetting.UseBucket,
+			"Bucket":     conf.ExternalAppSetting.UseBucket,
+			"TagRegion":  service.RegionTag(),
+			"TagNetwork": service.NetworkTag(),
 		},
 	})
 }
