@@ -78,7 +78,7 @@ func CreateChatGroup(address, id, name, icon, desc string) (string, error) {
 
 	_, err := chat.Scoped().Perform(uid).Groups().Create(gid, name, comet.PublicGroup, &comet.GroupCreateOption{
 		Owner: address,
-		Icon:  icon,
+		Icon:  fmt.Sprintf("http://%s", strings.TrimPrefix(icon, "http://")),
 		Desc:  desc,
 		Tags: []string{
 			regionTag(),
