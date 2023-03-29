@@ -6,6 +6,7 @@ App:
   MaxPageSize: 100
 External:
   UseBucket: bucketname
+  Region: regionname
   NetworkID: 19
 Server:
   RunMode: debug
@@ -72,6 +73,6 @@ Redis:
 Eth:
   Endpoint: "https://node.wallet.unipass.id/polygon-mumbai"
 Chat:
-  AppId: "235461af0053efb9"
-  Region: "us"
-  ApiKey: "e50156f5ab1294f3f1f67bf685d1a08e9245eea7"
+  AppId: ""
+  Region: ""
+  ApiKey: ""
