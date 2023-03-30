@@ -92,6 +92,28 @@ func (u *UserScoped) Create(uid, name string, opt *UserCreateOption) (*User, err
 	return &response.Data.User, nil
 }
 
+func (u *UserScoped) Get(uid string) (*User, error) {
+	u.setScope("users", uid)
+
+	req, err := buildRequest(u.setMethod(http.MethodGet))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data struct {
+			User
+		} `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Data.User, nil
+}
+
 func (u *UserScoped) AuthToken(uid string) *AuthTokenScoped {
 	u.setScope("users", uid)
 	u.setScope("auth_tokens", "")
