@@ -70,3 +70,21 @@ func (a *AuthTokenScoped) Delete(token string) (*ApiResult, error) {
 
 	return &response.Data.ApiResult, nil
 }
+
+func (a *AuthTokenScoped) List() ([]AuthToken, error) {
+	req, err := buildRequest(a.setMethod(http.MethodGet))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data []AuthToken `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Data, nil
+}

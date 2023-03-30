@@ -43,33 +43,43 @@ func RegionTag() string {
 	return fmt.Sprintf("region_%s", conf.ExternalAppSetting.Region)
 }
 
-func CreateChatUser(address, name, avatar string) (string, error) {
+func GetAuthToken(address, name, avatar string) (string, error) {
 	cUid := userId(address)
-	resp, err := chat.Scoped().Users().Create(cUid, name, &comet.UserCreateOption{
-		Tags:        []string{RegionTag(), NetworkTag()},
-		Avatar:      fmt.Sprintf("http://%s", strings.TrimPrefix(avatar, "http://")),
-		ReturnToken: true,
-	})
+
+	_, err := chat.Scoped().Users().Get(cUid)
 	if err != nil {
 		switch e := err.(type) {
 		case comet.RestApiError:
-			// if created
-			if e.Inner.Code != "ERR_UID_ALREADY_EXISTS" {
-				return "", err
+			if e.Inner.Code == "ERR_UID_NOT_FOUND" {
+				resp, err := chat.Scoped().Users().Create(cUid, name, &comet.UserCreateOption{
+					Tags:        []string{RegionTag(), NetworkTag()},
+					Avatar:      fmt.Sprintf("http://%s", strings.TrimPrefix(avatar, "http://")),
+					ReturnToken: true,
+				})
+				if err != nil {
+					return "", err
+				}
+
+				return resp.AuthToken, nil
 			}
-		default:
-			return "", err
 		}
-	} else {
-		return resp.AuthToken, nil
 	}
 
-	token, err := chat.Scoped().Users().AuthToken(cUid).Create(nil)
+	tokens, err := chat.Scoped().Users().AuthToken(cUid).List()
 	if err != nil {
 		return "", err
 	}
 
-	return token.AuthToken, nil
+	if len(tokens) == 0 {
+		token, err := chat.Scoped().Users().AuthToken(cUid).Create(nil)
+		if err != nil {
+			return "", err
+		}
+
+		return token.AuthToken, nil
+	}
+
+	return tokens[0].AuthToken, nil
 }
 
 func CreateChatGroup(address, id, name, icon, desc string) (string, error) {

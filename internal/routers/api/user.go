@@ -34,7 +34,7 @@ func Login(c *gin.Context) {
 	}
 
 	// Create user and auth token by chat
-	token, err := service.CreateChatUser(user.Address, user.Nickname, user.Avatar)
+	token, err := service.GetAuthToken(user.Address, user.Nickname, user.Avatar)
 	if err != nil {
 		logrus.Errorf("service.GenerateToken err: %v", err)
 		response.ToErrorResponse(errcode.UnauthorizedTokenGenerate)
