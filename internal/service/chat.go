@@ -35,11 +35,11 @@ func groupId(id string) string {
 	return genId(fmt.Sprintf("group_%s", id))
 }
 
-func networkTag() string {
+func NetworkTag() string {
 	return fmt.Sprintf("net_%d", conf.ExternalAppSetting.NetworkID)
 }
 
-func regionTag() string {
+func RegionTag() string {
 	return fmt.Sprintf("region_%s", conf.ExternalAppSetting.Region)
 }
 
@@ -52,7 +52,7 @@ func GetAuthToken(address, name, avatar string) (string, error) {
 		case comet.RestApiError:
 			if e.Inner.Code == "ERR_UID_NOT_FOUND" {
 				resp, err := chat.Scoped().Users().Create(cUid, name, &comet.UserCreateOption{
-					Tags:        []string{regionTag(), networkTag()},
+					Tags:        []string{RegionTag(), NetworkTag()},
 					Avatar:      fmt.Sprintf("http://%s", strings.TrimPrefix(avatar, "http://")),
 					ReturnToken: true,
 				})
@@ -91,8 +91,8 @@ func CreateChatGroup(address, id, name, icon, desc string) (string, error) {
 		Icon:  fmt.Sprintf("http://%s", strings.TrimPrefix(icon, "http://")),
 		Desc:  desc,
 		Tags: []string{
-			regionTag(),
-			networkTag(),
+			RegionTag(),
+			NetworkTag(),
 			fmt.Sprintf("DAO%s", name),
 		},
 	})
@@ -180,7 +180,7 @@ func ListChatGroups(daoId string, page, perPage int) ([]comet.Group, error) {
 
 	// TODO make sure return sames with logged list in database
 	return chat.Scoped().Perform(uid).Groups().List(comet.GroupListOption{
-		Tags:      []string{regionTag(), networkTag(), fmt.Sprintf("DAO%s", dao.Name)},
+		Tags:      []string{RegionTag(), NetworkTag(), fmt.Sprintf("DAO%s", dao.Name)},
 		Type:      "public",
 		HasJoined: true,
 		SortBy:    "createdAt",
