@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
@@ -128,6 +129,7 @@ func GetDaoBookmark(c *gin.Context) {
 }
 
 func ActionDaoBookmark(c *gin.Context) {
+	start := time.Now()
 	param := service.DaoFollowReq{}
 	response := app.NewResponse(c)
 	valid, errs := app.BindAndValid(c, &param)
@@ -136,23 +138,30 @@ func ActionDaoBookmark(c *gin.Context) {
 		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
 		return
 	}
-
+	logrus.Debugf("ActionDaoBookmark BindAndValid: %s", time.Since(start))
 	address, _ := c.Get("address")
 	token := c.GetHeader("X-Session-Token")
 
 	status := false
 	book, err := service.GetDaoBookmark(address.(string), param.DaoID)
+	logrus.Debugf("ActionDaoBookmark service.GetDaoBookmark: %s", time.Since(start))
 	if err != nil {
 		// create follow
 		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, daoId string) (string, error) {
-			return service.JoinOrLeaveGroup(ctx, daoId, true, token)
+			logrus.Debugf("ActionDaoBookmark service.JoinOrLeaveGroup join: %s", time.Since(start))
+			resp, err := service.JoinOrLeaveGroup(ctx, daoId, true, token)
+			return resp, err
 		})
+		logrus.Debugf("ActionDaoBookmark service.CreateDaoBookmark: %s", time.Since(start))
 		status = true
 	} else {
 		// cancel follow
 		err = service.DeleteDaoBookmark(book, func(ctx context.Context, daoId string) (string, error) {
-			return service.JoinOrLeaveGroup(ctx, daoId, false, token)
+			logrus.Debugf("ActionDaoBookmark service.JoinOrLeaveGroup leave: %s", time.Since(start))
+			resp, err := service.JoinOrLeaveGroup(ctx, daoId, false, token)
+			return resp, err
 		})
+		logrus.Debugf("ActionDaoBookmark service.DeleteDaoBookmark: %s", time.Since(start))
 	}
 
 	if err != nil {
