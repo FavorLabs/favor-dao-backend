@@ -13,11 +13,11 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-.idea
-.vscode
+.idea/
+.vscode/
 !*.example
 config.yaml
 *.log
-data
-dist
+data/
+dist/
 .DS_Store

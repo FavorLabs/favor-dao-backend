@@ -34,16 +34,10 @@ func Login(c *gin.Context) {
 	}
 
 	// Create user and auth token by chat
-	token, err := service.GetAuthToken(user.Address, user.Nickname, user.Avatar)
+	token, err := service.GetAuthToken(c, user.Address)
 	if err != nil {
 		logrus.Errorf("service.GenerateToken err: %v", err)
 		response.ToErrorResponse(errcode.UnauthorizedTokenGenerate)
-		return
-	}
-
-	if err := service.UpdateUserExternalInfo(c, user); err != nil {
-		logrus.Errorf("conf.Redis.Set err: %v", err)
-		response.ToErrorResponse(errcode.UnauthorizedTokenError)
 		return
 	}
 
@@ -128,8 +122,10 @@ func ChangeNickname(c *gin.Context) {
 		return
 	}
 
-	user.Nickname = param.Nickname
-	service.UpdateUserInfo(user)
+	if err := service.ChangeUserName(user, param.Nickname); err != nil {
+		response.ToErrorResponse(err)
+		return
+	}
 
 	response.ToResponse(nil)
 }
@@ -154,6 +150,7 @@ func ChangeAvatar(c *gin.Context) {
 		response.ToErrorResponse(err)
 		return
 	}
+
 	response.ToResponse(nil)
 }
 

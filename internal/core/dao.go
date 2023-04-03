@@ -11,8 +11,8 @@ type DaoManageService interface {
 	GetDao(dao *model.Dao) (*model.Dao, error)
 	GetDaoByName(dao *model.Dao) (*model.DaoFormatted, error)
 	GetMyDaoList(dao *model.Dao) ([]*model.DaoFormatted, error)
-	CreateDao(dao *model.Dao, chatAction func(*model.Dao) (string, error)) (*model.Dao, error)
-	UpdateDao(dao *model.Dao) error
+	CreateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) (string, error)) (*model.Dao, error)
+	UpdateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) error) error
 	DeleteDao(dao *model.Dao) error
 	DaoBookmarkCount(address string) int64
 	GetDaoBookmarkList(userAddress string, q *QueryReq, offset, limit int) (list []*model.DaoFormatted)

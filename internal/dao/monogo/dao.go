@@ -34,7 +34,7 @@ func (s *daoManageServant) GetDaoByKeyword(keyword string) ([]*model.Dao, error)
 	return dao.FindListByKeyword(context.TODO(), s.db, keyword, 0, 6)
 }
 
-func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(*model.Dao) (string, error)) (*model.Dao, error) {
+func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) (string, error)) (*model.Dao, error) {
 	err := util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		newDao, err := dao.Create(ctx, s.db)
 		if err != nil {
@@ -53,7 +53,7 @@ func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(*model.Dao)
 		if err != nil {
 			return err
 		}
-		groupId, err := chatAction(dao)
+		groupId, err := chatAction(ctx, newDao)
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(*model.Dao)
 		if err != nil {
 			return err
 		}
-		dao.ID = newDao.ID
+		dao = newDao
 		return nil
 	})
 
@@ -79,8 +79,14 @@ func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(*model.Dao)
 	return dao, nil
 }
 
-func (s *daoManageServant) UpdateDao(dao *model.Dao) error {
-	return dao.Update(context.TODO(), s.db)
+func (s *daoManageServant) UpdateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) error) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		err := dao.Update(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		return chatAction(ctx, dao)
+	})
 }
 
 func (s *daoManageServant) DeleteDao(dao *model.Dao) error {

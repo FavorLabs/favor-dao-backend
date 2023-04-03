@@ -15,21 +15,25 @@ type User struct {
 	Avatar    string       `json:"avatar"`
 	Link      string       `json:"link"`
 	Role      string       `json:"role"`
+	Scope     string       `json:"scope,omitempty"`
 	Metadata  UserMetadata `json:"metadata"`
 	Tags      []string     `json:"tags"`
 	Status    string       `json:"status"`
 	CreatedAt int          `json:"createdAt"`
+	UpdatedAt int          `json:"updatedAt,omitempty"`
+	JoinedAt  int          `json:"joinedAt,omitempty"`
 	AuthToken string       `json:"authToken,omitempty"`
 }
 
 type userInfo struct {
-	UID         string       `json:"uid"`
-	Name        string       `json:"name"`
+	UID         string       `json:"uid,omitempty"`
+	Name        string       `json:"name,omitempty"`
 	Avatar      string       `json:"avatar,omitempty"`
 	Link        string       `json:"link,omitempty"`
 	Role        string       `json:"role,omitempty"`
 	Metadata    UserMetadata `json:"metadata"`
 	Tags        []string     `json:"tags,omitempty"`
+	Unset       []string     `json:"unset,omitempty"`
 	ReturnToken bool         `json:"withAuthToken,omitempty"`
 }
 
@@ -92,6 +96,59 @@ func (u *UserScoped) Create(uid, name string, opt *UserCreateOption) (*User, err
 	return &response.Data.User, nil
 }
 
+type UserUpdateOption struct {
+	Name     string
+	Avatar   string
+	Link     string
+	Role     string
+	Metadata *UserMetadata
+	Tags     []string
+	Unset    []string
+}
+
+func (u *UserScoped) Update(uid string, opt UserUpdateOption) (*User, error) {
+	u.setScope("users", uid)
+
+	var info userInfo
+
+	info.Name = opt.Name
+	info.Avatar = opt.Avatar
+	info.Link = opt.Link
+	info.Role = opt.Role
+	if opt.Metadata != nil {
+		info.Metadata = *opt.Metadata
+	}
+	if len(opt.Tags) > 0 {
+		info.Tags = opt.Tags
+	}
+	if len(opt.Unset) > 0 {
+		info.Unset = opt.Unset
+	}
+
+	body, err := json.Marshal(info)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := buildRequest(u.setMethod(http.MethodPut).setBody(body))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data struct {
+			User
+		} `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Data.User, nil
+}
+
 func (u *UserScoped) Get(uid string) (*User, error) {
 	u.setScope("users", uid)
 
@@ -112,6 +169,36 @@ func (u *UserScoped) Get(uid string) (*User, error) {
 	}
 
 	return &response.Data.User, nil
+}
+
+type UserListOption struct {
+	SearchKey       string
+	SearchIn        []string
+	Status          string
+	Count           bool
+	PerPage         int
+	Page            int
+	Role            string
+	OnlyDeactivated bool
+	WithDeactivated bool
+}
+
+func (u *UserScoped) List(opt UserListOption) ([]User, error) {
+	req, err := buildRequest(u.setQueries(opt).setMethod(http.MethodGet))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data []User `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Data, nil
 }
 
 func (u *UserScoped) AuthToken(uid string) *AuthTokenScoped {

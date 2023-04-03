@@ -43,7 +43,7 @@ func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 	return ds.GetDaoByName(dao)
 }
 
-func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAction func(*model.Dao) (string, error)) (_ *model.DaoFormatted, err error) {
+func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAction func(context.Context, *model.Dao) (string, error)) (_ *model.DaoFormatted, err error) {
 	dao := &model.Dao{
 		Address:      userAddress,
 		Name:         param.Name,
@@ -101,20 +101,31 @@ func GetDaoBookmarkIDsByAddress(address string) []string {
 }
 
 func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
-	dao := &model.Dao{
-		ID:           param.Id,
-		Name:         param.Name,
-		Visibility:   param.Visibility,
-		Introduction: param.Introduction,
-		Avatar:       param.Avatar,
-		Banner:       param.Banner,
-	}
-	getDao, err := ds.GetDao(dao)
+	dao, err := ds.GetDao(&model.Dao{ID: param.Id})
 	if err != nil {
 		return err
 	}
-	if getDao.Address != userAddress {
+	if dao.Address != userAddress {
 		return errcode.NoPermission
+	}
+	if param.Name != "" {
+		dao.Name = param.Name
+	}
+	if param.Avatar != "" {
+		dao.Avatar = param.Avatar
+	}
+	if param.Introduction != "" {
+		dao.Introduction = param.Introduction
+	}
+	if param.Banner != "" {
+		dao.Banner = param.Banner
+	}
+	dao.Visibility = param.Visibility
+	err = ds.UpdateDao(dao, func(ctx context.Context, dao *model.Dao) error {
+		return UpdateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+	})
+	if err != nil {
+		return err
 	}
 	if dao.Visibility == model.DaoVisitPublic {
 		// push to search
@@ -128,7 +139,7 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 			logrus.Warnf("%s when update, delete dao from search err: %v", userAddress, err)
 		}
 	}
-	return ds.UpdateDao(dao)
+	return err
 }
 
 func GetDao(daoId string) (*core.Dao, error) {
