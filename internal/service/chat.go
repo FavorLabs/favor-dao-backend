@@ -20,6 +20,10 @@ type Session struct {
 	WalletAddr   string `json:"wallet_addr"`
 }
 
+func formatValidUrl(s string) string {
+	return fmt.Sprintf("http://%s", strings.TrimPrefix(s, "http://"))
+}
+
 func genId(id string) string {
 	return strconv.FormatUint(
 		xxhash.Sum64String(fmt.Sprintf("%s-%d-%s", conf.ExternalAppSetting.Region, conf.ExternalAppSetting.NetworkID, id)),
@@ -43,35 +47,58 @@ func RegionTag() string {
 	return fmt.Sprintf("region_%s", conf.ExternalAppSetting.Region)
 }
 
-func GetAuthToken(address, name, avatar string) (string, error) {
-	cUid := userId(address)
+func CreateChatUser(ctx context.Context, address, name, avatar string) error {
+	uid := userId(address)
 
-	_, err := chat.Scoped().Users().Get(cUid)
+	_, err := chat.Scoped().Context(ctx).Users().Get(uid)
 	if err != nil {
 		switch e := err.(type) {
 		case comet.RestApiError:
 			if e.Inner.Code == "ERR_UID_NOT_FOUND" {
-				resp, err := chat.Scoped().Users().Create(cUid, name, &comet.UserCreateOption{
+				_, err := chat.Scoped().Context(ctx).Users().Create(uid, name, &comet.UserCreateOption{
 					Tags:        []string{RegionTag(), NetworkTag()},
-					Avatar:      fmt.Sprintf("http://%s", strings.TrimPrefix(avatar, "http://")),
-					ReturnToken: true,
+					Avatar:      formatValidUrl(avatar),
+					ReturnToken: false,
 				})
 				if err != nil {
-					return "", err
+					return err
 				}
 
-				return resp.AuthToken, nil
+				return nil
 			}
 		}
+
+		return err
 	}
 
-	tokens, err := chat.Scoped().Users().AuthToken(cUid).List()
+	return nil
+}
+
+func UpdateChatUser(ctx context.Context, address, name, avatar string) error {
+	uid := userId(address)
+
+	_, err := chat.Scoped().Context(ctx).Users().Update(uid, comet.UserUpdateOption{
+		Tags:   []string{RegionTag(), NetworkTag()},
+		Name:   name,
+		Avatar: formatValidUrl(avatar),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetAuthToken(ctx context.Context, address string) (string, error) {
+	uid := userId(address)
+
+	tokens, err := chat.Scoped().Context(ctx).Users().AuthToken(uid).List()
 	if err != nil {
 		return "", err
 	}
 
 	if len(tokens) == 0 {
-		token, err := chat.Scoped().Users().AuthToken(cUid).Create(nil)
+		token, err := chat.Scoped().Context(ctx).Users().AuthToken(uid).Create(nil)
 		if err != nil {
 			return "", err
 		}
@@ -82,13 +109,13 @@ func GetAuthToken(address, name, avatar string) (string, error) {
 	return tokens[0].AuthToken, nil
 }
 
-func CreateChatGroup(address, id, name, icon, desc string) (string, error) {
+func CreateChatGroup(ctx context.Context, address, id, name, icon, desc string) (string, error) {
 	uid := userId(address)
 	gid := groupId(id)
 
-	_, err := chat.Scoped().Perform(uid).Groups().Create(gid, name, comet.PublicGroup, &comet.GroupCreateOption{
+	_, err := chat.Scoped().Context(ctx).Perform(uid).Groups().Create(gid, name, comet.PublicGroup, &comet.GroupCreateOption{
 		Owner: address,
-		Icon:  fmt.Sprintf("http://%s", strings.TrimPrefix(icon, "http://")),
+		Icon:  formatValidUrl(icon),
 		Desc:  desc,
 		Tags: []string{
 			RegionTag(),
@@ -101,6 +128,27 @@ func CreateChatGroup(address, id, name, icon, desc string) (string, error) {
 	}
 
 	return gid, nil
+}
+
+func UpdateChatGroup(ctx context.Context, address, id, name, icon, desc string) error {
+	uid := userId(address)
+	gid := groupId(id)
+
+	_, err := chat.Scoped().Context(ctx).Perform(uid).Groups().Update(gid, comet.GroupUpdateOption{
+		Name: name,
+		Icon: formatValidUrl(icon),
+		Desc: desc,
+		Tags: []string{
+			RegionTag(),
+			NetworkTag(),
+			fmt.Sprintf("DAO%s", name),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func JoinOrLeaveGroup(ctx context.Context, daoId string, joinOrLeave bool, token string) (string, error) {

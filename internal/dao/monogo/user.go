@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/util"
+	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -52,12 +52,35 @@ func (s *userManageServant) GetTagsByKeyword(keyword string) ([]*model.Tag, erro
 	return tag.FindListByKeyword(context.TODO(), s.db, keyword, 0, 6)
 }
 
-func (s *userManageServant) CreateUser(user *model.User) (*model.User, error) {
-	return user.Create(context.TODO(), s.db)
+func (s *userManageServant) CreateUser(user *model.User, chatAction func(context.Context, *model.User) error) (*model.User, error) {
+	err := util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		newUser, err := user.Create(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		err = chatAction(ctx, newUser)
+		if err != nil {
+			return err
+		}
+		user = newUser
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
-func (s *userManageServant) UpdateUser(user *model.User) error {
-	return user.Update(context.TODO(), s.db)
+func (s *userManageServant) UpdateUser(user *model.User, chatAction func(context.Context, *model.User) error) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		err := user.Update(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		return chatAction(ctx, user)
+	})
 }
 
 func (s *userManageServant) IsFriend(userAddress string, friendAddress string) bool {

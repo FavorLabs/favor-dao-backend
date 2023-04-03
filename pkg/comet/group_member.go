@@ -85,3 +85,27 @@ func (g *GroupMemberScoped) Kick(uid string) (*ApiResult, error) {
 
 	return &response.Data.ApiResult, nil
 }
+
+type GroupMemberListOption struct {
+	PerPage int
+	Page    int
+	Scopes  []string
+}
+
+func (g *GroupMemberScoped) List(opt GroupMemberOption) ([]User, error) {
+	req, err := buildRequest(g.setQueries(opt).setMethod(http.MethodGet))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data []User `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Data, nil
+}

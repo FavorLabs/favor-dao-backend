@@ -36,9 +36,9 @@ type Group struct {
 }
 
 type groupInfo struct {
-	GID      string            `json:"guid"`
-	Name     string            `json:"name"`
-	Type     GroupType         `json:"type"`
+	GID      string            `json:"guid,omitempty"`
+	Name     string            `json:"name,omitempty"`
+	Type     GroupType         `json:"type,omitempty"`
 	Password string            `json:"password,omitempty"`
 	Icon     string            `json:"icon,omitempty"`
 	Desc     string            `json:"description,omitempty"`
@@ -46,6 +46,7 @@ type groupInfo struct {
 	Owner    string            `json:"owner,omitempty"`
 	Tags     []string          `json:"tags,omitempty"`
 	Members  groupMembersInfo  `json:"members,omitempty"`
+	Unset    []string          `json:"unset,omitempty"`
 }
 
 type GroupCreateOption struct {
@@ -86,6 +87,61 @@ func (g *GroupScoped) Create(gid, name string, typ GroupType, opt *GroupCreateOp
 	}
 
 	req, err := buildRequest(g.setBody(body).setMethod(http.MethodPost))
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data struct {
+			Group
+		} `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Data.Group, nil
+}
+
+type GroupUpdateOption struct {
+	Name     string
+	Type     string
+	Password string
+	Icon     string
+	Desc     string
+	Metadata map[string]string
+	Owner    string
+	Tags     []string
+	Unset    []string
+}
+
+func (g *GroupScoped) Update(gid string, opt GroupUpdateOption) (*Group, error) {
+	g.setScope("groups", gid)
+
+	var info groupInfo
+
+	info.Name = opt.Name
+	info.Icon = opt.Icon
+	info.Desc = opt.Desc
+	if len(opt.Metadata) > 0 {
+		info.Metadata = opt.Metadata
+	}
+	info.Owner = opt.Owner
+	if len(opt.Tags) > 0 {
+		info.Tags = opt.Tags
+	}
+	if len(opt.Unset) > 0 {
+		info.Unset = opt.Unset
+	}
+
+	body, err := json.Marshal(info)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := buildRequest(g.setBody(body).setMethod(http.MethodPut))
 	if err != nil {
 		return nil, err
 	}

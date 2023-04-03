@@ -2,6 +2,7 @@ package comet
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -56,6 +57,12 @@ func (s *Scoped) Perform(uid string) *Scoped {
 	return s
 }
 
+func (s *Scoped) Context(ctx context.Context) *Scoped {
+	s.setContext(ctx)
+
+	return s
+}
+
 func (s *Scoped) Users() *UserScoped {
 	return &UserScoped{
 		chatRequest: s.setScope("users", ""),
@@ -69,6 +76,7 @@ func (s *Scoped) Groups() *GroupScoped {
 }
 
 type chatRequest struct {
+	ctx     context.Context
 	url     string
 	user    string
 	scopes  [][]string
@@ -158,12 +166,18 @@ func (r *chatRequest) setQueries(values interface{}) *chatRequest {
 	return r
 }
 
+func (r *chatRequest) setContext(ctx context.Context) *chatRequest {
+	r.ctx = ctx
+	return r
+}
+
 type apiBuilder interface {
 	getUrl() string
 	getBody() []byte
 	getMethod() string
 	getHeader() http.Header
 	getQuery() url.Values
+	getContext() context.Context
 }
 
 func (r *chatRequest) getUrl() string {
@@ -200,6 +214,10 @@ func (r *chatRequest) getQuery() url.Values {
 	return r.query
 }
 
+func (r *chatRequest) getContext() context.Context {
+	return r.ctx
+}
+
 func buildRequest(builder apiBuilder) (*http.Request, error) {
 	var body io.Reader
 	if rawBody := builder.getBody(); rawBody != nil {
@@ -210,6 +228,8 @@ func buildRequest(builder apiBuilder) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	req = req.WithContext(builder.getContext())
 
 	if header := builder.getHeader(); len(header) != 0 {
 		req.Header = header
@@ -296,6 +316,7 @@ type Pagination struct {
 }
 
 type Cursor struct {
-	UpdatedAt int    `json:"updated_at"`
+	UpdatedAt int    `json:"updated_at,omitempty"`
+	JoinedAt  int    `json:"joined_at,omitempty"`
 	Affix     string `json:"affix"`
 }

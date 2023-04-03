@@ -52,8 +52,8 @@ func CreateDao(c *gin.Context) {
 
 	userAddress, _ := c.Get("address")
 
-	dao, err := service.CreateDao(c, userAddress.(string), param, func(dao *model.Dao) (string, error) {
-		return service.CreateChatGroup(dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+	dao, err := service.CreateDao(c, userAddress.(string), param, func(ctx context.Context, dao *model.Dao) (string, error) {
+		return service.CreateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
 	})
 	if err != nil {
 		logrus.Errorf("service.CreateDao err: %v\n", err)
