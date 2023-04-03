@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -141,6 +140,8 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 					Nickname: param.WalletAddr[:10],
 					Address:  param.WalletAddr,
 					Avatar:   GetRandomAvatar(),
+				}, func(ctx context.Context, user *model.User) error {
+					return CreateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
 				})
 				if err != nil {
 					return nil, err
@@ -181,23 +182,18 @@ func GetUserByAddress(address string) (*model.User, error) {
 	return nil, errcode.NoExistUserAddress
 }
 
-func UpdateUserExternalInfo(ctx context.Context, user *model.User) error {
-	userInfo, _ := json.Marshal(model.UserInfo{
-		Nickname: user.Nickname,
-		Avatar:   user.Avatar,
-	})
-	key := fmt.Sprintf("user_%s", user.Address)
-	return conf.Redis.Set(ctx, key, userInfo, 0).Err()
-}
-
 func UpdateUserInfo(user *model.User) *errcode.Error {
-	if err := ds.UpdateUser(user); err != nil {
-		return errcode.ServerError
-	}
-	if err := UpdateUserExternalInfo(context.Background(), user); err != nil {
+	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
+		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
+	}); err != nil {
 		return errcode.ServerError
 	}
 	return nil
+}
+
+func ChangeUserName(user *model.User, nickname string) *errcode.Error {
+	user.Nickname = nickname
+	return UpdateUserInfo(user)
 }
 
 func ChangeUserAvatar(user *model.User, avatar string) (err *errcode.Error) {
