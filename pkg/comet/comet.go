@@ -229,7 +229,9 @@ func buildRequest(builder apiBuilder) (*http.Request, error) {
 		return nil, err
 	}
 
-	req = req.WithContext(builder.getContext())
+	if ctx := builder.getContext(); ctx != nil {
+		req = req.WithContext(ctx)
+	}
 
 	if header := builder.getHeader(); len(header) != 0 {
 		req.Header = header
