@@ -21,5 +21,5 @@ type DaoManageService interface {
 	CreateDaoFollow(myAddress string, daoID string, chatAction func(context.Context, string) (string, error)) (*model.DaoBookmark, error)
 	DeleteDaoFollow(d *model.DaoBookmark, chatAction func(context.Context, string) (string, error)) error
 	GetDaoCount(conditions *model.ConditionsT) (int64, error)
-	GetDAOs(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error)
+	GetDaoList(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error)
 }

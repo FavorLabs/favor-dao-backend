@@ -42,6 +42,9 @@ type Post struct {
 	IsEssence       int                `json:"is_essence"        bson:"is_essence"`
 	Tags            string             `json:"tags"              bson:"tags"`
 	Type            PostType           `json:"type"              bson:"type"`
+	OrigType        PostType           `json:"orig_type"         bson:"orig_type"`
+	AuthorId        string             `json:"author_id"         bson:"author_id"`
+	AuthorDaoId     primitive.ObjectID `json:"author_dao_id"     bson:"author_dao_id"`
 	RefId           primitive.ObjectID `json:"ref_id"            bson:"ref_id"`
 	RefType         PostRefType        `json:"ref_type"          bson:"ref_type"`
 }
@@ -66,6 +69,11 @@ type PostFormatted struct {
 	IsEssence       int                     `json:"is_essence"`
 	Tags            map[string]int8         `json:"tags"`
 	Type            PostType                `json:"type"`
+	OrigType        PostType                `json:"orig_type"`
+	AuthorId        string                  `json:"author_id"`
+	AuthorDaoId     primitive.ObjectID      `json:"author_dao_id"`
+	Author          *UserFormatted          `json:"author"`
+	AuthorDao       *DaoFormatted           `json:"author_dao"`
 	RefId           primitive.ObjectID      `json:"ref_id"`
 	RefType         PostRefType             `json:"ref_type"`
 }
@@ -97,6 +105,10 @@ func (p *Post) Format() *PostFormatted {
 		Tags:            tagsMap,
 		Type:            p.Type,
 		CreatedOn:       p.CreatedOn,
+		AuthorId:        p.AuthorId,
+		AuthorDaoId:     p.AuthorDaoId,
+		Author:          &UserFormatted{},
+		AuthorDao:       &DaoFormatted{},
 		RefId:           p.RefId,
 		RefType:         p.RefType,
 	}

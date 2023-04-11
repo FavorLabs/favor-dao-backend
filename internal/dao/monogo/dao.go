@@ -97,7 +97,7 @@ func (s *daoManageServant) GetDaoCount(conditions *model.ConditionsT) (int64, er
 	return (&model.Dao{}).Count(s.db, conditions)
 }
 
-func (s *daoManageServant) GetDAOs(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error) {
+func (s *daoManageServant) GetDaoList(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error) {
 	return (&model.Dao{}).List(s.db, conditions, offset, limit)
 }
 

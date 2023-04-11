@@ -113,7 +113,12 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 
 	switch param.Type {
 	case model.Retweet, model.RetweetComment:
-		var tags string
+		var (
+			tags         string
+			authorId     string
+			authorDaoId  primitive.ObjectID
+			origPostType model.PostType
+		)
 
 		// check orig content exists
 		switch param.RefType {
@@ -124,30 +129,47 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 				return nil, fmt.Errorf("need find post to retweet: %v", err)
 			}
 
-			// if re-post type is retweet, we'll find original post id
-			if origPost.Type == model.Retweet {
+			switch origPost.Type {
+			case model.Retweet:
+				// if re-post type is retweet, we'll find original post id
 				param.RefId = origPost.RefId
+				authorId = origPost.AuthorId
+				authorDaoId = origPost.AuthorDaoId
+			default:
+				authorId = origPost.Address
+				authorDaoId = origPost.DaoId
 			}
 
 			tags = origPost.Tags
+			origPostType = origPost.OrigType
 		case model.RefComment:
-			_, err = ds.GetCommentByID(param.RefId)
+			comment, err := ds.GetCommentByID(param.RefId)
+			if err != nil {
+				return nil, fmt.Errorf("need find comment to retweet: %v", err)
+			}
+
+			authorId = comment.Address
 		case model.RefCommentReply:
-			_, err = ds.GetCommentReplyByID(param.RefId)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("")
+			reply, err := ds.GetCommentReplyByID(param.RefId)
+			if err != nil {
+				return nil, fmt.Errorf("need find comment-reply to retweet: %v", err)
+			}
+
+			authorId = reply.Address
 		}
 
 		// create post ref
 		post, err = ds.CreatePost(&model.Post{
-			Address:    address,
-			DaoId:      param.DaoId,
-			Tags:       tags,
-			Visibility: param.Visibility,
-			Type:       param.Type,
-			RefId:      param.RefId,
-			RefType:    param.RefType,
+			Address:     address,
+			DaoId:       param.DaoId,
+			Tags:        tags,
+			Visibility:  param.Visibility,
+			Type:        param.Type,
+			OrigType:    origPostType,
+			AuthorId:    authorId,
+			AuthorDaoId: authorDaoId,
+			RefId:       param.RefId,
+			RefType:     param.RefType,
 		})
 		if err != nil {
 			return nil, err
@@ -184,6 +206,7 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 			Tags:       strings.Join(tags, ","),
 			Visibility: param.Visibility,
 			Type:       param.Type,
+			OrigType:   param.Type,
 		})
 		if err != nil {
 			return nil, err
@@ -432,36 +455,89 @@ func DeletePostCollection(collection *model.PostCollection) error {
 
 func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 	post, err := ds.GetPostByID(id)
-
-	if err != nil {
-		return nil, err
-	}
-
-	postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
-	if err != nil {
-		return nil, err
-	}
-
-	users, err := ds.GetUsersByAddresses([]string{post.Address})
-	if err != nil {
-		return nil, err
-	}
-	dao, err := ds.GetDao(&model.Dao{ID: post.DaoId})
 	if err != nil {
 		return nil, err
 	}
 
 	postFormatted := post.Format()
-	for _, user := range users {
-		postFormatted.User = user.Format()
-	}
-	postFormatted.Dao = dao.Format()
 
-	for _, content := range postContents {
-		if content.PostID == post.ID {
-			postFormatted.Contents = append(postFormatted.Contents, content.Format())
+	switch postFormatted.Type {
+	case model.Retweet:
+	case model.RetweetComment:
+		fallthrough
+	default:
+		postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
+		if err != nil {
+			return nil, err
+		}
+		for _, content := range postContents {
+			if content.PostID == post.ID {
+				postFormatted.Contents = append(postFormatted.Contents, content.Format())
+			}
 		}
 	}
+
+	switch postFormatted.RefType {
+	case model.RefPost:
+		refContents, err := ds.GetPostContentByID(post.RefId)
+		if err != nil {
+			return nil, err
+		}
+		refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
+		for i := range refContentsFormatted {
+			refContentsFormatted[i] = refContents[i].Format()
+		}
+		postFormatted.Contents = append(postFormatted.Contents, refContentsFormatted...)
+	case model.RefComment:
+		refComments, err := ds.GetCommentContentsByIDs([]primitive.ObjectID{post.RefId})
+		if err != nil {
+			return nil, err
+		}
+		refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
+		for i := range refCommentsFormatted {
+			refCommentsFormatted[i] = refComments[i].PostFormat()
+		}
+		postFormatted.Contents = append(postFormatted.Contents, refCommentsFormatted...)
+	case model.RefCommentReply:
+		refReplies, err := ds.GetCommentReplyByID(post.RefId)
+		if err != nil {
+			return nil, err
+		}
+		postFormatted.Contents = append(postFormatted.Contents, refReplies.PostFormat())
+	}
+
+	users, err := ds.GetUsersByAddresses([]string{post.Address, post.AuthorId})
+	if err != nil {
+		return nil, err
+	}
+	daoList, err := ds.GetDaoList(&model.ConditionsT{
+		"query": bson.M{"_id": bson.M{"$in": []primitive.ObjectID{post.DaoId, post.AuthorDaoId}}},
+	}, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	userMap := make(map[string]*model.User)
+	for _, user := range users {
+		userMap[user.Address] = user
+	}
+
+	daoMap := make(map[primitive.ObjectID]*model.Dao)
+	for _, dao := range daoList {
+		daoMap[dao.ID] = dao
+	}
+
+	postFormatted.User = userMap[post.Address].Format()
+	postFormatted.Dao = daoMap[post.DaoId].Format()
+
+	if postFormatted.AuthorId != "" {
+		postFormatted.Author = userMap[post.AuthorId].Format()
+	}
+
+	if !postFormatted.AuthorDaoId.IsZero() {
+		postFormatted.AuthorDao = daoMap[post.AuthorDaoId].Format()
+	}
+
 	return postFormatted, nil
 }
 
@@ -537,6 +613,11 @@ func PushPostToSearch(post *model.Post) {
 		"content":           contentFormatted,
 		"tags":              tagMaps,
 		"type":              post.Type,
+		"orig_type":         post.OrigType,
+		"author_id":         post.AuthorId,
+		"author_dao_id":     post.AuthorDaoId,
+		"ref_id":            post.RefId,
+		"ref_type":          post.RefType,
 		"created_on":        post.CreatedOn,
 		"modified_on":       post.ModifiedOn,
 		"latest_replied_on": post.LatestRepliedOn,
@@ -589,6 +670,11 @@ func PushPostsToSearch() {
 				"content":           contentFormatted,
 				"tags":              post.Tags,
 				"type":              post.Type,
+				"orig_type":         post.OrigType,
+				"author_id":         post.AuthorId,
+				"author_dao_id":     post.AuthorDaoId,
+				"ref_id":            post.RefId,
+				"ref_type":          post.RefType,
 				"created_on":        post.CreatedOn,
 				"modified_on":       post.ModifiedOn,
 				"latest_replied_on": post.LatestRepliedOn,

@@ -282,6 +282,6 @@ func GetDaoCount(conditions *model.ConditionsT) (int64, error) {
 }
 
 func GetDaoList(req *PostListReq) ([]*model.Dao, error) {
-	posts, err := ds.GetDAOs(req.Conditions, req.Offset, req.Limit)
+	posts, err := ds.GetDaoList(req.Conditions, req.Offset, req.Limit)
 	return posts, err
 }

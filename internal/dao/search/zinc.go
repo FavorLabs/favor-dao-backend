@@ -85,8 +85,19 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 	must := types.AnySlice{}
 	if len(q.Type) > 0 {
 		must = append(must, map[string]types.Any{
-			"terms": map[string]types.Any{
-				"type": q.Type,
+			"bool": map[string]types.Any{
+				"should": types.AnySlice{
+					map[string]types.Any{
+						"terms": map[string]types.Any{
+							"type": q.Type,
+						},
+					},
+					map[string]types.Any{
+						"terms": map[string]types.Any{
+							"orig_type": q.Type,
+						},
+					},
+				},
 			},
 		})
 	}
@@ -275,6 +286,31 @@ func (s *zincTweetSearchServant) createIndex() {
 			Store: true,
 		},
 		"type": &zinc.ZincIndexPropertyT{
+			Type:  "numeric",
+			Index: true,
+			Store: true,
+		},
+		"orig_type": &zinc.ZincIndexPropertyT{
+			Type:  "numeric",
+			Index: true,
+			Store: true,
+		},
+		"author_id": &zinc.ZincIndexPropertyT{
+			Type:  "text",
+			Index: true,
+			Store: true,
+		},
+		"author_dao_id": &zinc.ZincIndexPropertyT{
+			Type:  "text",
+			Index: true,
+			Store: true,
+		},
+		"ref_id": &zinc.ZincIndexPropertyT{
+			Type:  "text",
+			Index: true,
+			Store: true,
+		},
+		"ref_type": &zinc.ZincIndexPropertyT{
 			Type:  "numeric",
 			Index: true,
 			Store: true,
