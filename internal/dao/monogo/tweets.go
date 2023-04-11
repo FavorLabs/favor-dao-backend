@@ -133,11 +133,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 			if err != nil {
 				return nil, err
 			}
-			refReliesFormatted := make([]*model.PostContentFormatted, len(refReplies))
-			for i := range refReliesFormatted {
-				refReliesFormatted[i] = refReplies[i].PostFormat()
-			}
-			postFormatted.Contents = append(postFormatted.Contents, refReliesFormatted...)
+			postFormatted.Contents = append(postFormatted.Contents, refReplies.PostFormat())
 		}
 
 		postsFormatted[i] = postFormatted
@@ -158,8 +154,8 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 		if post.Type != model.DAO {
 			postIds = append(postIds, post.ID)
 		}
-		addresses = append(addresses, post.Address)
-		daoIds = append(daoIds, post.DaoId)
+		addresses = append(addresses, post.Address, post.AuthorId)
+		daoIds = append(daoIds, post.DaoId, post.AuthorDaoId)
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -197,6 +193,14 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 		post.User = userMap[post.Address]
 		post.Dao = daoMap[post.DaoId.Hex()]
 
+		if post.AuthorId != "" {
+			post.Author = userMap[post.AuthorId]
+		}
+
+		if !post.AuthorDaoId.IsZero() {
+			post.AuthorDao = daoMap[post.AuthorDaoId.Hex()]
+		}
+
 		if content, ok := contentMap[post.ID]; ok {
 			post.Contents = content
 		}
@@ -227,11 +231,7 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 			if err != nil {
 				return nil, err
 			}
-			refReliesFormatted := make([]*model.PostContentFormatted, len(refReplies))
-			for i := range refReliesFormatted {
-				refReliesFormatted[i] = refReplies[i].PostFormat()
-			}
-			post.Contents = append(post.Contents, refReliesFormatted...)
+			post.Contents = append(post.Contents, refReplies.PostFormat())
 		}
 	}
 	return posts, nil
@@ -258,11 +258,8 @@ func (s *tweetHelpServant) getCommentContentsByID(id primitive.ObjectID) ([]*mod
 	}, 0, 0)
 }
 
-func (s *tweetHelpServant) getCommentRepliesByID(id primitive.ObjectID) ([]*model.CommentReply, error) {
-	return (&model.CommentReply{}).List(s.db, &model.ConditionsT{
-		"query": bson.M{"_id": id},
-		"ORDER": bson.M{"sort": 1},
-	}, 0, 0)
+func (s *tweetHelpServant) getCommentRepliesByID(id primitive.ObjectID) (*model.CommentReply, error) {
+	return (&model.CommentReply{ID: id}).Get(s.db)
 }
 
 func (s *tweetHelpServant) getUsersByAddress(addresses []string) ([]*model.User, error) {
@@ -330,9 +327,11 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 				return nil, err
 			}
 
-			// delete post content
-			if err := postContent.DeleteByPostId(s.db, postId); err != nil {
-				return nil, err
+			if mediaContents != nil {
+				// delete post content
+				if err := postContent.DeleteByPostId(s.db, postId); err != nil {
+					return nil, err
+				}
 			}
 
 			if tags := strings.Split(post.Tags, ","); len(tags) > 0 {
