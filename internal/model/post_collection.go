@@ -15,7 +15,7 @@ type PostCollection struct {
 	Address string             `json:"address" bson:"address"`
 }
 
-func (p *PostCollection) table() string {
+func (p *PostCollection) Table() string {
 	return "post_collection"
 }
 
@@ -46,7 +46,7 @@ func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 	}
 
 	ctx := context.TODO()
-	cursor, err := db.Collection(p.table()).Aggregate(ctx, pipeline)
+	cursor, err := db.Collection(p.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (p *PostCollection) Get(db *mongo.Database) (*PostCollection, error) {
 }
 
 func (p *PostCollection) Create(db *mongo.Database) (*PostCollection, error) {
-	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+	res, err := db.Collection(p.Table()).InsertOne(context.TODO(), &p)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (p *PostCollection) Create(db *mongo.Database) (*PostCollection, error) {
 func (p *PostCollection) Delete(db *mongo.Database) error {
 	filter := bson.D{{"_id", p.ID}}
 	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
-	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
+	res := db.Collection(p.Table()).FindOneAndUpdate(context.TODO(), filter, update)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -125,7 +125,7 @@ func (p *PostCollection) List(db *mongo.Database, conditions *ConditionsT, offse
 	}
 
 	ctx := context.TODO()
-	cursor, err = db.Collection(p.table()).Aggregate(ctx, pipeline)
+	cursor, err = db.Collection(p.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (p *PostCollection) Count(db *mongo.Database, conditions *ConditionsT) (int
 	}
 
 	ctx := context.TODO()
-	cursor, err = db.Collection(p.table()).Aggregate(ctx, pipeline)
+	cursor, err = db.Collection(p.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return 0, err
 	}

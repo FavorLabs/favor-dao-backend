@@ -151,6 +151,19 @@ func UpdateChatGroup(ctx context.Context, address, id, name, icon, desc string) 
 	return nil
 }
 
+func DeleteGroup(ctx context.Context, daoId string) error {
+	gid := groupId(daoId)
+	_, err := chat.Scoped().Context(ctx).Groups().Delete(gid)
+	return err
+}
+
+func KickGroupMembers(ctx context.Context, daoId, address string) (err error) {
+	uid := userId(address)
+	gid := groupId(daoId)
+	_, err = chat.Scoped().Context(ctx).Groups().Members(gid).Kick(uid)
+	return err
+}
+
 func JoinOrLeaveGroup(ctx context.Context, daoId string, joinOrLeave bool, token string) (string, error) {
 	groupId := groupId(daoId)
 

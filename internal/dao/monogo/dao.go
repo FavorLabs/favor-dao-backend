@@ -235,3 +235,27 @@ func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func
 		return group.Delete(ctx, s.db)
 	})
 }
+
+func (s *daoManageServant) RealDeleteDAO(address string, chatAction func(context.Context, *model.Dao) (string, error)) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		cursor, err := s.db.Collection(new(model.Dao).Table()).Find(ctx, bson.M{"address": address})
+		if err != nil {
+			return err
+		}
+		for cursor.Next(ctx) {
+			var d model.Dao
+			if cursor.Decode(&d) != nil {
+				return err
+			}
+			groupId, err := chatAction(ctx, &d)
+			if err != nil {
+				return err
+			}
+			err = d.RealDelete(ctx, s.db, groupId)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}

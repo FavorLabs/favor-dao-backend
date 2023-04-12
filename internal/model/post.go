@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"favor-dao-backend/pkg/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -79,7 +80,7 @@ type PostFormatted struct {
 	RefType         PostRefType             `json:"ref_type"`
 }
 
-func (p *Post) table() string {
+func (p *Post) Table() string {
 	return "post"
 }
 
@@ -120,7 +121,7 @@ func (p *Post) Create(db *mongo.Database) (*Post, error) {
 	now := time.Now().Unix()
 	p.CreatedOn = now
 	p.ModifiedOn = now
-	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+	res, err := db.Collection(p.Table()).InsertOne(context.TODO(), &p)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,7 @@ func (p *Post) Delete(db *mongo.Database) error {
 		{"is_del", 1},
 		{"deleted_on", time.Now().Unix()},
 	}}}
-	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
+	res := db.Collection(p.Table()).FindOneAndUpdate(context.TODO(), filter, update)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -146,7 +147,7 @@ func (p *Post) Get(db *mongo.Database) (*Post, error) {
 		return nil, mongo.ErrNoDocuments
 	}
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
-	res := db.Collection(p.table()).FindOne(context.TODO(), filter)
+	res := db.Collection(p.Table()).FindOne(context.TODO(), filter)
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
@@ -190,7 +191,7 @@ func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit i
 			finds = append(finds, options.Find().SetSort(v))
 		}
 	}
-	if cursor, err = db.Collection(p.table()).Find(context.TODO(), query, finds...); err != nil {
+	if cursor, err = db.Collection(p.Table()).Find(context.TODO(), query, finds...); err != nil {
 		return nil, err
 	}
 	for cursor.Next(context.TODO()) {
@@ -218,7 +219,7 @@ func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error)
 			}
 		}
 	}
-	count, err := db.Collection(p.table()).CountDocuments(context.TODO(), query)
+	count, err := db.Collection(p.Table()).CountDocuments(context.TODO(), query)
 	if err != nil {
 		return 0, err
 	}
@@ -230,7 +231,7 @@ func (p *Post) Update(db *mongo.Database) error {
 	p.ModifiedOn = time.Now().Unix()
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
 	update := bson.M{"$set": p}
-	if _, err := db.Collection(p.table()).UpdateMany(context.TODO(), filter, update); err != nil {
+	if _, err := db.Collection(p.Table()).UpdateMany(context.TODO(), filter, update); err != nil {
 		return err
 	}
 	return nil
@@ -247,4 +248,28 @@ func (p PostVisibleT) String() string {
 	default:
 		return "unknow"
 	}
+}
+
+func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) error {
+	return util.MongoTransaction(ctx, db, func(ctx context.Context) error {
+		if !p.ID.IsZero() {
+			table := []string{
+				new(PostContent).Table(),
+				new(PostCollection).Table(),
+				new(PostStar).Table(),
+				new(Comment).Table(),
+			}
+			for _, v := range table {
+				_, err := db.Collection(v).DeleteMany(ctx, bson.M{"post_id": p.ID})
+				if err != nil {
+					return err
+				}
+			}
+			_, err := db.Collection(p.Table()).DeleteOne(ctx, bson.M{"_id": p.ID})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
