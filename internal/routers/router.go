@@ -47,7 +47,10 @@ func NewRouter() *gin.Engine {
 	authApi := r.Group("/").Use(middleware.Session())
 	privApi := r.Group("/").Use(middleware.Session())
 	{
+		authApi.DELETE("/account", api.DeleteAccount)
+
 		authApi.GET("/user/info", api.GetUserInfo)
+
 		authApi.GET("/user/statistic", api.GetUserStatistic)
 
 		authApi.GET("/user/collections", api.GetUserCollections)

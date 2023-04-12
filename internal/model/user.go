@@ -153,3 +153,16 @@ func (m *User) Update(ctx context.Context, db *mongo.Database) error {
 	res := db.Collection(m.Table()).FindOneAndReplace(ctx, filter, &m)
 	return res.Err()
 }
+
+func (m *User) Delete(ctx context.Context, db *mongo.Database) error {
+	filter := bson.D{
+		{"$or", bson.A{
+			bson.M{"_id": m.ID},
+			bson.M{"address": m.Address},
+		},
+		},
+	}
+	m.DeletedOn = time.Now().Unix()
+	res := db.Collection(m.Table()).FindOneAndReplace(ctx, filter, &m)
+	return res.Err()
+}

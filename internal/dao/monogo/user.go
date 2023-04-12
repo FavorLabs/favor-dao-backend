@@ -83,6 +83,10 @@ func (s *userManageServant) UpdateUser(user *model.User, chatAction func(context
 	})
 }
 
+func (s *userManageServant) DeleteUser(user *model.User) error {
+	return user.Delete(context.TODO(), s.db)
+}
+
 func (s *userManageServant) IsFriend(userAddress string, friendAddress string) bool {
 	// just true now
 	return true

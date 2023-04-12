@@ -11,4 +11,5 @@ var (
 	UnauthorizedTokenTimeout  = NewError(10006, "Unauthorized Token Timeout")
 	UnauthorizedTokenGenerate = NewError(10007, "Unauthorized Token Generate")
 	TooManyRequests           = NewError(10008, "Too Many Requests")
+	WaitForDelete             = NewError(40000, "Wait for delete")
 )
