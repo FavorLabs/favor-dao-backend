@@ -138,7 +138,7 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 			"as":           "dao",
 		}}},
 		{{"$match", query}},
-		{{"$sort", bson.M{"_id": -1}}},
+		{{"$sort", bson.M{"dao.follow_count": -1}}},
 		{{"$skip", offset}},
 		{{"$limit", limit}},
 		{{"$unwind", "$dao"}},
