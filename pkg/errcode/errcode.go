@@ -69,6 +69,8 @@ func (e *Error) StatusCode() int {
 		return http.StatusUnauthorized
 	case TooManyRequests.Code():
 		return http.StatusTooManyRequests
+	case WaitForDelete.Code():
+		return http.StatusUnauthorized
 	}
 
 	return http.StatusInternalServerError

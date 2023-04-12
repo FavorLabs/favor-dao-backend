@@ -96,6 +96,10 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		created = true
 	}
 
+	if !created && user.DeletedOn > 0 {
+		return nil, errcode.WaitForDelete
+	}
+
 	if created || !user.ID.IsZero() {
 		if errTimes, err := conf.Redis.Get(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result(); err == nil {
 			if convert.StrTo(errTimes).MustInt() >= MAX_LOGIN_ERR_TIMES {
@@ -162,6 +166,32 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 	}
 
 	return nil, errcode.UnauthorizedAuthNotExist
+}
+
+func DeleteUser(ctx context.Context, user *model.User) error {
+	uid := userId(user.Address)
+
+	// delete auth token
+	tokens, err := chat.Scoped().Context(ctx).Users().AuthToken(uid).List()
+	if err != nil {
+		return err
+	}
+
+	if len(tokens) > 0 {
+		for _, token := range tokens {
+			_, err = chat.Scoped().Context(ctx).Users().AuthToken(uid).Delete(token.AuthToken)
+			if err != nil {
+				return err
+			}
+
+			err = conf.Redis.Del(ctx, fmt.Sprintf("token_%s", token.AuthToken)).Err()
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return ds.DeleteUser(user)
 }
 
 func GetUserInfo(param *AuthRequest) (*model.User, error) {

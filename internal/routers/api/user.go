@@ -57,6 +57,25 @@ func Login(c *gin.Context) {
 	})
 }
 
+func DeleteAccount(c *gin.Context) {
+	response := app.NewResponse(c)
+
+	user, exist := userFrom(c)
+	if !exist {
+		response.ToErrorResponse(errcode.NoPermission)
+		return
+	}
+
+	err := service.DeleteUser(c, user)
+	if err != nil {
+		logrus.Errorf("service.DeleteUser err: %v", err)
+		response.ToErrorResponse(errcode.ServerError)
+		return
+	}
+
+	response.ToResponse(nil)
+}
+
 func GetUserInfo(c *gin.Context) {
 	param := service.AuthRequest{}
 	response := app.NewResponse(c)
