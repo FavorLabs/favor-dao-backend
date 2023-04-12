@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/model/rest"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -31,6 +33,7 @@ type TweetManageService interface {
 	CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error)
 	DeletePostCollection(p *model.PostCollection) error
 	CreatePostContent(content *model.PostContent) (*model.PostContent, error)
+	RealDeletePosts(address string, fn func(context.Context, *model.Post) (string, error)) error
 }
 
 type TweetHelpService interface {

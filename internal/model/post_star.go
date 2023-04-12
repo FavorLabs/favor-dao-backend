@@ -23,7 +23,7 @@ type PostStarFormatted struct {
 	Address string             `json:"address" bson:"address"`
 }
 
-func (p *PostStar) table() string {
+func (p *PostStar) Table() string {
 	return "post_star"
 }
 func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
@@ -54,7 +54,7 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 	}
 
 	ctx := context.TODO()
-	cursor, err := db.Collection(p.table()).Aggregate(ctx, pipeline)
+	cursor, err := db.Collection(p.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 }
 
 func (p *PostStar) Create(db *mongo.Database) (*PostStar, error) {
-	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+	res, err := db.Collection(p.Table()).InsertOne(context.TODO(), &p)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (p *PostStar) Create(db *mongo.Database) (*PostStar, error) {
 
 func (p *PostStar) Delete(db *mongo.Database) error {
 	filter := bson.D{{"_id", p.ID}}
-	_, err := db.Collection(p.table()).DeleteOne(context.TODO(), filter)
+	_, err := db.Collection(p.Table()).DeleteOne(context.TODO(), filter)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	}
 
 	ctx := context.TODO()
-	cursor, err = db.Collection(p.table()).Aggregate(ctx, pipeline)
+	cursor, err = db.Collection(p.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	}
 
 	ctx := context.TODO()
-	cursor, err = db.Collection(p.table()).Aggregate(ctx, pipeline)
+	cursor, err = db.Collection(p.Table()).Aggregate(ctx, pipeline)
 	if err != nil {
 		return 0, err
 	}
@@ -196,7 +196,7 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 
 func (p *PostStar) CountByAddress(db *mongo.Database, address string) (int64, error) {
 	var count int64
-	count, err := db.Collection(p.table()).CountDocuments(context.TODO(), bson.M{"address": address})
+	count, err := db.Collection(p.Table()).CountDocuments(context.TODO(), bson.M{"address": address})
 	if err != nil {
 		return 0, err
 	}

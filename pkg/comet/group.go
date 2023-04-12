@@ -2,6 +2,7 @@ package comet
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -214,6 +215,31 @@ func (g *GroupScoped) Get(gid string) (*Group, error) {
 	}
 
 	return &response.Data.Group, nil
+}
+
+func (g *GroupScoped) Delete(gid string) (bool, error) {
+	g.setScope("groups", gid)
+
+	req, err := buildRequest(g.setMethod(http.MethodDelete))
+	if err != nil {
+		return false, err
+	}
+
+	var response struct {
+		Data struct {
+			Success bool   `json:"success"`
+			Message string `json:"message"`
+		} `json:"data"`
+	}
+
+	err = doRequest(req, &response)
+	if err != nil {
+		return false, err
+	}
+	if response.Data.Success {
+		return true, nil
+	}
+	return false, errors.New(response.Data.Message)
 }
 
 func (g *GroupScoped) Members(gid string) *GroupMemberScoped {

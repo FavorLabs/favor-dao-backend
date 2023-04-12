@@ -120,3 +120,40 @@ func (s *userManageServant) GetMyCommentCount(address string) int64 {
 	}
 	return count
 }
+
+func (s *userManageServant) Cancellation(ctx context.Context, address string) (err error) {
+	filter := bson.M{"address": address}
+
+	tables := []string{
+		new(model.User).Table(),
+		new(model.DaoBookmark).Table(),
+		new(model.PostContent).Table(),
+		new(model.PostCollection).Table(),
+		new(model.PostStar).Table(),
+		new(model.Comment).Table(),
+		new(model.CommentReply).Table(),
+	}
+
+	return util.MongoTransaction(ctx, s.db, func(ctx context.Context) error {
+		// delete my comment
+		cursor, err := s.db.Collection(new(model.Comment).Table()).Find(ctx, filter)
+		for cursor.Next(ctx) {
+			var t model.Comment
+			if cursor.Decode(&t) != nil {
+				break
+			}
+			err = t.RealDelete(ctx, s.db)
+			if err != nil {
+				return err
+			}
+		}
+		// delete my all
+		for _, v := range tables {
+			_, err = s.db.Collection(v).DeleteMany(ctx, filter)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}

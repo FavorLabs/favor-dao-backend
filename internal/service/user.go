@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	unipass_sigverify "github.com/unipassid/unipass-sigverify-go"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -331,4 +332,50 @@ func GetMyDaoMarkCount(address string) int64 {
 
 func GetMyCommentCount(address string) int64 {
 	return ds.GetMyCommentCount(address)
+}
+
+func Cancellation(ctx context.Context, address string) (err error) {
+	// cancel follow DAO
+	daoIDs := GetDaoBookmarkListByAddress(address)
+	for _, v := range daoIDs {
+		err = DeleteDaoBookmark(&model.DaoBookmark{DaoID: v}, func(ctx context.Context, daoId string) (string, error) {
+			err = KickGroupMembers(ctx, daoId, address)
+			if err != nil {
+				logrus.Errorf("Cancellation chat.KickGroupMembers daoID %s: %s", daoId, err)
+			}
+			return "", err
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// delete DAO
+	err = ds.RealDeleteDAO(address, func(ctx context.Context, dao *model.Dao) (string, error) {
+		daoId := dao.ID.Hex()
+		err = DeleteGroup(ctx, daoId)
+		if err != nil {
+			logrus.Errorf("Cancellation chat.DeleteGroup daoID %s: %s", daoId, err)
+			return "", err
+		}
+		err = DeleteSearchDao(dao)
+		if err != nil {
+			logrus.Errorf("Cancellation delete daoID %s from search err: %v", daoId, err)
+		}
+		return "", err
+	})
+
+	// delete post
+	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post) (string, error) {
+		err = DeleteSearchPost(post)
+		if err != nil {
+			logrus.Errorf("Cancellation delete postID %s from search err: %v", post.ID.Hex(), err)
+		}
+		return "", err
+	})
+
+	if err != nil {
+		return err
+	}
+	return ds.Cancellation(ctx, address)
 }

@@ -6,6 +6,7 @@ import (
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -352,6 +353,27 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 
 	s.cacheIndex.SendAction(core.IdxActDeletePost, post)
 	return mediaContents, nil
+}
+
+func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post) (string, error)) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		cursor, err := s.db.Collection(new(model.Post).Table()).Find(ctx, bson.M{"address": address})
+		for cursor.Next(ctx) {
+			var t model.Post
+			if cursor.Decode(&t) != nil {
+				break
+			}
+			err = t.RealDelete(ctx, s.db)
+			if err != nil {
+				return err
+			}
+			_, err = fn(ctx, &t)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *tweetManageServant) StickPost(post *model.Post) error {
