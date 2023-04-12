@@ -107,33 +107,35 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 			postFormatted.Contents = content
 		}
 
-		switch post.RefType {
-		case model.RefPost:
-			refContents, err := s.getPostContentsByID(post.RefId)
-			if err != nil {
-				return nil, err
+		if postFormatted.Type == model.Retweet || postFormatted.Type == model.RetweetComment {
+			switch post.RefType {
+			case model.RefPost:
+				refContents, err := s.getPostContentsByID(post.RefId)
+				if err != nil {
+					return nil, err
+				}
+				refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
+				for i := range refContentsFormatted {
+					refContentsFormatted[i] = refContents[i].Format()
+				}
+				postFormatted.OrigContents = append(postFormatted.Contents, refContentsFormatted...)
+			case model.RefComment:
+				refComments, err := s.getCommentContentsByID(post.RefId)
+				if err != nil {
+					return nil, err
+				}
+				refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
+				for i := range refCommentsFormatted {
+					refCommentsFormatted[i] = refComments[i].PostFormat()
+				}
+				postFormatted.OrigContents = append(postFormatted.Contents, refCommentsFormatted...)
+			case model.RefCommentReply:
+				refReplies, err := s.getCommentRepliesByID(post.RefId)
+				if err != nil {
+					return nil, err
+				}
+				postFormatted.OrigContents = append(postFormatted.Contents, refReplies.PostFormat())
 			}
-			refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
-			for i := range refContentsFormatted {
-				refContentsFormatted[i] = refContents[i].Format()
-			}
-			postFormatted.Contents = append(postFormatted.Contents, refContentsFormatted...)
-		case model.RefComment:
-			refComments, err := s.getCommentContentsByID(post.RefId)
-			if err != nil {
-				return nil, err
-			}
-			refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
-			for i := range refCommentsFormatted {
-				refCommentsFormatted[i] = refComments[i].PostFormat()
-			}
-			postFormatted.Contents = append(postFormatted.Contents, refCommentsFormatted...)
-		case model.RefCommentReply:
-			refReplies, err := s.getCommentRepliesByID(post.RefId)
-			if err != nil {
-				return nil, err
-			}
-			postFormatted.Contents = append(postFormatted.Contents, refReplies.PostFormat())
 		}
 
 		postsFormatted[i] = postFormatted
@@ -205,33 +207,35 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 			post.Contents = content
 		}
 
-		switch post.RefType {
-		case model.RefPost:
-			refContents, err := s.getPostContentsByID(post.RefId)
-			if err != nil {
-				return nil, err
+		if post.Type == model.Retweet || post.Type == model.RetweetComment {
+			switch post.RefType {
+			case model.RefPost:
+				refContents, err := s.getPostContentsByID(post.RefId)
+				if err != nil {
+					return nil, err
+				}
+				refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
+				for i := range refContentsFormatted {
+					refContentsFormatted[i] = refContents[i].Format()
+				}
+				post.OrigContents = append(post.Contents, refContentsFormatted...)
+			case model.RefComment:
+				refComments, err := s.getCommentContentsByID(post.RefId)
+				if err != nil {
+					return nil, err
+				}
+				refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
+				for i := range refCommentsFormatted {
+					refCommentsFormatted[i] = refComments[i].PostFormat()
+				}
+				post.OrigContents = append(post.Contents, refCommentsFormatted...)
+			case model.RefCommentReply:
+				refReplies, err := s.getCommentRepliesByID(post.RefId)
+				if err != nil {
+					return nil, err
+				}
+				post.OrigContents = append(post.Contents, refReplies.PostFormat())
 			}
-			refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
-			for i := range refContentsFormatted {
-				refContentsFormatted[i] = refContents[i].Format()
-			}
-			post.Contents = append(post.Contents, refContentsFormatted...)
-		case model.RefComment:
-			refComments, err := s.getCommentContentsByID(post.RefId)
-			if err != nil {
-				return nil, err
-			}
-			refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
-			for i := range refCommentsFormatted {
-				refCommentsFormatted[i] = refComments[i].PostFormat()
-			}
-			post.Contents = append(post.Contents, refCommentsFormatted...)
-		case model.RefCommentReply:
-			refReplies, err := s.getCommentRepliesByID(post.RefId)
-			if err != nil {
-				return nil, err
-			}
-			post.Contents = append(post.Contents, refReplies.PostFormat())
 		}
 	}
 	return posts, nil

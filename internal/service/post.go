@@ -477,33 +477,35 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 		}
 	}
 
-	switch postFormatted.RefType {
-	case model.RefPost:
-		refContents, err := ds.GetPostContentByID(post.RefId)
-		if err != nil {
-			return nil, err
+	if postFormatted.Type == model.Retweet || postFormatted.Type == model.RetweetComment {
+		switch postFormatted.RefType {
+		case model.RefPost:
+			refContents, err := ds.GetPostContentByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
+			for i := range refContentsFormatted {
+				refContentsFormatted[i] = refContents[i].Format()
+			}
+			postFormatted.OrigContents = append(postFormatted.Contents, refContentsFormatted...)
+		case model.RefComment:
+			refComments, err := ds.GetCommentContentsByIDs([]primitive.ObjectID{post.RefId})
+			if err != nil {
+				return nil, err
+			}
+			refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
+			for i := range refCommentsFormatted {
+				refCommentsFormatted[i] = refComments[i].PostFormat()
+			}
+			postFormatted.OrigContents = append(postFormatted.Contents, refCommentsFormatted...)
+		case model.RefCommentReply:
+			refReplies, err := ds.GetCommentReplyByID(post.RefId)
+			if err != nil {
+				return nil, err
+			}
+			postFormatted.OrigContents = append(postFormatted.Contents, refReplies.PostFormat())
 		}
-		refContentsFormatted := make([]*model.PostContentFormatted, len(refContents))
-		for i := range refContentsFormatted {
-			refContentsFormatted[i] = refContents[i].Format()
-		}
-		postFormatted.Contents = append(postFormatted.Contents, refContentsFormatted...)
-	case model.RefComment:
-		refComments, err := ds.GetCommentContentsByIDs([]primitive.ObjectID{post.RefId})
-		if err != nil {
-			return nil, err
-		}
-		refCommentsFormatted := make([]*model.PostContentFormatted, len(refComments))
-		for i := range refCommentsFormatted {
-			refCommentsFormatted[i] = refComments[i].PostFormat()
-		}
-		postFormatted.Contents = append(postFormatted.Contents, refCommentsFormatted...)
-	case model.RefCommentReply:
-		refReplies, err := ds.GetCommentReplyByID(post.RefId)
-		if err != nil {
-			return nil, err
-		}
-		postFormatted.Contents = append(postFormatted.Contents, refReplies.PostFormat())
 	}
 
 	users, err := ds.GetUsersByAddresses([]string{post.Address, post.AuthorId})
