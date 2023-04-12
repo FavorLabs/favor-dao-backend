@@ -59,6 +59,7 @@ type PostFormatted struct {
 	Address         string                  `json:"address"`
 	User            *UserFormatted          `json:"user"`
 	Contents        []*PostContentFormatted `json:"contents"`
+	OrigContents    []*PostContentFormatted `json:"orig_contents"`
 	Member          int                     `json:"member"`
 	ViewCount       int64                   `json:"view_count"`
 	CollectionCount int64                   `json:"collection_count"`
@@ -94,6 +95,7 @@ func (p *Post) Format() *PostFormatted {
 		Address:         p.Address,
 		User:            &UserFormatted{},
 		Contents:        []*PostContentFormatted{},
+		OrigContents:    []*PostContentFormatted{},
 		Member:          p.Member,
 		ViewCount:       p.ViewCount,
 		CollectionCount: p.CollectionCount,
