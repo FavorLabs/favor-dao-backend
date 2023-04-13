@@ -227,8 +227,7 @@ func (g *GroupScoped) Delete(gid string) (bool, error) {
 
 	var response struct {
 		Data struct {
-			Success bool   `json:"success"`
-			Message string `json:"message"`
+			ApiResult
 		} `json:"data"`
 	}
 

@@ -149,6 +149,34 @@ func (u *UserScoped) Update(uid string, opt UserUpdateOption) (*User, error) {
 	return &response.Data.User, nil
 }
 
+func (u *UserScoped) Delete(uid string) error {
+	u.setScope("users", uid)
+
+	var req struct {
+		Permanent bool `json:"permanent"`
+	}
+	req.Permanent = true
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	request, err := buildRequest(u.setMethod(http.MethodDelete).setBody(body))
+	if err != nil {
+		return err
+	}
+	var response struct {
+		Data struct {
+			ApiResult
+		} `json:"data"`
+	}
+	err = doRequest(request, &response)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (u *UserScoped) Get(uid string) (*User, error) {
 	u.setScope("users", uid)
 

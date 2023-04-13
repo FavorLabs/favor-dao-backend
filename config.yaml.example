@@ -14,6 +14,7 @@ Server:
   HttpPort: 8010
   ReadTimeout: 60
   WriteTimeout: 60
+  CancellationTimeInterval: 10  # Timed task interval, in minutes
 Features:
   Default: [ "SimpleCacheIndex", "Zinc", "LoggerZinc" ]
   Develop: [ "BigCacheIndex", "Meili", "LoggerMeili" ]

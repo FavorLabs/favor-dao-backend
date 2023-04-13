@@ -91,6 +91,10 @@ func GetDaoBookmarkListByAddress(address string) []primitive.ObjectID {
 	return daoIds
 }
 
+func GetDaoBookmarkByAddress(address string) []*model.DaoBookmark {
+	return ds.GetDaoBookmarkListByAddress(address)
+}
+
 func GetDaoBookmarkIDsByAddress(address string) []string {
 	list := ds.GetDaoBookmarkListByAddress(address)
 	daoIds := make([]string, 0, len(list))

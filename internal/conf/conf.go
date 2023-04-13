@@ -70,6 +70,7 @@ func setupSetting(suite []string, noDefault bool) error {
 
 	ServerSetting.ReadTimeout *= time.Second
 	ServerSetting.WriteTimeout *= time.Second
+	ServerSetting.CancellationTimeInterval *= time.Minute
 	SimpleCacheIndexSetting.CheckTickDuration *= time.Second
 	SimpleCacheIndexSetting.ExpireTickDuration *= time.Second
 	BigCacheIndexSetting.ExpireInSecond *= time.Second

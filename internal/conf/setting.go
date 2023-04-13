@@ -42,11 +42,12 @@ type LoggerMeiliSettingS struct {
 }
 
 type ServerSettingS struct {
-	RunMode      string
-	HttpIp       string
-	HttpPort     string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	RunMode                  string
+	HttpIp                   string
+	HttpPort                 string
+	ReadTimeout              time.Duration
+	WriteTimeout             time.Duration
+	CancellationTimeInterval time.Duration
 }
 
 type AppSettingS struct {

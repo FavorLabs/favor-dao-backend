@@ -17,4 +17,5 @@ type UserManageService interface {
 	GetMyDaoMarkCount(address string) int64
 	GetMyCommentCount(address string) int64
 	Cancellation(ctx context.Context, address string) (err error)
+	GetCancellationUsers() (out []string, err error)
 }
