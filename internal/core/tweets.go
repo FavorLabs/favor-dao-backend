@@ -21,7 +21,7 @@ type TweetService interface {
 }
 
 type TweetManageService interface {
-	CreatePost(post *model.Post) (*model.Post, error)
+	CreatePost(post *model.Post, contents []*model.PostContent) (*model.Post, error)
 	DeletePost(post *model.Post) ([]string, error)
 	StickPost(post *model.Post) error
 	VisiblePost(post *model.Post, visibility model.PostVisibleT) error
@@ -30,7 +30,6 @@ type TweetManageService interface {
 	DeletePostStar(p *model.PostStar) error
 	CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error)
 	DeletePostCollection(p *model.PostCollection) error
-	CreatePostContent(content *model.PostContent) (*model.PostContent, error)
 }
 
 type TweetHelpService interface {

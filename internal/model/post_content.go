@@ -101,8 +101,8 @@ func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId primitive
 	return contents, nil
 }
 
-func (p *PostContent) Create(db *mongo.Database) (*PostContent, error) {
-	res, err := db.Collection(p.table()).InsertOne(context.TODO(), &p)
+func (p *PostContent) Create(ctx context.Context, db *mongo.Database) (*PostContent, error) {
+	res, err := db.Collection(p.table()).InsertOne(ctx, &p)
 	if err != nil {
 		return nil, err
 	}

@@ -49,7 +49,7 @@ func (s *commentServant) GetCommentReplyByID(id primitive.ObjectID) (*model.Comm
 	reply := &model.CommentReply{
 		ID: id,
 	}
-	return reply.Get(s.db)
+	return reply.Get(context.TODO(), s.db)
 }
 
 func (s *commentServant) GetCommentCount(conditions *model.ConditionsT) (int64, error) {

@@ -272,26 +272,6 @@ func (s *zincTweetSearchServant) createIndex() {
 			Index: true,
 			Store: true,
 		},
-		"author_id": &zinc.ZincIndexPropertyT{
-			Type:  "text",
-			Index: true,
-			Store: true,
-		},
-		"author_dao_id": &zinc.ZincIndexPropertyT{
-			Type:  "text",
-			Index: true,
-			Store: true,
-		},
-		"ref_id": &zinc.ZincIndexPropertyT{
-			Type:  "text",
-			Index: true,
-			Store: true,
-		},
-		"ref_type": &zinc.ZincIndexPropertyT{
-			Type:  "numeric",
-			Index: true,
-			Store: true,
-		},
 		"created_on": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",
 			Index:    true,
