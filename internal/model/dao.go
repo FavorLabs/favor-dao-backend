@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	chatModel "favor-dao-backend/internal/model/chat"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -237,4 +238,34 @@ func (m *Dao) FindListByKeyword(ctx context.Context, db *mongo.Database, keyword
 		list = append(list, &t)
 	}
 	return
+}
+
+func (m *Dao) RealDelete(ctx context.Context, db *mongo.Database, gid string) error {
+	if !m.ID.IsZero() {
+		table := []string{
+			new(DaoBookmark).Table(),
+		}
+		for _, v := range table {
+			_, err := db.Collection(v).DeleteMany(ctx, bson.M{"dao_id": m.ID})
+			if err != nil {
+				return err
+			}
+		}
+		group := &chatModel.Group{
+			ID: chatModel.GroupID{
+				DaoID:   m.ID,
+				GroupID: gid,
+				OwnerID: m.Address,
+			},
+		}
+		err := group.Delete(ctx, db)
+		if err != nil {
+			return err
+		}
+		_, err = db.Collection(m.Table()).DeleteOne(ctx, bson.M{"_id": m.ID})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -17,4 +17,6 @@ type UserManageService interface {
 	GetMyPostStartCount(address string) int64
 	GetMyDaoMarkCount(address string) int64
 	GetMyCommentCount(address string) int64
+	Cancellation(ctx context.Context, address string) (err error)
+	GetCancellationUsers() (out []string, err error)
 }

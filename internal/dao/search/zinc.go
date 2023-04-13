@@ -135,20 +135,43 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 			},
 		})
 	}
+	should := types.AnySlice{}
 	if q.Query != "" {
-		must = append(must, map[string]types.Any{
-			"match_phrase": map[string]types.Any{
-				"content": q.Query,
+		should = types.AnySlice{
+			map[string]types.Any{
+				"query_string": map[string]types.Any{
+					"query": "content:" + q.Query,
+				},
 			},
-		})
-	}
-	query := map[string]types.Any{}
-	if len(must) == 0 {
-		query["match_all"] = map[string]string{}
-	} else {
-		query["bool"] = map[string]types.Any{
-			"must": must,
+			map[string]types.Any{
+				"query_string": map[string]types.Any{
+					"query": "content:*" + q.Query,
+				},
+			},
+			map[string]types.Any{
+				"query_string": map[string]types.Any{
+					"query": "content:" + q.Query + "*",
+				},
+			},
+			map[string]types.Any{
+				"query_string": map[string]types.Any{
+					"query": "content:*" + q.Query + "*",
+				},
+			},
 		}
+	}
+	query := make(map[string]map[string]types.Any)
+	query["bool"] = make(map[string]types.Any)
+	if len(should) > 0 {
+		query["bool"]["should"] = should
+		query["bool"]["minimum_should_match"] = 1
+	}
+	if len(must) > 0 {
+		query["bool"]["must"] = must
+	}
+	if len(query["bool"]) == 0 {
+		delete(query, "bool")
+		query["match_all"] = map[string]types.Any{}
 	}
 	sort := types.AnySlice{}
 	sort = append(sort, map[string]types.Any{

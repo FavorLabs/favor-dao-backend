@@ -138,7 +138,7 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 			"as":           "dao",
 		}}},
 		{{"$match", query}},
-		{{"$sort", bson.M{"_id": -1}}},
+		{{"$sort", bson.M{"dao.follow_count": -1}}},
 		{{"$skip", offset}},
 		{{"$limit", limit}},
 		{{"$unwind", "$dao"}},
@@ -150,7 +150,7 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 
 func (s *daoManageServant) GetDaoBookmarkListByAddress(address string) []*model.DaoBookmark {
 	book := &model.DaoBookmark{}
-	return book.FindList(context.TODO(), s.db, bson.M{"address": address})
+	return book.FindList(context.TODO(), s.db, bson.M{"address": address, "is_del": 0})
 }
 
 func (s *daoManageServant) GetDaoBookmarkByAddressAndDaoID(myAddress string, daoId string) (*model.DaoBookmark, error) {
@@ -233,5 +233,29 @@ func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func
 			},
 		}
 		return group.Delete(ctx, s.db)
+	})
+}
+
+func (s *daoManageServant) RealDeleteDAO(address string, chatAction func(context.Context, *model.Dao) (string, error)) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		cursor, err := s.db.Collection(new(model.Dao).Table()).Find(ctx, bson.M{"address": address})
+		if err != nil {
+			return err
+		}
+		for cursor.Next(ctx) {
+			var d model.Dao
+			if cursor.Decode(&d) != nil {
+				return err
+			}
+			groupId, err := chatAction(ctx, &d)
+			if err != nil {
+				return err
+			}
+			err = d.RealDelete(ctx, s.db, groupId)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }

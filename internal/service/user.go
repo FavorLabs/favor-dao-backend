@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	unipass_sigverify "github.com/unipassid/unipass-sigverify-go"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -331,4 +332,79 @@ func GetMyDaoMarkCount(address string) int64 {
 
 func GetMyCommentCount(address string) int64 {
 	return ds.GetMyCommentCount(address)
+}
+
+func Cancellation(address string) (err error) {
+	ctx := context.TODO()
+	// delete user for chat
+	err = DeleteChatUser(ctx, address)
+	if err != nil {
+		return err
+	}
+	// cancel follow DAO
+	daoBookmarks := GetDaoBookmarkByAddress(address)
+	for _, v := range daoBookmarks {
+		err = DeleteDaoBookmark(v, func(ctx context.Context, daoId string) (string, error) {
+			return GetGroupID(daoId), nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// delete DAO
+	err = ds.RealDeleteDAO(address, func(ctx context.Context, dao *model.Dao) (string, error) {
+		daoId := dao.ID.Hex()
+		gid := GetGroupID(daoId)
+		err = DeleteGroup(ctx, daoId)
+		if err != nil {
+			logrus.Errorf("Cancellation chat.DeleteGroup daoID %s: %s", daoId, err)
+			return gid, err
+		}
+		err = DeleteSearchDao(dao)
+		if err != nil {
+			logrus.Errorf("Cancellation delete daoID %s from search err: %v", daoId, err)
+		}
+		return gid, err
+	})
+	if err != nil {
+		return err
+	}
+	// delete post
+	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post) (string, error) {
+		err = DeleteSearchPost(post)
+		if err != nil {
+			logrus.Errorf("Cancellation delete postID %s from search err: %v", post.ID.Hex(), err)
+		}
+		return "", err
+	})
+	if err != nil {
+		return err
+	}
+	return ds.Cancellation(ctx, address)
+}
+
+func CancellationTask() {
+	interval := conf.ServerSetting.CancellationTimeInterval
+	if interval.Minutes() < 1 {
+		return
+	}
+	tick := time.NewTicker(interval)
+	for {
+		select {
+		case <-tick.C:
+			addresses, err := ds.GetCancellationUsers()
+			if err != nil {
+				logrus.Errorf("CancellationTask GetCancellationUsers %s", err)
+				break
+			}
+			for _, v := range addresses {
+				err = Cancellation(v)
+				if err != nil {
+					logrus.Errorf("CancellationTask Cancellation address %s %s", v, err)
+				}
+			}
+			tick.Reset(interval)
+		}
+	}
 }

@@ -417,6 +417,27 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 	return mediaContents, nil
 }
 
+func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post) (string, error)) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		cursor, err := s.db.Collection(new(model.Post).Table()).Find(ctx, bson.M{"address": address})
+		for cursor.Next(ctx) {
+			var t model.Post
+			if cursor.Decode(&t) != nil {
+				break
+			}
+			err = t.RealDelete(ctx, s.db)
+			if err != nil {
+				return err
+			}
+			_, err = fn(ctx, &t)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (s *tweetManageServant) StickPost(post *model.Post) error {
 	post.IsTop = 1 - post.IsTop
 	if err := post.Update(context.TODO(), s.db); err != nil {

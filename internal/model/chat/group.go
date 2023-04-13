@@ -37,9 +37,9 @@ func (m *Group) Create(ctx context.Context, db *mongo.Database) (*Group, error) 
 
 func (m *Group) Delete(ctx context.Context, db *mongo.Database) error {
 	filter := bson.D{{"_id", m.ID}}
-	res := db.Collection(m.Table()).FindOneAndDelete(ctx, filter)
-	if res.Err() != nil {
-		return res.Err()
+	_, err := db.Collection(m.Table()).DeleteOne(ctx, filter)
+	if err != nil {
+		return err
 	}
 	return nil
 }

@@ -39,6 +39,10 @@ func groupId(id string) string {
 	return genId(fmt.Sprintf("group_%s", id))
 }
 
+func GetGroupID(daoId string) string {
+	return groupId(daoId)
+}
+
 func NetworkTag() string {
 	return fmt.Sprintf("net_%d", conf.ExternalAppSetting.NetworkID)
 }
@@ -83,6 +87,23 @@ func UpdateChatUser(ctx context.Context, address, name, avatar string) error {
 		Avatar: formatValidUrl(avatar),
 	})
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeleteChatUser(ctx context.Context, address string) error {
+	uid := userId(address)
+
+	err := chat.Scoped().Context(ctx).Users().Delete(uid)
+	if err != nil {
+		switch e := err.(type) {
+		case comet.RestApiError:
+			if e.Inner.Code == "ERR_UID_NOT_FOUND" {
+				return nil
+			}
+		}
 		return err
 	}
 
@@ -149,6 +170,38 @@ func UpdateChatGroup(ctx context.Context, address, id, name, icon, desc string) 
 	}
 
 	return nil
+}
+
+func DeleteGroup(ctx context.Context, daoId string) (err error) {
+	gid := groupId(daoId)
+	_, err = chat.Scoped().Context(ctx).Groups().Delete(gid)
+	if err != nil {
+		switch e := err.(type) {
+		case comet.RestApiError:
+			if e.Inner.Code == "ERR_GUID_NOT_FOUND" {
+				return nil
+			}
+		}
+		return
+	}
+	return
+}
+
+func KickGroupMembers(ctx context.Context, daoId, address string) (gid string, err error) {
+	uid := userId(address)
+	gid = groupId(daoId)
+	_, err = chat.Scoped().Context(ctx).Groups().Members(gid).Kick(uid)
+	if err != nil {
+		switch e := err.(type) {
+		case comet.RestApiError:
+			if e.Inner.Code == "ERR_UID_NOT_FOUND" || e.Inner.Code == "ERR_GUID_NOT_FOUND" {
+				err = nil
+				return
+			}
+		}
+		return
+	}
+	return
 }
 
 func JoinOrLeaveGroup(ctx context.Context, daoId string, joinOrLeave bool, token string) (string, error) {

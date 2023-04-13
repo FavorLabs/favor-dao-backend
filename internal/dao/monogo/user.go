@@ -6,6 +6,7 @@ import (
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/internal/model/chat"
 	"favor-dao-backend/pkg/util"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -119,4 +120,59 @@ func (s *userManageServant) GetMyCommentCount(address string) int64 {
 		return 0
 	}
 	return count
+}
+
+func (s *userManageServant) GetCancellationUsers() (out []string, err error) {
+	ctx := context.TODO()
+	cursor, err := s.db.Collection(new(model.User).Table()).Find(ctx, bson.M{"is_del": 1})
+	for cursor.Next(ctx) {
+		var t model.User
+		if err = cursor.Decode(&t); err != nil {
+			break
+		}
+		out = append(out, t.Address)
+	}
+	return
+}
+
+func (s *userManageServant) Cancellation(ctx context.Context, address string) (err error) {
+	filter := bson.M{"address": address}
+
+	tables := []string{
+		new(model.User).Table(),
+		new(model.DaoBookmark).Table(),
+		new(model.PostContent).Table(),
+		new(model.PostCollection).Table(),
+		new(model.PostStar).Table(),
+		new(model.Comment).Table(),
+		new(model.CommentContent).Table(),
+		new(model.CommentReply).Table(),
+	}
+
+	return util.MongoTransaction(ctx, s.db, func(ctx context.Context) error {
+		// delete my comment
+		cursor, err := s.db.Collection(new(model.Comment).Table()).Find(ctx, filter)
+		for cursor.Next(ctx) {
+			var t model.Comment
+			if cursor.Decode(&t) != nil {
+				break
+			}
+			err = t.RealDelete(ctx, s.db)
+			if err != nil {
+				return err
+			}
+		}
+		// delete my all
+		for _, v := range tables {
+			_, err = s.db.Collection(v).DeleteMany(ctx, filter)
+			if err != nil {
+				return err
+			}
+		}
+		_, err = s.db.Collection(new(chat.Group).Table()).DeleteMany(ctx, bson.M{"_id.owner_id": address})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }

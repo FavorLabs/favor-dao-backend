@@ -195,3 +195,17 @@ func (c *Comment) DeleteByPostId(db *mongo.Database, postId string) error {
 	_, err = db.Collection(c.Table()).UpdateMany(context.TODO(), filter, update)
 	return err
 }
+
+func (c *Comment) RealDelete(ctx context.Context, db *mongo.Database) error {
+	if !c.ID.IsZero() {
+		_, err := db.Collection(new(CommentContent).Table()).DeleteMany(ctx, bson.M{"comment_id": c.ID})
+		if err != nil {
+			return err
+		}
+		_, err = db.Collection(new(CommentReply).Table()).DeleteMany(ctx, bson.M{"comment_id": c.ID})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

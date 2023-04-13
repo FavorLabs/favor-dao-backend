@@ -68,14 +68,14 @@ type PostContentFormatted struct {
 	Sort    int64              `json:"sort"`
 }
 
-func (p *PostContent) table() string {
+func (p *PostContent) Table() string {
 	return "post_content"
 }
 
 func (p *PostContent) DeleteByPostId(db *mongo.Database, postId primitive.ObjectID) error {
 	filter := bson.D{{"post_id", postId}}
 	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
-	res := db.Collection(p.table()).FindOneAndUpdate(context.TODO(), filter, update)
+	res := db.Collection(p.Table()).FindOneAndUpdate(context.TODO(), filter, update)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -87,7 +87,7 @@ func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId primitive
 		{"is_del", 0},
 		{"post_id", postId},
 		{"type", bson.D{{"$in", bson.A{CONTENT_TYPE_IMAGE, CONTENT_TYPE_VIDEO, CONTENT_TYPE_AUDIO, CONTENT_TYPE_FAVOR}}}}}
-	cursor, err := db.Collection(p.table()).Find(context.TODO(), filter)
+	cursor, err := db.Collection(p.Table()).Find(context.TODO(), filter)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (p *PostContent) MediaContentsByPostId(db *mongo.Database, postId primitive
 }
 
 func (p *PostContent) Create(ctx context.Context, db *mongo.Database) (*PostContent, error) {
-	res, err := db.Collection(p.table()).InsertOne(ctx, &p)
+	res, err := db.Collection(p.Table()).InsertOne(ctx, &p)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (p *PostContent) List(db *mongo.Database, conditions *ConditionsT, offset, 
 			finds = append(finds, options.Find().SetSort(v))
 		}
 	}
-	if cursor, err = db.Collection(p.table()).Find(context.TODO(), query, finds...); err != nil {
+	if cursor, err = db.Collection(p.Table()).Find(context.TODO(), query, finds...); err != nil {
 		return nil, err
 	}
 	for cursor.Next(context.TODO()) {
@@ -171,7 +171,7 @@ func (p *PostContent) Get(db *mongo.Database) (*PostContent, error) {
 		return nil, mongo.ErrNoDocuments
 	}
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
-	res := db.Collection(p.table()).FindOne(context.TODO(), filter)
+	res := db.Collection(p.Table()).FindOne(context.TODO(), filter)
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
