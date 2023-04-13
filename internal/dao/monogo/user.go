@@ -124,7 +124,7 @@ func (s *userManageServant) GetMyCommentCount(address string) int64 {
 
 func (s *userManageServant) GetCancellationUsers() (out []string, err error) {
 	ctx := context.TODO()
-	cursor, err := s.db.Collection(new(model.User).Table()).Find(ctx, bson.M{"is_del": 1})
+	cursor, err := s.db.Collection(new(model.User).Table()).Find(ctx, bson.M{"deleted_on": bson.M{"$gt": 0}})
 	for cursor.Next(ctx) {
 		var t model.User
 		if err = cursor.Decode(&t); err != nil {
