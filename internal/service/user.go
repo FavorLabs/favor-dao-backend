@@ -1,10 +1,7 @@
 package service
 
 import (
-	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
 	"fmt"
 	"time"
@@ -13,13 +10,8 @@ import (
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	unipass_sigverify "github.com/unipassid/unipass-sigverify-go"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -30,23 +22,6 @@ type PhoneCaptchaReq struct {
 
 type AuthRequest struct {
 	UserAddress string `json:"user_address" form:"user_address" binding:"required"`
-}
-
-type WalletType string
-
-const (
-	WalletConnect WalletType = "wallet_connect"
-	MetaMask      WalletType = "meta_mask"
-	OKX           WalletType = "okx"
-	Unipass_Std   WalletType = "unipass_std"
-	Unipass_eth   WalletType = "unipass_eth"
-)
-
-type AuthByWalletRequest struct {
-	Timestamp  int64      `json:"timestamp" binding:"required"`
-	WalletAddr string     `json:"wallet_addr" binding:"required"`
-	Signature  string     `json:"signature" binding:"required"`
-	Type       WalletType `json:"type" binding:"required"`
 }
 
 type RegisterRequest struct {
@@ -77,15 +52,6 @@ const MAX_LOGIN_ERR_TIMES = 10
 
 // DoLoginWallet Wallet login, register if user does not exist
 func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, error) {
-	walletBytes, err := hexutil.Decode(param.WalletAddr)
-	if err != nil {
-		return nil, errcode.InvalidParams
-	}
-	signature, err := hexutil.Decode(param.Signature)
-	if err != nil {
-		return nil, errcode.InvalidParams
-	}
-
 	created := false
 
 	user, err := ds.GetUserByAddress(param.WalletAddr)
@@ -108,36 +74,10 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 			}
 		}
 
-		// check valid timestamp
-		if time.Now().After(time.UnixMilli(param.Timestamp).Add(time.Minute)) {
-			return nil, errcode.UnauthorizedTokenTimeout
-		}
-
-		var ok bool
-
-		// parse message
 		guessMessage := fmt.Sprintf("%s login FavorDAO at %d", param.WalletAddr, param.Timestamp)
-		switch param.Type {
-		case WalletConnect, MetaMask, OKX:
-			ethMessage := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(guessMessage), guessMessage))
-			// Convert to btcec input format with 'recovery id' v at the beginning.
-			btcsig := make([]byte, 65)
-			btcsig[0] = signature[64]
-			copy(btcsig[1:], signature)
-			rawKey, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, crypto.Keccak256(ethMessage))
-			if err == nil {
-				pubkey := (*ecdsa.PublicKey)(rawKey)
-				pubBytes := elliptic.Marshal(btcec.S256(), pubkey.X, pubkey.Y)
-				var signer common.Address
-				copy(signer[:], crypto.Keccak256(pubBytes[1:])[12:])
-				ok = bytes.Equal(walletBytes, signer.Bytes())
-			}
-		case Unipass_Std:
-			ok, _ = unipass_sigverify.VerifyMessageSignature(ctx, common.BytesToAddress(walletBytes), []byte(guessMessage), signature, false, eth)
-		case Unipass_eth:
-			ok, _ = unipass_sigverify.VerifyMessageSignature(ctx, common.BytesToAddress(walletBytes), []byte(guessMessage), signature, true, eth)
-		default:
-			return nil, errcode.InvalidParams
+		ok, err := verifySignMessage(ctx, param, guessMessage)
+		if err != nil {
+			return nil, err
 		}
 		if ok {
 			if created {
@@ -169,8 +109,27 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 	return nil, errcode.UnauthorizedAuthNotExist
 }
 
-func DeleteUser(ctx context.Context, user *model.User) error {
+func DeleteUser(ctx context.Context, param *AuthByWalletRequest) error {
+	user, err := ds.GetUserByAddress(param.WalletAddr)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil
+		}
+
+		return err
+	}
+
 	uid := userId(user.Address)
+
+	guessMessage := fmt.Sprintf("delete %s account at %d", param.WalletAddr, param.Timestamp)
+	ok, err := verifySignMessage(ctx, param, guessMessage)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return errcode.NoPermission
+	}
 
 	// delete auth token
 	tokens, err := chat.Scoped().Context(ctx).Users().AuthToken(uid).List()

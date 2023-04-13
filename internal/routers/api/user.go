@@ -58,15 +58,16 @@ func Login(c *gin.Context) {
 }
 
 func DeleteAccount(c *gin.Context) {
+	param := service.AuthByWalletRequest{}
 	response := app.NewResponse(c)
-
-	user, exist := userFrom(c)
-	if !exist {
-		response.ToErrorResponse(errcode.NoPermission)
+	valid, errs := app.BindAndValid(c, &param)
+	if !valid {
+		logrus.Errorf("app.BindAndValid errs: %v", errs)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
 		return
 	}
 
-	err := service.DeleteUser(c, user)
+	err := service.DeleteUser(c, &param)
 	if err != nil {
 		logrus.Errorf("service.DeleteUser err: %v", err)
 		response.ToErrorResponse(errcode.ServerError)
