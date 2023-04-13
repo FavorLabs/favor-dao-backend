@@ -37,6 +37,7 @@ type Post struct {
 	CollectionCount int64              `json:"collection_count"  bson:"collection_count"`
 	UpvoteCount     int64              `json:"upvote_count"      bson:"upvote_count"`
 	CommentCount    int64              `json:"comment_count"     bson:"comment_count"`
+	RefCount        int64              `json:"ref_count"         bson:"ref_count"`
 	Member          int                `json:"member"            bson:"member"`
 	Visibility      PostVisibleT       `json:"visibility"        bson:"visibility"`
 	IsTop           int                `json:"is_top"            bson:"is_top"`
@@ -66,6 +67,7 @@ type PostFormatted struct {
 	CollectionCount int64                   `json:"collection_count"`
 	UpvoteCount     int64                   `json:"upvote_count"`
 	CommentCount    int64                   `json:"comment_count"`
+	RefCount        int64                   `json:"ref_count"`
 	Visibility      PostVisibleT            `json:"visibility"`
 	IsTop           int                     `json:"is_top"`
 	IsEssence       int                     `json:"is_essence"`
@@ -102,11 +104,13 @@ func (p *Post) Format() *PostFormatted {
 		CollectionCount: p.CollectionCount,
 		UpvoteCount:     p.UpvoteCount,
 		CommentCount:    p.CommentCount,
+		RefCount:        p.RefCount,
 		Visibility:      p.Visibility,
 		IsTop:           p.IsTop,
 		IsEssence:       p.IsEssence,
 		Tags:            tagsMap,
 		Type:            p.Type,
+		OrigType:        p.OrigType,
 		CreatedOn:       p.CreatedOn,
 		AuthorId:        p.AuthorId,
 		AuthorDaoId:     p.AuthorDaoId,
@@ -117,11 +121,11 @@ func (p *Post) Format() *PostFormatted {
 	}
 }
 
-func (p *Post) Create(db *mongo.Database) (*Post, error) {
+func (p *Post) Create(ctx context.Context, db *mongo.Database) (*Post, error) {
 	now := time.Now().Unix()
 	p.CreatedOn = now
 	p.ModifiedOn = now
-	res, err := db.Collection(p.Table()).InsertOne(context.TODO(), &p)
+	res, err := db.Collection(p.Table()).InsertOne(ctx, &p)
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +146,12 @@ func (p *Post) Delete(db *mongo.Database) error {
 	return nil
 }
 
-func (p *Post) Get(db *mongo.Database) (*Post, error) {
+func (p *Post) Get(ctx context.Context, db *mongo.Database) (*Post, error) {
 	if p.ID.IsZero() {
 		return nil, mongo.ErrNoDocuments
 	}
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
-	res := db.Collection(p.Table()).FindOne(context.TODO(), filter)
+	res := db.Collection(p.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
@@ -227,11 +231,11 @@ func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error)
 	return count, nil
 }
 
-func (p *Post) Update(db *mongo.Database) error {
+func (p *Post) Update(ctx context.Context, db *mongo.Database) error {
 	p.ModifiedOn = time.Now().Unix()
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
 	update := bson.M{"$set": p}
-	if _, err := db.Collection(p.Table()).UpdateMany(context.TODO(), filter, update); err != nil {
+	if _, err := db.Collection(p.Table()).UpdateMany(ctx, filter, update); err != nil {
 		return err
 	}
 	return nil

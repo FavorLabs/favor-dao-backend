@@ -119,7 +119,7 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 				for i := range refContentsFormatted {
 					refContentsFormatted[i] = refContents[i].Format()
 				}
-				postFormatted.OrigContents = append(postFormatted.Contents, refContentsFormatted...)
+				postFormatted.OrigContents = append(postFormatted.OrigContents, refContentsFormatted...)
 			case model.RefComment:
 				refComments, err := s.getCommentContentsByID(post.RefId)
 				if err != nil {
@@ -129,13 +129,13 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 				for i := range refCommentsFormatted {
 					refCommentsFormatted[i] = refComments[i].PostFormat()
 				}
-				postFormatted.OrigContents = append(postFormatted.Contents, refCommentsFormatted...)
+				postFormatted.OrigContents = append(postFormatted.OrigContents, refCommentsFormatted...)
 			case model.RefCommentReply:
 				refReplies, err := s.getCommentRepliesByID(post.RefId)
 				if err != nil {
 					return nil, err
 				}
-				postFormatted.OrigContents = append(postFormatted.Contents, refReplies.PostFormat())
+				postFormatted.OrigContents = append(postFormatted.OrigContents, refReplies.PostFormat())
 			}
 		}
 
@@ -219,7 +219,7 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 				for i := range refContentsFormatted {
 					refContentsFormatted[i] = refContents[i].Format()
 				}
-				post.OrigContents = append(post.Contents, refContentsFormatted...)
+				post.OrigContents = append(post.OrigContents, refContentsFormatted...)
 			case model.RefComment:
 				refComments, err := s.getCommentContentsByID(post.RefId)
 				if err != nil {
@@ -229,13 +229,13 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 				for i := range refCommentsFormatted {
 					refCommentsFormatted[i] = refComments[i].PostFormat()
 				}
-				post.OrigContents = append(post.Contents, refCommentsFormatted...)
+				post.OrigContents = append(post.OrigContents, refCommentsFormatted...)
 			case model.RefCommentReply:
 				refReplies, err := s.getCommentRepliesByID(post.RefId)
 				if err != nil {
 					return nil, err
 				}
-				post.OrigContents = append(post.Contents, refReplies.PostFormat())
+				post.OrigContents = append(post.OrigContents, refReplies.PostFormat())
 			}
 		}
 	}
@@ -264,7 +264,7 @@ func (s *tweetHelpServant) getCommentContentsByID(id primitive.ObjectID) ([]*mod
 }
 
 func (s *tweetHelpServant) getCommentRepliesByID(id primitive.ObjectID) (*model.CommentReply, error) {
-	return (&model.CommentReply{ID: id}).Get(s.db)
+	return (&model.CommentReply{ID: id}).Get(context.TODO(), s.db)
 }
 
 func (s *tweetHelpServant) getUsersByAddress(addresses []string) ([]*model.User, error) {
@@ -294,17 +294,79 @@ func (s *tweetManageServant) DeletePostCollection(p *model.PostCollection) error
 	return p.Delete(s.db)
 }
 
-func (s *tweetManageServant) CreatePostContent(content *model.PostContent) (*model.PostContent, error) {
-	return content.Create(s.db)
-}
+func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.PostContent) (*model.Post, error) {
+	var newPost *model.Post
 
-func (s *tweetManageServant) CreatePost(post *model.Post) (*model.Post, error) {
-	p, err := post.Create(s.db)
+	err := util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		if !post.RefId.IsZero() {
+			// check orig content exists
+			switch post.RefType {
+			case model.RefPost:
+				// retweet post MUST exist
+				origPost, err := (&model.Post{ID: post.RefId}).Get(ctx, s.db)
+				if err != nil {
+					return err
+				}
+
+				// update ref count
+				origPost.RefCount++
+				err = origPost.Update(ctx, s.db)
+				if err != nil {
+					return err
+				}
+
+				switch origPost.Type {
+				case model.Retweet:
+					// if re-post type is retweet, we'll find original post id
+					post.RefId = origPost.RefId
+					post.AuthorId = origPost.AuthorId
+					post.AuthorDaoId = origPost.AuthorDaoId
+				default:
+					post.AuthorId = origPost.Address
+					post.AuthorDaoId = origPost.DaoId
+				}
+
+				post.Tags = origPost.Tags
+				post.OrigType = origPost.OrigType
+			case model.RefComment:
+				comment, err := (&model.Comment{ID: post.RefId}).Get(ctx, s.db)
+				if err != nil {
+					return err
+				}
+
+				post.AuthorId = comment.Address
+			case model.RefCommentReply:
+				reply, err := (&model.CommentReply{ID: post.RefId}).Get(ctx, s.db)
+				if err != nil {
+					return err
+				}
+
+				post.AuthorId = reply.Address
+			}
+		}
+
+		p, err := post.Create(ctx, s.db)
+		if err != nil {
+			return err
+		}
+
+		for _, content := range contents {
+			content.PostID = p.ID
+			_, err = content.Create(ctx, s.db)
+			if err != nil {
+				return err
+			}
+		}
+
+		newPost = p
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	s.cacheIndex.SendAction(core.IdxActCreatePost, post)
-	return p, nil
+	return newPost, nil
 }
 
 func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
@@ -378,7 +440,7 @@ func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Con
 
 func (s *tweetManageServant) StickPost(post *model.Post) error {
 	post.IsTop = 1 - post.IsTop
-	if err := post.Update(s.db); err != nil {
+	if err := post.Update(context.TODO(), s.db); err != nil {
 		return err
 	}
 	s.cacheIndex.SendAction(core.IdxActStickPost, post)
@@ -408,7 +470,7 @@ func (s *tweetManageServant) VisiblePost(post *model.Post, visibility model.Post
 	defer session.EndSession(context.TODO())
 
 	_, err = session.WithTransaction(context.TODO(), func(sessCtx mongo.SessionContext) (interface{}, error) {
-		err := post.Update(s.db)
+		err := post.Update(sessCtx, s.db)
 		if err != nil {
 			return nil, err
 		}
@@ -438,7 +500,7 @@ func (s *tweetManageServant) VisiblePost(post *model.Post, visibility model.Post
 }
 
 func (s *tweetManageServant) UpdatePost(post *model.Post) error {
-	if err := post.Update(s.db); err != nil {
+	if err := post.Update(context.TODO(), s.db); err != nil {
 		return err
 	}
 	s.cacheIndex.SendAction(core.IdxActUpdatePost, post)
@@ -461,7 +523,7 @@ func (s *tweetServant) GetPostByID(id primitive.ObjectID) (*model.Post, error) {
 	post := &model.Post{
 		ID: id,
 	}
-	return post.Get(s.db)
+	return post.Get(context.TODO(), s.db)
 }
 
 func (s *tweetServant) GetPosts(conditions *model.ConditionsT, offset, limit int) ([]*model.Post, error) {
@@ -504,7 +566,7 @@ func (s *tweetServant) GetUserPostCollection(postID primitive.ObjectID, address 
 	}
 	star, err := star.Get(s.db)
 	post := &model.Post{ID: postID}
-	post, err = post.Get(s.db)
+	post, err = post.Get(context.TODO(), s.db)
 	star.Post = post
 	return star, err
 }
@@ -520,7 +582,7 @@ func (s *tweetServant) GetUserPostCollections(address string, offset, limit int)
 
 	for _, p := range pc {
 		post := &model.Post{ID: p.PostID}
-		post, err = post.Get(s.db)
+		post, err = post.Get(context.TODO(), s.db)
 		p.Post = post
 	}
 

@@ -113,12 +113,12 @@ func (c *CommentReply) Create(db *mongo.Database) (*CommentReply, error) {
 	return c, err
 }
 
-func (c *CommentReply) Get(db *mongo.Database) (*CommentReply, error) {
+func (c *CommentReply) Get(ctx context.Context, db *mongo.Database) (*CommentReply, error) {
 	if c.ID.IsZero() {
 		return nil, mongo.ErrNoDocuments
 	}
 	filter := bson.D{{"_id", c.ID}, {"is_del", 0}}
-	res := db.Collection(c.Table()).FindOne(context.TODO(), filter)
+	res := db.Collection(c.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
 	}

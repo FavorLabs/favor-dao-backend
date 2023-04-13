@@ -111,92 +111,40 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 		return
 	}
 
-	switch param.Type {
-	case model.Retweet, model.RetweetComment:
-		var (
-			tags         string
-			authorId     string
-			authorDaoId  primitive.ObjectID
-			origPostType model.PostType
-		)
-
-		// check orig content exists
-		switch param.RefType {
-		case model.RefPost:
-			// retweet post MUST exist
-			origPost, err := ds.GetPostByID(param.RefId)
-			if err != nil {
-				return nil, fmt.Errorf("need find post to retweet: %v", err)
-			}
-
-			switch origPost.Type {
-			case model.Retweet:
-				// if re-post type is retweet, we'll find original post id
-				param.RefId = origPost.RefId
-				authorId = origPost.AuthorId
-				authorDaoId = origPost.AuthorDaoId
-			default:
-				authorId = origPost.Address
-				authorDaoId = origPost.DaoId
-			}
-
-			tags = origPost.Tags
-			origPostType = origPost.OrigType
-		case model.RefComment:
-			comment, err := ds.GetCommentByID(param.RefId)
-			if err != nil {
-				return nil, fmt.Errorf("need find comment to retweet: %v", err)
-			}
-
-			authorId = comment.Address
-		case model.RefCommentReply:
-			reply, err := ds.GetCommentReplyByID(param.RefId)
-			if err != nil {
-				return nil, fmt.Errorf("need find comment-reply to retweet: %v", err)
-			}
-
-			authorId = reply.Address
+	var contents []*model.PostContent
+	for _, item := range param.Contents {
+		if err := item.Check(); err != nil {
+			// 属性非法
+			logrus.Infof("contents check err: %v", err)
+			continue
 		}
 
+		contents = append(contents, &model.PostContent{
+			Address: address,
+			Content: item.Content,
+			Type:    item.Type,
+			Sort:    item.Sort,
+		})
+	}
+
+	switch param.Type {
+	case model.RetweetComment:
+		if len(contents) < 1 {
+			return nil, fmt.Errorf("empty post content in RetweetComment")
+		}
+		fallthrough
+	case model.Retweet:
 		// create post ref
 		post, err = ds.CreatePost(&model.Post{
-			Address:     address,
-			DaoId:       param.DaoId,
-			Tags:        tags,
-			Visibility:  param.Visibility,
-			Type:        param.Type,
-			OrigType:    origPostType,
-			AuthorId:    authorId,
-			AuthorDaoId: authorDaoId,
-			RefId:       param.RefId,
-			RefType:     param.RefType,
-		})
+			Address:    address,
+			DaoId:      param.DaoId,
+			Visibility: param.Visibility,
+			Type:       param.Type,
+			RefId:      param.RefId,
+			RefType:    param.RefType,
+		}, contents)
 		if err != nil {
 			return nil, err
-		}
-
-		if param.Type == model.RetweetComment {
-			if len(param.Contents) < 1 {
-				return nil, fmt.Errorf("empty post content in RetweetComment")
-			}
-			for _, item := range param.Contents {
-				if err := item.Check(); err != nil {
-					// 属性非法
-					logrus.Infof("contents check err: %v", err)
-					continue
-				}
-
-				postContent := &model.PostContent{
-					PostID:  post.ID,
-					Address: address,
-					Content: item.Content,
-					Type:    item.Type,
-					Sort:    item.Sort,
-				}
-				if _, err = ds.CreatePostContent(postContent); err != nil {
-					return nil, err
-				}
-			}
 		}
 	default:
 		tags := tagsFrom(param.Tags)
@@ -207,28 +155,9 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 			Visibility: param.Visibility,
 			Type:       param.Type,
 			OrigType:   param.Type,
-		})
+		}, contents)
 		if err != nil {
 			return nil, err
-		}
-
-		for _, item := range param.Contents {
-			if err := item.Check(); err != nil {
-				// 属性非法
-				logrus.Infof("contents check err: %v", err)
-				continue
-			}
-
-			postContent := &model.PostContent{
-				PostID:  post.ID,
-				Address: address,
-				Content: item.Content,
-				Type:    item.Type,
-				Sort:    item.Sort,
-			}
-			if _, err = ds.CreatePostContent(postContent); err != nil {
-				return nil, err
-			}
 		}
 
 		if post.Visibility == model.PostVisitPublic {
@@ -488,7 +417,7 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 			for i := range refContentsFormatted {
 				refContentsFormatted[i] = refContents[i].Format()
 			}
-			postFormatted.OrigContents = append(postFormatted.Contents, refContentsFormatted...)
+			postFormatted.OrigContents = append(postFormatted.OrigContents, refContentsFormatted...)
 		case model.RefComment:
 			refComments, err := ds.GetCommentContentsByIDs([]primitive.ObjectID{post.RefId})
 			if err != nil {
@@ -498,13 +427,13 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 			for i := range refCommentsFormatted {
 				refCommentsFormatted[i] = refComments[i].PostFormat()
 			}
-			postFormatted.OrigContents = append(postFormatted.Contents, refCommentsFormatted...)
+			postFormatted.OrigContents = append(postFormatted.OrigContents, refCommentsFormatted...)
 		case model.RefCommentReply:
 			refReplies, err := ds.GetCommentReplyByID(post.RefId)
 			if err != nil {
 				return nil, err
 			}
-			postFormatted.OrigContents = append(postFormatted.Contents, refReplies.PostFormat())
+			postFormatted.OrigContents = append(postFormatted.OrigContents, refReplies.PostFormat())
 		}
 	}
 
@@ -608,6 +537,7 @@ func PushPostToSearch(post *model.Post) {
 		"collection_count":  post.CollectionCount,
 		"upvote_count":      post.UpvoteCount,
 		"comment_count":     post.CommentCount,
+		"ref_count":         post.RefCount,
 		"member":            post.Member,
 		"visibility":        post.Visibility,
 		"is_top":            post.IsTop,
@@ -665,6 +595,7 @@ func PushPostsToSearch() {
 				"collection_count":  post.CollectionCount,
 				"upvote_count":      post.UpvoteCount,
 				"comment_count":     post.CommentCount,
+				"ref_count":         post.RefCount,
 				"member":            post.Member,
 				"visibility":        post.Visibility,
 				"is_top":            post.IsTop,
