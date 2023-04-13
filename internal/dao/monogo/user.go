@@ -6,6 +6,7 @@ import (
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/internal/model/chat"
 	"favor-dao-backend/pkg/util"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -121,6 +122,19 @@ func (s *userManageServant) GetMyCommentCount(address string) int64 {
 	return count
 }
 
+func (s *userManageServant) GetCancellationUsers() (out []string, err error) {
+	ctx := context.TODO()
+	cursor, err := s.db.Collection(new(model.User).Table()).Find(ctx, bson.M{"is_del": 1})
+	for cursor.Next(ctx) {
+		var t model.User
+		if err = cursor.Decode(&t); err != nil {
+			break
+		}
+		out = append(out, t.Address)
+	}
+	return
+}
+
 func (s *userManageServant) Cancellation(ctx context.Context, address string) (err error) {
 	filter := bson.M{"address": address}
 
@@ -131,6 +145,7 @@ func (s *userManageServant) Cancellation(ctx context.Context, address string) (e
 		new(model.PostCollection).Table(),
 		new(model.PostStar).Table(),
 		new(model.Comment).Table(),
+		new(model.CommentContent).Table(),
 		new(model.CommentReply).Table(),
 	}
 
@@ -153,6 +168,10 @@ func (s *userManageServant) Cancellation(ctx context.Context, address string) (e
 			if err != nil {
 				return err
 			}
+		}
+		_, err = s.db.Collection(new(chat.Group).Table()).DeleteMany(ctx, bson.M{"_id.owner_id": address})
+		if err != nil {
+			return err
 		}
 		return nil
 	})

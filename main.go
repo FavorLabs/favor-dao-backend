@@ -18,6 +18,7 @@ import (
 )
 
 var (
+	deleteAddress     string
 	pushSearch        bool
 	noDefaultFeatures bool
 	features          suites
@@ -44,6 +45,7 @@ func init() {
 }
 
 func flagParse() {
+	flag.StringVar(&deleteAddress, "del-address", "", "Cancellation user and real delete")
 	flag.BoolVar(&pushSearch, "push-search", false, "push posts to search")
 	flag.BoolVar(&noDefaultFeatures, "no-default-features", false, "whether use default features")
 	flag.Var(&features, "features", "use special features")
@@ -56,6 +58,15 @@ func main() {
 		service.PushDAOsToSearch()
 		return
 	}
+	if deleteAddress != "" {
+		err := service.Cancellation(deleteAddress)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("successful")
+		return
+	}
+	go service.CancellationTask()
 
 	gin.SetMode(conf.ServerSetting.RunMode)
 
