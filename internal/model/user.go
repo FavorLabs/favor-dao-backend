@@ -20,6 +20,7 @@ type User struct {
 	Address    string             `json:"address"          bson:"address"`
 	Avatar     string             `json:"avatar"           bson:"avatar"`
 	Role       string             `json:"role"             bson:"role"`
+	LoginAt    int64              `json:"login_at"         bson:"login_at"`
 }
 
 type UserFormatted struct {

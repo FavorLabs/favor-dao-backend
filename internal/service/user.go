@@ -145,9 +145,16 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 					Nickname: param.WalletAddr[:10],
 					Address:  param.WalletAddr,
 					Avatar:   GetRandomAvatar(),
+					LoginAt:  time.Now().Unix(),
 				}, func(ctx context.Context, user *model.User) error {
 					return CreateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
 				})
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				user.LoginAt = time.Now().Unix()
+				err = UpdateUserInfo(user)
 				if err != nil {
 					return nil, err
 				}
