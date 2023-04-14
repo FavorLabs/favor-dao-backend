@@ -51,6 +51,19 @@ func parseQueryReq(c *gin.Context) *core.QueryReq {
 	if strings.HasPrefix(q.Query, "0x") {
 		q.Addresses = append(q.Addresses, q.Query)
 	}
+	sort := c.Query("sort")
+	if sort != "" {
+		for _, v := range strings.Split(sort, ",") {
+			if v != "" {
+				tmp := strings.Split(v, ":")
+				if len(tmp) == 2 {
+					mp := make(map[string]interface{})
+					mp[tmp[0]] = tmp[1]
+					q.Sort = append(q.Sort, mp)
+				}
+			}
+		}
+	}
 	return q
 }
 

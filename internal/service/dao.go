@@ -215,11 +215,11 @@ func GetDaoBookmark(userAddress string, daoId string) (*model.DaoBookmark, error
 	return ds.GetDaoBookmarkByAddressAndDaoID(userAddress, daoId)
 }
 
-func CreateDaoBookmark(myAddress string, daoId string, chatAction func(context.Context, string) (string, error)) (*model.DaoBookmark, error) {
+func CreateDaoBookmark(myAddress string, daoId string, chatAction func(context.Context, *model.Dao) (string, error)) (*model.DaoBookmark, error) {
 	return ds.CreateDaoFollow(myAddress, daoId, chatAction)
 }
 
-func DeleteDaoBookmark(book *model.DaoBookmark, chatAction func(context.Context, string) (string, error)) error {
+func DeleteDaoBookmark(book *model.DaoBookmark, chatAction func(context.Context, *model.Dao) (string, error)) error {
 	return ds.DeleteDaoFollow(book, chatAction)
 }
 
@@ -231,6 +231,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		"id":               dao.ID,
 		"address":          dao.Address,
 		"dao_id":           dao.ID.Hex(),
+		"dao_follow_count": dao.FollowCount,
 		"view_count":       0,
 		"collection_count": 0,
 		"upvote_count":     0,

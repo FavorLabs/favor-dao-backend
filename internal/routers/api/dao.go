@@ -147,18 +147,32 @@ func ActionDaoBookmark(c *gin.Context) {
 	logrus.Debugf("ActionDaoBookmark service.GetDaoBookmark: %s", time.Since(start))
 	if err != nil {
 		// create follow
-		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, daoId string) (string, error) {
+		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, dao *model.Dao) (string, error) {
 			logrus.Debugf("ActionDaoBookmark service.JoinOrLeaveGroup join: %s", time.Since(start))
-			resp, err := service.JoinOrLeaveGroup(ctx, daoId, true, token)
+			resp, err := service.JoinOrLeaveGroup(ctx, dao.ID.Hex(), true, token)
+			if err != nil {
+				return "", err
+			}
+			_, err = service.PushDaoToSearch(dao)
+			if err != nil {
+				return "", err
+			}
 			return resp, err
 		})
 		logrus.Debugf("ActionDaoBookmark service.CreateDaoBookmark: %s", time.Since(start))
 		status = true
 	} else {
 		// cancel follow
-		err = service.DeleteDaoBookmark(book, func(ctx context.Context, daoId string) (string, error) {
+		err = service.DeleteDaoBookmark(book, func(ctx context.Context, dao *model.Dao) (string, error) {
 			logrus.Debugf("ActionDaoBookmark service.JoinOrLeaveGroup leave: %s", time.Since(start))
-			resp, err := service.JoinOrLeaveGroup(ctx, daoId, false, token)
+			resp, err := service.JoinOrLeaveGroup(ctx, dao.ID.Hex(), false, token)
+			if err != nil {
+				return "", err
+			}
+			_, err = service.PushDaoToSearch(dao)
+			if err != nil {
+				return "", err
+			}
 			return resp, err
 		})
 		logrus.Debugf("ActionDaoBookmark service.DeleteDaoBookmark: %s", time.Since(start))

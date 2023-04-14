@@ -85,9 +85,16 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 					Nickname: param.WalletAddr[:10],
 					Address:  param.WalletAddr,
 					Avatar:   GetRandomAvatar(),
+					LoginAt:  time.Now().Unix(),
 				}, func(ctx context.Context, user *model.User) error {
 					return CreateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
 				})
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				user.LoginAt = time.Now().Unix()
+				err = UpdateUserInfo(user)
 				if err != nil {
 					return nil, err
 				}
@@ -303,8 +310,8 @@ func Cancellation(address string) (err error) {
 	// cancel follow DAO
 	daoBookmarks := GetDaoBookmarkByAddress(address)
 	for _, v := range daoBookmarks {
-		err = DeleteDaoBookmark(v, func(ctx context.Context, daoId string) (string, error) {
-			return GetGroupID(daoId), nil
+		err = DeleteDaoBookmark(v, func(ctx context.Context, dao *model.Dao) (string, error) {
+			return GetGroupID(dao.ID.Hex()), nil
 		})
 		if err != nil {
 			return err

@@ -173,13 +173,14 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 		delete(query, "bool")
 		query["match_all"] = map[string]types.Any{}
 	}
-	sort := types.AnySlice{}
-	sort = append(sort, map[string]types.Any{
-		"created_on": "desc",
-	})
+	if q.Sort == nil {
+		q.Sort = append(q.Sort, map[string]types.Any{
+			"created_on": "desc",
+		})
+	}
 	queryMap := map[string]types.Any{
 		"query": query,
-		"sort":  sort,
+		"sort":  q.Sort,
 		"from":  offset,
 		"size":  limit,
 	}
@@ -228,6 +229,12 @@ func (s *zincTweetSearchServant) createIndex() {
 			Type:  "text",
 			Index: true,
 			Store: true,
+		},
+		"dao_follow_count": &zinc.ZincIndexPropertyT{
+			Type:     "numeric",
+			Index:    true,
+			Sortable: true,
+			Store:    true,
 		},
 		"view_count": &zinc.ZincIndexPropertyT{
 			Type:     "numeric",

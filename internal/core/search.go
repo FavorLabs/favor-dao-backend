@@ -1,5 +1,7 @@
 package core
 
+import "favor-dao-backend/pkg/types"
+
 type (
 	SearchType string
 
@@ -10,6 +12,7 @@ type (
 		DaoIDs     []string
 		Addresses  []string
 		Tag        string
+		Sort       types.AnySlice
 	}
 
 	QueryResp struct {
