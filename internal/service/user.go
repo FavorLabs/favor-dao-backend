@@ -93,8 +93,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 					return nil, err
 				}
 			} else {
-				user.LoginAt = time.Now().Unix()
-				err = UpdateUserInfo(user)
+				err = UpdateLoginAt(user)
 				if err != nil {
 					return nil, err
 				}
@@ -182,6 +181,16 @@ func GetUserByAddress(address string) (*model.User, error) {
 func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
 		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
+	}); err != nil {
+		return errcode.ServerError
+	}
+	return nil
+}
+
+func UpdateLoginAt(user *model.User) error {
+	user.LoginAt = time.Now().Unix()
+	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
+		return nil
 	}); err != nil {
 		return errcode.ServerError
 	}
