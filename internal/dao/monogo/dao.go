@@ -162,7 +162,7 @@ func (s *daoManageServant) GetDaoBookmarkByAddressAndDaoID(myAddress string, dao
 	return res, nil
 }
 
-func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string, chatAction func(context.Context, string) (string, error)) (out *model.DaoBookmark, err error) {
+func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string, chatAction func(context.Context, *model.Dao) (string, error)) (out *model.DaoBookmark, err error) {
 	id, err := primitive.ObjectIDFromHex(daoID)
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string, chatA
 			out.DeletedOn = 0
 			err = out.Update(ctx, s.db)
 		}
-		groupId, err := chatAction(ctx, dao.ID.Hex())
+		groupId, err := chatAction(ctx, dao)
 		if err != nil {
 			return err
 		}
@@ -206,7 +206,7 @@ func (s *daoManageServant) CreateDaoFollow(myAddress string, daoID string, chatA
 	return
 }
 
-func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func(context.Context, string) (string, error)) error {
+func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func(context.Context, *model.Dao) (string, error)) error {
 	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		dao, err := (&model.Dao{ID: d.DaoID, IsDel: 1}).Get(ctx, s.db)
 		if err != nil {
@@ -221,7 +221,7 @@ func (s *daoManageServant) DeleteDaoFollow(d *model.DaoBookmark, chatAction func
 		if err != nil {
 			return err
 		}
-		groupId, err := chatAction(ctx, dao.ID.Hex())
+		groupId, err := chatAction(ctx, dao)
 		if err != nil {
 			return err
 		}

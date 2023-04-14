@@ -344,8 +344,8 @@ func Cancellation(address string) (err error) {
 	// cancel follow DAO
 	daoBookmarks := GetDaoBookmarkByAddress(address)
 	for _, v := range daoBookmarks {
-		err = DeleteDaoBookmark(v, func(ctx context.Context, daoId string) (string, error) {
-			return GetGroupID(daoId), nil
+		err = DeleteDaoBookmark(v, func(ctx context.Context, dao *model.Dao) (string, error) {
+			return GetGroupID(dao.ID.Hex()), nil
 		})
 		if err != nil {
 			return err
