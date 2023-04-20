@@ -29,6 +29,7 @@ var (
 	MeiliSetting            *MeiliSettingS
 	EthSetting              *EthSettingS
 	ChatSetting             *ChatSettingS
+	PointSetting            *PointSettingS
 )
 
 func setupSetting(suite []string, noDefault bool) error {
@@ -63,6 +64,7 @@ func setupSetting(suite []string, noDefault bool) error {
 		"Redis":            &redisSetting,
 		"Eth":              &EthSetting,
 		"Chat":             &ChatSetting,
+		"Point":            &PointSetting,
 	}
 	if err = setting.Unmarshal(objects); err != nil {
 		return err
@@ -84,6 +86,7 @@ func Initialize(suite []string, noDefault bool) {
 		log.Fatalf("init.setupSetting err: %v", err)
 	}
 
+	CheckSetting(PointSetting, "gateway", "callback")
 	CheckSetting(ChatSetting, "appid", "region", "apikey")
 	CheckSetting(EthSetting, "endpoint")
 

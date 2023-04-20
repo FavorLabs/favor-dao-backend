@@ -8,14 +8,16 @@ import (
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/comet"
+	"favor-dao-backend/pkg/pointSystem"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var (
-	ds   core.DataService
-	ts   core.TweetSearchService
-	eth  *ethclient.Client
-	chat *comet.ChatGateway
+	ds    core.DataService
+	ts    core.TweetSearchService
+	eth   *ethclient.Client
+	chat  *comet.ChatGateway
+	point *pointSystem.Gateway
 )
 
 func Initialize() {
@@ -29,6 +31,7 @@ func Initialize() {
 	}
 	eth = client
 	chat = comet.New(conf.ChatSetting.AppId, conf.ChatSetting.Region, conf.ChatSetting.ApiKey)
+	point = pointSystem.New(conf.PointSetting.Gateway, conf.PointSetting.Callback)
 }
 
 func persistMediaContents(contents []*PostContentItem) (items []string, err error) {
