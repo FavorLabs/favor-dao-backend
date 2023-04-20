@@ -70,10 +70,10 @@ func parseQueryReq(c *gin.Context) *core.QueryReq {
 func GetPostList(c *gin.Context) {
 	response := app.NewResponse(c)
 	q := parseQueryReq(c)
-	// user, _ := userFrom(c)
+	user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
 	// only public
-	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
+	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
 	if err != nil {
 		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
 		response.ToResponseList([]*model.PostFormatted{}, 0)
@@ -98,7 +98,7 @@ func GetFocusPostList(c *gin.Context) {
 	q.DaoIDs = daoIds
 
 	// only public
-	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
+	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
 	if err != nil {
 		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
 		response.ToResponseList([]*model.PostFormatted{}, 0)
@@ -117,12 +117,13 @@ func GetPost(c *gin.Context) {
 		return
 	}
 	postFormatted, err := service.GetPost(postId)
-
 	if err != nil {
 		logrus.Errorf("service.GetPost err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
+	user, _ := userFrom(c)
+	postFormatted = service.FilterMemberContent(user, postFormatted)
 
 	response.ToResponse(postFormatted)
 }
@@ -137,9 +138,13 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
-	// todo userid? address
-	address, _ := c.Get("address")
-	post, err := service.CreatePost(c, address.(string), param)
+	user, _ := userFrom(c)
+	e := service.CheckIsMyDAO(user.Address, param.DaoId)
+	if e != nil {
+		response.ToErrorResponse(e)
+		return
+	}
+	post, err := service.CreatePost(user, param)
 
 	if err != nil {
 		logrus.Errorf("service.CreatePost err: %v\n", err)
@@ -349,25 +354,24 @@ func StickPost(c *gin.Context) {
 		return
 	}
 
-	// user, _ := c.Get("USER")
 	postId, err := primitive.ObjectIDFromHex(param.ID)
 	if err != nil {
 		logrus.Errorf("service.StickPost err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
-	// 获取Post
-	postFormated, err := service.GetPost(postId)
+	postFormatted, err := service.GetPost(postId)
 	if err != nil {
 		logrus.Errorf("service.GetPost err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
-
-	// if !user.(*model.User).IsAdmin {
-	//	response.ToErrorResponse(errcode.NoPermission)
-	//	return
-	// }
+	user, _ := c.Get("address")
+	e := service.CheckIsMyDAO(user.(string), postFormatted.DaoId)
+	if e != nil {
+		response.ToErrorResponse(e)
+		return
+	}
 	err = service.StickPost(postId)
 	if err != nil {
 		logrus.Errorf("service.StickPost err: %v\n", err)
@@ -376,7 +380,7 @@ func StickPost(c *gin.Context) {
 	}
 
 	response.ToResponse(gin.H{
-		"top_status": 1 - postFormated.IsTop,
+		"top_status": 1 - postFormatted.IsTop,
 	})
 }
 

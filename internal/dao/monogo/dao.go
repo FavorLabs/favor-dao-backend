@@ -2,6 +2,7 @@ package monogo
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -258,4 +259,20 @@ func (s *daoManageServant) RealDeleteDAO(address string, chatAction func(context
 		}
 		return nil
 	})
+}
+
+func (s *daoManageServant) IsSubscribeDAO(address string, daoID primitive.ObjectID) bool {
+	filter := bson.M{
+		"address": address,
+		"dao_id":  daoID,
+		"status":  model.DaoSubscribeSuccess,
+	}
+	res := s.db.Collection(new(model.DaoSubscribe).Table()).FindOne(context.TODO(), filter)
+	if errors.Is(res.Err(), mongo.ErrNoDocuments) {
+		return false
+	}
+	if res.Err() != nil {
+		return false
+	}
+	return true
 }

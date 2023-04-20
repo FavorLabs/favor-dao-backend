@@ -9,6 +9,7 @@ import (
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/errcode"
+	geth "github.com/ethereum/go-ethereum/mobile"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,6 +22,7 @@ type DaoCreationReq struct {
 	Visibility   model.DaoVisibleT `json:"visibility"`
 	Avatar       string            `json:"avatar"`
 	Banner       string            `json:"banner"`
+	Price        geth.BigInt       `json:"price"`
 }
 
 type DaoUpdateReq struct {
@@ -51,7 +53,13 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		Introduction: param.Introduction,
 		Avatar:       param.Avatar,
 		Banner:       param.Banner,
+		Price:        param.Price,
 		FollowCount:  1, // default owner joined
+	}
+	if param.Price.GetInt64() == 0 {
+		price := geth.BigInt{}
+		price.SetInt64(10)
+		dao.Price = price // default subscribe price
 	}
 	res, err := ds.CreateDao(dao, chatAction)
 	if err != nil {
@@ -289,4 +297,19 @@ func GetDaoCount(conditions *model.ConditionsT) (int64, error) {
 func GetDaoList(req *PostListReq) ([]*model.Dao, error) {
 	posts, err := ds.GetDaoList(req.Conditions, req.Offset, req.Limit)
 	return posts, err
+}
+
+func CheckIsMyDAO(address string, daoID primitive.ObjectID) *errcode.Error {
+	dao, err := ds.GetDao(&model.Dao{ID: daoID})
+	if err != nil {
+		return errcode.NoExistDao
+	}
+	if dao.Address != address {
+		return errcode.NoPermission
+	}
+	return nil
+}
+
+func CheckSubscribeDAO(address string, daoID primitive.ObjectID) bool {
+	return ds.IsSubscribeDAO(address, daoID)
 }

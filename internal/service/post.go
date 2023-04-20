@@ -12,7 +12,6 @@ import (
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/model/rest"
 	"favor-dao-backend/pkg/errcode"
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -41,6 +40,7 @@ type PostCreationReq struct {
 	RefType    model.PostRefType  `json:"ref_type"`
 	RefId      primitive.ObjectID `json:"ref_id"`
 	Visibility model.PostVisibleT `json:"visibility"`
+	Member     model.PostMemberT  `json:"member"`
 }
 
 type PostDelReq struct {
@@ -75,7 +75,6 @@ type PostContentItem struct {
 }
 
 func (p *PostContentItem) Check() error {
-	// 检查链接是否合法
 	if p.Type == model.CONTENT_TYPE_LINK {
 		if strings.Index(p.Content, "http://") != 0 && strings.Index(p.Content, "https://") != 0 {
 			return fmt.Errorf("链接不合法")
@@ -95,7 +94,7 @@ func tagsFrom(originTags []string) []string {
 	return tags
 }
 
-func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model.PostFormatted, err error) {
+func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted, err error) {
 	var (
 		post          *model.Post
 		mediaContents []string
@@ -114,13 +113,12 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	var contents []*model.PostContent
 	for _, item := range param.Contents {
 		if err := item.Check(); err != nil {
-			// 属性非法
 			logrus.Infof("contents check err: %v", err)
 			continue
 		}
 
 		contents = append(contents, &model.PostContent{
-			Address: address,
+			Address: user.Address,
 			Content: item.Content,
 			Type:    item.Type,
 			Sort:    item.Sort,
@@ -136,12 +134,13 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	case model.Retweet:
 		// create post ref
 		post, err = ds.CreatePost(&model.Post{
-			Address:    address,
+			Address:    user.Address,
 			DaoId:      param.DaoId,
 			Visibility: param.Visibility,
 			Type:       param.Type,
 			RefId:      param.RefId,
 			RefType:    param.RefType,
+			Member:     param.Member,
 		}, contents)
 		if err != nil {
 			return nil, err
@@ -149,12 +148,13 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	default:
 		tags := tagsFrom(param.Tags)
 		post, err = ds.CreatePost(&model.Post{
-			Address:    address,
+			Address:    user.Address,
 			DaoId:      param.DaoId,
 			Tags:       strings.Join(tags, ","),
 			Visibility: param.Visibility,
 			Type:       param.Type,
 			OrigType:   param.Type,
+			Member:     param.Member,
 		}, contents)
 		if err != nil {
 			return nil, err
@@ -163,7 +163,7 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 		if post.Visibility == model.PostVisitPublic {
 			for _, t := range tags {
 				tag := &model.Tag{
-					Address: address,
+					Address: user.Address,
 					Tag:     t,
 				}
 				ds.CreateTag(tag)
@@ -178,7 +178,7 @@ func CreatePost(c *gin.Context, address string, param PostCreationReq) (_ *model
 	if err != nil {
 		return nil, err
 	}
-	return formattedPosts[0], nil
+	return FilterMemberContent(user, formattedPosts[0]), nil
 }
 
 func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
@@ -200,10 +200,8 @@ func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
 		return errcode.DeletePostFailed
 	}
 
-	// 删除推文的媒体内容
 	deleteOssObjects(mediaContents)
 
-	// 删除索引
 	DeleteSearchPost(post)
 
 	return nil
@@ -231,12 +229,14 @@ func StickPost(id primitive.ObjectID) error {
 }
 
 func VisiblePost(user *model.User, postId primitive.ObjectID, visibility model.PostVisibleT) *errcode.Error {
-
 	post, err := ds.GetPostByID(postId)
 	if err != nil {
 		return errcode.GetPostFailed
 	}
-
+	e := CheckIsMyDAO(user.Address, post.DaoId)
+	if e != nil {
+		return e
+	}
 	if err = ds.VisiblePost(post, visibility); err != nil {
 		logrus.Warnf("update post failure: %v", err)
 		return errcode.VisiblePostFailed
@@ -280,22 +280,18 @@ func DeletePostStar(star *model.PostStar) error {
 	if err != nil {
 		return err
 	}
-	// 加载Post
 	post, err := ds.GetPostByID(star.PostID)
 	if err != nil {
 		return err
 	}
 
-	// 私密post不可操作
 	if post.Visibility == model.PostVisitPrivate {
 		return errors.New("no permision")
 	}
 
-	// 更新Post点赞数
 	post.UpvoteCount--
 	ds.UpdatePost(post)
 
-	// 更新索引
 	PushPostToSearch(post)
 
 	return nil
@@ -307,11 +303,9 @@ func CreatePostView(postID primitive.ObjectID) error {
 		return err
 	}
 
-	// 更新Post观看数
 	post.ViewCount++
 	ds.UpdatePost(post)
 
-	// 更新索引
 	PushPostToSearch(post)
 
 	return nil
@@ -330,13 +324,11 @@ func GetPostCollection(postID primitive.ObjectID, address string) (*model.PostCo
 }
 
 func CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {
-	// 加载Post
 	post, err := ds.GetPostByID(postID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 私密post不可操作
 	if post.Visibility == model.PostVisitPrivate {
 		return nil, errors.New("no permision")
 	}
@@ -346,11 +338,9 @@ func CreatePostCollection(postID primitive.ObjectID, address string) (*model.Pos
 		return nil, err
 	}
 
-	// 更新Post点赞数
 	post.CollectionCount++
 	ds.UpdatePost(post)
 
-	// 更新索引
 	PushPostToSearch(post)
 
 	return collection, nil
@@ -361,22 +351,18 @@ func DeletePostCollection(collection *model.PostCollection) error {
 	if err != nil {
 		return err
 	}
-	// 加载Post
 	post, err := ds.GetPostByID(collection.PostID)
 	if err != nil {
 		return err
 	}
 
-	// 私密post不可操作
 	if post.Visibility == model.PostVisitPrivate {
 		return errors.New("no permision")
 	}
 
-	// 更新Post点赞数
 	post.CollectionCount--
 	ds.UpdatePost(post)
 
-	// 更新索引
 	PushPostToSearch(post)
 
 	return nil
@@ -494,7 +480,7 @@ func GetPostCount(conditions *model.ConditionsT) (int64, error) {
 	return ds.GetPostCount(conditions)
 }
 
-func GetPostListFromSearch(q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
+func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
 	resp, err := ts.Search(q, offset, limit)
 	if err != nil {
 		return nil, 0, err
@@ -502,6 +488,9 @@ func GetPostListFromSearch(q *core.QueryReq, offset, limit int) ([]*model.PostFo
 	posts, err := ds.RevampPosts(resp.Items)
 	if err != nil {
 		return nil, 0, err
+	}
+	for k, v := range posts {
+		posts[k] = FilterMemberContent(user, v)
 	}
 	return posts, resp.Total, nil
 }
@@ -632,13 +621,11 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 
 	conditions := &model.ConditionsT{}
 	if param.Type == TagTypeHot {
-		// 热门标签
 		conditions = &model.ConditionsT{
 			"ORDER": bson.M{"quote_num": -1},
 		}
 	}
 	if param.Type == TagTypeNew {
-		// 热门标签
 		conditions = &model.ConditionsT{
 			"ORDER": bson.M{"id": -1},
 		}
@@ -649,7 +636,6 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 		return nil, err
 	}
 
-	// 获取创建者User IDs
 	userIds := []string{}
 	for _, tag := range tags {
 		userIds = append(userIds, tag.Address)
@@ -669,4 +655,28 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 	}
 
 	return tagsFormated, nil
+}
+
+func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.PostFormatted {
+	if post.Member == model.PostMemberNothing || user.Address == post.Address || user.Address == post.AuthorId {
+		return post
+	}
+	if post.Type == model.VIDEO {
+		if user == nil || !CheckSubscribeDAO(user.Address, post.DaoId) {
+			for k, v := range post.Contents {
+				if v.Type == model.CONTENT_TYPE_VIDEO {
+					post.Contents[k].Content = ""
+				}
+			}
+		}
+	} else if post.OrigType == model.VIDEO {
+		if user == nil || !CheckSubscribeDAO(user.Address, post.AuthorDaoId) {
+			for k, v := range post.OrigContents {
+				if v.Type == model.CONTENT_TYPE_VIDEO {
+					post.OrigContents[k].Content = ""
+				}
+			}
+		}
+	}
+	return post
 }

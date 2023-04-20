@@ -24,6 +24,15 @@ const (
 	// PostVisitInvalid
 )
 
+type PostMemberT uint8
+
+const (
+	PostMemberNothing PostMemberT = iota
+	PostMember1
+	PostMember2
+	PostMember3
+)
+
 type Post struct {
 	ID              primitive.ObjectID `json:"id"                bson:"_id,omitempty"`
 	CreatedOn       int64              `json:"created_on"        bson:"created_on"`
@@ -38,7 +47,7 @@ type Post struct {
 	UpvoteCount     int64              `json:"upvote_count"      bson:"upvote_count"`
 	CommentCount    int64              `json:"comment_count"     bson:"comment_count"`
 	RefCount        int64              `json:"ref_count"         bson:"ref_count"`
-	Member          int                `json:"member"            bson:"member"`
+	Member          PostMemberT        `json:"member"            bson:"member"`
 	Visibility      PostVisibleT       `json:"visibility"        bson:"visibility"`
 	IsTop           int                `json:"is_top"            bson:"is_top"`
 	IsEssence       int                `json:"is_essence"        bson:"is_essence"`
@@ -62,7 +71,7 @@ type PostFormatted struct {
 	User            *UserFormatted          `json:"user"`
 	Contents        []*PostContentFormatted `json:"contents"`
 	OrigContents    []*PostContentFormatted `json:"orig_contents"`
-	Member          int                     `json:"member"`
+	Member          PostMemberT             `json:"member"`
 	ViewCount       int64                   `json:"view_count"`
 	CollectionCount int64                   `json:"collection_count"`
 	UpvoteCount     int64                   `json:"upvote_count"`

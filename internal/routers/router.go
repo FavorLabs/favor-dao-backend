@@ -83,8 +83,6 @@ func NewRouter() *gin.Engine {
 
 		privApi.POST("/post/collection", api.PostCollection)
 
-		// privApi.POST("/post/lock", api.LockPost)
-
 		privApi.POST("/post/stick", api.StickPost)
 
 		privApi.POST("/post/visibility", api.VisiblePost)

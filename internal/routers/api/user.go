@@ -209,7 +209,7 @@ func GetUserPosts(c *gin.Context) {
 	offset, limit := app.GetPageOffset(c)
 
 	// Contains my private when query address it's me
-	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
+	posts, totalRows, err := service.GetPostListFromSearch(my, q, offset, limit)
 	if err != nil {
 		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
 		response.ToResponseList([]*model.PostFormatted{}, 0)
@@ -241,7 +241,7 @@ func GetDaoPosts(c *gin.Context) {
 	offset, limit := app.GetPageOffset(c)
 
 	// Contains dao private when query dao it's me
-	posts, totalRows, err := service.GetPostListFromSearch(q, offset, limit)
+	posts, totalRows, err := service.GetPostListFromSearch(my, q, offset, limit)
 	if err != nil {
 		logrus.Errorf("service.GetPostListFromSearch err: %v\n", err)
 		response.ToResponseList([]*model.PostFormatted{}, 0)

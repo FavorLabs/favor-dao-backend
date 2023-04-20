@@ -28,6 +28,19 @@
     ]
   },
   {
+    "TableName": "dao_subscribe",
+    "Indexes": [
+      [
+        {
+          "dao_id": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
     "TableName": "post_collection",
     "Indexes": [
       [
