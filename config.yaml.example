@@ -77,3 +77,6 @@ Chat:
   AppId: ""
   Region: ""
   ApiKey: ""
+Point:
+  Gateway: ""
+  Callback: ""

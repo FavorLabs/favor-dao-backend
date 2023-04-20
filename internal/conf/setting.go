@@ -109,6 +109,11 @@ type ChatSettingS struct {
 	Region string
 }
 
+type PointSettingS struct {
+	Gateway  string
+	Callback string
+}
+
 type TweetSearchS struct {
 	MaxUpdateQPS int
 	MinWorker    int

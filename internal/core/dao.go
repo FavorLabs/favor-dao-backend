@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"favor-dao-backend/internal/model"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type DaoManageService interface {
@@ -23,4 +24,5 @@ type DaoManageService interface {
 	GetDaoCount(conditions *model.ConditionsT) (int64, error)
 	GetDaoList(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error)
 	RealDeleteDAO(address string, chatAction func(context.Context, *model.Dao) (string, error)) error
+	IsSubscribeDAO(address string, daoID primitive.ObjectID) bool
 }

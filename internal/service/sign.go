@@ -31,10 +31,10 @@ const (
 )
 
 type AuthByWalletRequest struct {
-	Timestamp  int64      `json:"timestamp" binding:"required"`
-	WalletAddr string     `json:"wallet_addr" binding:"required"`
-	Signature  string     `json:"signature" binding:"required"`
-	Type       WalletType `json:"type" binding:"required"`
+	Timestamp  int64      `json:"timestamp"     binding:"required"`
+	WalletAddr string     `json:"wallet_addr"   binding:"required"`
+	Signature  string     `json:"signature"     binding:"required"`
+	Type       WalletType `json:"type"          binding:"required"`
 }
 
 func verifySignMessage(ctx context.Context, auth *AuthByWalletRequest, guessMessage string) (bool, error) {

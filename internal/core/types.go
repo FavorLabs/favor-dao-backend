@@ -15,6 +15,8 @@ type (
 const (
 	PostVisitPublic  = model.PostVisitPublic
 	PostVisitPrivate = model.PostVisitPrivate
+
+	PostMember1 = model.PostMember1
 )
 
 var (

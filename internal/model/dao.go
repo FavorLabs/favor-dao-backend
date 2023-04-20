@@ -6,6 +6,7 @@ import (
 	"time"
 
 	chatModel "favor-dao-backend/internal/model/chat"
+	geth "github.com/ethereum/go-ethereum/mobile"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,6 +34,7 @@ type Dao struct {
 	Avatar       string             `json:"avatar"           bson:"avatar"`
 	Banner       string             `json:"banner"           bson:"banner"`
 	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
+	Price        geth.BigInt        `json:"price"            bson:"price"`
 }
 
 type DaoFormatted struct {
@@ -44,6 +46,7 @@ type DaoFormatted struct {
 	Avatar       string           `json:"avatar"`
 	Banner       string           `json:"banner"`
 	FollowCount  int64            `json:"follow_count"`
+	Price        geth.BigInt      `json:"price"`
 	LastPosts    []*PostFormatted `json:"last_posts"`
 }
 
@@ -57,6 +60,7 @@ func (m *Dao) Format() *DaoFormatted {
 		Avatar:       m.Avatar,
 		Banner:       m.Banner,
 		FollowCount:  m.FollowCount,
+		Price:        m.Price,
 		LastPosts:    []*PostFormatted{},
 	}
 }
