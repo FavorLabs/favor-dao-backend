@@ -42,6 +42,8 @@ func NewRouter() *gin.Engine {
 		noAuthApi.GET("/user/posts", api.GetUserPosts)
 
 		noAuthApi.GET("/dao/posts", api.GetDaoPosts)
+
+		noAuthApi.GET("/pay/notify", api.PayNotify)
 	}
 
 	authApi := r.Group("/").Use(middleware.Session())
@@ -103,6 +105,7 @@ func NewRouter() *gin.Engine {
 		authApi.PUT("/dao", api.UpdateDao)
 		authApi.GET("/dao/bookmark", api.GetDaoBookmark)
 		authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
+		authApi.POST("/dao/sub/:daoId", api.SubDao)
 
 		// chat
 		authApi.GET("/chat/groups", api.GetChatGroups)

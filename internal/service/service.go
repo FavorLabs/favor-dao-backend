@@ -18,12 +18,14 @@ var (
 	eth   *ethclient.Client
 	chat  *comet.ChatGateway
 	point *pointSystem.Gateway
+	pay   *Pay
 )
 
 func Initialize() {
 	ds = dao.DataService()
 	ts = dao.TweetSearchService()
 
+	pay = New()
 	// MUST connect!
 	client, err := ethclient.Dial(conf.EthSetting.Endpoint)
 	if err != nil {
