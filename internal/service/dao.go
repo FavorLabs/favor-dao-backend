@@ -313,3 +313,9 @@ func CheckIsMyDAO(address string, daoID primitive.ObjectID) *errcode.Error {
 func CheckSubscribeDAO(address string, daoID primitive.ObjectID) bool {
 	return ds.IsSubscribeDAO(address, daoID)
 }
+
+func SubDao(daoID primitive.ObjectID, address string) PayStatus {
+	// todo
+	n := pay.Sub("")
+	return n.status
+}

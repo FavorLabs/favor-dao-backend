@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strings"
 	"time"
 
@@ -184,6 +185,22 @@ func ActionDaoBookmark(c *gin.Context) {
 		return
 	}
 
+	response.ToResponse(gin.H{
+		"status": status,
+	})
+}
+
+func SubDao(c *gin.Context) {
+	response := app.NewResponse(c)
+	daoId := c.Param("daoId")
+	daoID, err := primitive.ObjectIDFromHex(daoId)
+	if err != nil {
+		logrus.Errorf("service.GetPostCollection err: %v\n", err)
+		response.ToErrorResponse(errcode.GetPostFailed)
+		return
+	}
+	user, _ := userFrom(c)
+	status := service.SubDao(daoID, user.Address)
 	response.ToResponse(gin.H{
 		"status": status,
 	})
