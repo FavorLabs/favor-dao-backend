@@ -30,6 +30,7 @@ var (
 	EthSetting              *EthSettingS
 	ChatSetting             *ChatSettingS
 	PointSetting            *PointSettingS
+	FirebaseSetting         *FirebaseSettingS
 )
 
 func setupSetting(suite []string, noDefault bool) error {
@@ -65,6 +66,7 @@ func setupSetting(suite []string, noDefault bool) error {
 		"Eth":              &EthSetting,
 		"Chat":             &ChatSetting,
 		"Point":            &PointSetting,
+		"Firebase":         &FirebaseSetting,
 	}
 	if err = setting.Unmarshal(objects); err != nil {
 		return err

@@ -80,3 +80,5 @@ Chat:
 Point:
   Gateway: ""
   Callback: ""
+Firebase:
+  config: ""

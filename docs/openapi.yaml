@@ -1,0 +1,252 @@
+openapi: 3.0.0
+servers:
+  - url: //192.168.100.250:8010/v1
+    description: Default server
+info:
+  description: ""
+  version: 1.0.0
+  title: Swagger FavorDAO
+  termsOfService: 'https://favordao.favorlabs.io/'
+tags:
+  - name: POST
+    description: Everything about your post
+  - name: DAO
+    description: Access to DAO
+  - name: USER
+    description: Operations about user
+x-tagGroups:
+  - name: General
+    tags:
+      - POST
+      - DAO
+  - name: User Management
+    tags:
+      - USER
+paths:
+  /post:
+    post:
+      tags:
+        - POST
+      summary: Add a new post
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/Post'
+
+    get:
+      tags:
+        - POST
+      summary: Get a post
+      parameters:
+        - name: id
+          in: query
+          description: id of post
+          required: true
+          schema:
+            type: string
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - api_key: []
+
+  /posts:
+    get:
+      tags:
+        - POST
+      summary: post list
+      parameters:
+        - name: query
+          in: query
+          description: address,title,content of post
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid ID supplied
+      security:
+        - api_key: []
+
+  /auth/login:
+    post:
+      tags:
+        - USER
+      summary: Logs user into the system
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthByWallet'
+        description: Created user object
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid sign supplied
+
+  /account:
+    delete:
+      tags:
+        - USER
+      summary: Delete a user
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid Order
+
+  /user/info:
+    get:
+      tags:
+        - USER
+      summary: get user info
+      parameters:
+        - name: user_address
+          in: query
+          description: The user address for login
+          required: true
+          schema:
+            type: string
+      responses:
+        default:
+          description: successful operation
+
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    DAO:
+      type: object
+      properties:
+        id:
+          type: string
+        address:
+          type: string
+        introduction:
+          type: string
+        follow_count:
+          type: integer
+        avatar:
+          type: string
+        banner:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+    Post:
+      type: object
+      required:
+        - id
+        - dao_id
+        - address
+      properties:
+        id:
+          description: The id given to a post
+          type: string
+          example: 643508d47408f36e6595087a
+        created_on:
+          description: The UTC time unix
+          type: integer
+        modified_on:
+          description: The UTC time unix
+          type: integer
+        latest_replied_on:
+          description: The UTC time unix
+          type: integer
+        dao_id:
+          type: string
+          example: 643508d47408f36e6595087a
+        dao:
+          allOf:
+            - $ref: '#/components/schemas/DAO'
+        address:
+          type: string
+        user:
+          allOf:
+            - $ref: '#/components/schemas/User'
+        type:
+          type: integer
+          description: -1 DAO, 0 SMS, 1 VIDEO, 2 Retweet, 3 RetweetComment
+        visibility:
+          description: 0 draft, 1 public, 2 private
+          type: integer
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        nickname:
+          type: string
+        address:
+          type: string
+        avatar:
+          type: string
+
+    AuthByWallet:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+        wallet_addr:
+          type: string
+        signature:
+          type: string
+        type:
+          type: string
+          enum:
+            - wallet_connect
+            - meta_mask
+            - okx
+            - unipass_std
+            - unipass_eth
+
+  requestBodies:
+    Post:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Post'
+      description: ''
+      required: true
+    AuthByWallet:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/AuthByWallet'
+      description: ''
+      required: true
+
+  responses:
+    PostArray:
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Post'
+      description: List of post object
+
+  securitySchemes:
+    api_key:
+      description: >
+        For this sample, you can use the api key `special-key` to test the
+        authorization filters.
+      type: apiKey
+      name: X-Session-Token
+      in: header
