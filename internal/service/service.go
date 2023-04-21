@@ -8,17 +8,19 @@ import (
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/comet"
+	"favor-dao-backend/pkg/firebase"
 	"favor-dao-backend/pkg/pointSystem"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var (
-	ds    core.DataService
-	ts    core.TweetSearchService
-	eth   *ethclient.Client
-	chat  *comet.ChatGateway
-	point *pointSystem.Gateway
-	pay   *Pay
+	ds     core.DataService
+	ts     core.TweetSearchService
+	eth    *ethclient.Client
+	chat   *comet.ChatGateway
+	point  *pointSystem.Gateway
+	pay    *Pay
+	notify *firebase.Client
 )
 
 func Initialize() {
@@ -32,6 +34,10 @@ func Initialize() {
 		panic(fmt.Sprintf("dial eth: %s", err))
 	}
 	eth = client
+	notify, err = firebase.New(conf.FirebaseSetting.Config)
+	if err != nil {
+		panic(err)
+	}
 	chat = comet.New(conf.ChatSetting.AppId, conf.ChatSetting.Region, conf.ChatSetting.ApiKey)
 	point = pointSystem.New(conf.PointSetting.Gateway, conf.PointSetting.Callback)
 }

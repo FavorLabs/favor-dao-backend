@@ -114,6 +114,10 @@ type PointSettingS struct {
 	Callback string
 }
 
+type FirebaseSettingS struct {
+	Config string
+}
+
 type TweetSearchS struct {
 	MaxUpdateQPS int
 	MinWorker    int
