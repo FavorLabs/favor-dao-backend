@@ -69,3 +69,19 @@ func (m *DaoSubscribe) Get(ctx context.Context, db *mongo.Database) (*DaoSubscri
 	}
 	return &dao, nil
 }
+
+func (m *DaoSubscribe) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*DaoSubscribe) {
+	cursor, err := db.Collection(m.Table()).Find(ctx, filter)
+	if err != nil {
+		return
+	}
+	list = []*DaoSubscribe{}
+	for cursor.Next(context.TODO()) {
+		var t DaoSubscribe
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, &t)
+	}
+	return
+}

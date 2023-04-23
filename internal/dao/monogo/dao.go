@@ -261,6 +261,22 @@ func (s *daoManageServant) RealDeleteDAO(address string, chatAction func(context
 	})
 }
 
+func (s *daoManageServant) IsJoinedDAO(address string, daoID primitive.ObjectID) bool {
+	filter := bson.M{
+		"address": address,
+		"dao_id":  daoID,
+		"is_del":  0,
+	}
+	res := s.db.Collection(new(model.DaoBookmark).Table()).FindOne(context.TODO(), filter)
+	if errors.Is(res.Err(), mongo.ErrNoDocuments) {
+		return false
+	}
+	if res.Err() != nil {
+		return false
+	}
+	return true
+}
+
 func (s *daoManageServant) IsSubscribeDAO(address string, daoID primitive.ObjectID) bool {
 	filter := bson.M{
 		"address": address,

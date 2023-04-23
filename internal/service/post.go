@@ -174,11 +174,11 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 
 	PushPostToSearch(post)
 
-	formattedPosts, err := ds.RevampPosts([]*model.PostFormatted{post.Format()})
+	formattedPosts, err := ds.RevampPosts(user.Address, []*model.PostFormatted{post.Format()})
 	if err != nil {
 		return nil, err
 	}
-	return FilterMemberContent(user, formattedPosts[0]), nil
+	return formattedPosts[0], nil
 }
 
 func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
@@ -485,12 +485,12 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	if err != nil {
 		return nil, 0, err
 	}
-	posts, err := ds.RevampPosts(resp.Items)
+	if user == nil {
+		user = &model.User{}
+	}
+	posts, err := ds.RevampPosts(user.Address, resp.Items)
 	if err != nil {
 		return nil, 0, err
-	}
-	for k, v := range posts {
-		posts[k] = FilterMemberContent(user, v)
 	}
 	return posts, resp.Total, nil
 }
@@ -658,6 +658,7 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 }
 
 func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.PostFormatted {
+	// Warning, Other related places tweetHelpServant.filterMemberContent
 	if post.Member == model.PostMemberNothing || user.Address == post.Address || user.Address == post.AuthorId {
 		return post
 	}

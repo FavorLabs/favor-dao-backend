@@ -48,6 +48,8 @@ type DaoFormatted struct {
 	FollowCount  int64            `json:"follow_count"`
 	Price        geth.BigInt      `json:"price"`
 	LastPosts    []*PostFormatted `json:"last_posts"`
+	IsJoined     bool             `json:"is_joined"`
+	IsSubscribed bool             `json:"is_subscribed"`
 }
 
 func (m *Dao) Format() *DaoFormatted {
