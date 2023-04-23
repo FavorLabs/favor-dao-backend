@@ -106,7 +106,7 @@ func NewRouter() *gin.Engine {
 		authApi.PUT("/dao", api.UpdateDao)
 		authApi.GET("/dao/bookmark", api.GetDaoBookmark)
 		authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
-		authApi.POST("/dao/sub/:daoId", api.SubDao)
+		authApi.POST("/dao/sub/:dao_id", api.SubDao)
 
 		// chat
 		authApi.GET("/chat/groups", api.GetChatGroups)

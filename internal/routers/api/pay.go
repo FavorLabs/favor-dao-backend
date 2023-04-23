@@ -11,13 +11,13 @@ import (
 func PayNotify(c *gin.Context) {
 	response := app.NewResponse(c)
 	param := service.PayCallbackParam{}
-	valid, errs := app.BindAndValid(c, &param)
-	if !valid {
-		logrus.Errorf("app.BindAndValid errs: %v", errs)
-		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
+	err := c.ShouldBindQuery(&param)
+	if err != nil {
+		logrus.Errorf("app.BindAndValid err: %s", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
 		return
 	}
-	err := service.PayNotify(param)
+	err = service.PayNotify(param)
 	if err != nil {
 		logrus.Errorf("service.PayNotify err: %s", err)
 		response.ToErrorResponse(errcode.PayNotifyError.WithDetails(err.Error()))

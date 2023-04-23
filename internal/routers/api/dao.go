@@ -197,7 +197,7 @@ func ActionDaoBookmark(c *gin.Context) {
 
 func SubDao(c *gin.Context) {
 	response := app.NewResponse(c)
-	daoId := c.Param("daoId")
+	daoId := c.Param("dao_id")
 	daoID, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
 		logrus.Errorf("service.GetPostCollection err: %v\n", err)
@@ -205,6 +205,10 @@ func SubDao(c *gin.Context) {
 		return
 	}
 	user, _ := userFrom(c)
+	if service.CheckSubscribeDAO(user.Address, daoID) {
+		response.ToErrorResponse(errcode.AlreadySubscribedDAO)
+		return
+	}
 	_, status, err := service.SubDao(c.Request.Context(), daoID, user.Address)
 	if err != nil {
 		logrus.Errorf("service.SubDao err: %v\n", err)

@@ -116,6 +116,22 @@ paths:
       security:
         - api_key: [ ]
 
+  /dao/sub/{dao_id}:
+    post:
+      tags:
+        - DAO
+      summary: subscribe a DAO
+      parameters:
+        - name: dao_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - api_key: [ ]
   /auth/login:
     post:
       tags:

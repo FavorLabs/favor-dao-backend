@@ -34,6 +34,8 @@ func (s *Gateway) request(ctx context.Context, method, url string, body, respDat
 	if err != nil {
 		return err
 	}
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("content-type", "application/json")
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return err

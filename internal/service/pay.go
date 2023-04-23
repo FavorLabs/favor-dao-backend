@@ -8,11 +8,11 @@ import (
 )
 
 type PayCallbackParam struct {
-	OrderId     string `json:"order_id"`
-	Method      string `json:"method"`
-	TxID        string `json:"tx_id"`
-	TxStatus    string `json:"tx_status"`
-	TxTimestamp string `json:"tx_timestamp"`
+	OrderId     string `form:"order_id"`
+	Method      string `form:"method"`
+	TxID        string `form:"tx_id"`
+	TxStatus    string `form:"tx_status"`
+	TxTimestamp string `form:"tx_timestamp"`
 }
 
 const (

@@ -33,7 +33,7 @@ type Dao struct {
 	Avatar       string             `json:"avatar"           bson:"avatar"`
 	Banner       string             `json:"banner"           bson:"banner"`
 	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
-	Price        uint64             `json:"price"            bson:"price"`
+	Price        int64              `json:"price"            bson:"price"`
 }
 
 type DaoFormatted struct {
@@ -45,7 +45,7 @@ type DaoFormatted struct {
 	Avatar       string           `json:"avatar"`
 	Banner       string           `json:"banner"`
 	FollowCount  int64            `json:"follow_count"`
-	Price        uint64           `json:"price"`
+	Price        int64            `json:"price"`
 	LastPosts    []*PostFormatted `json:"last_posts"`
 	IsJoined     bool             `json:"is_joined"`
 	IsSubscribed bool             `json:"is_subscribed"`

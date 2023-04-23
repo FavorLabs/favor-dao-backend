@@ -24,7 +24,7 @@ type DaoCreationReq struct {
 	Visibility   model.DaoVisibleT `json:"visibility"`
 	Avatar       string            `json:"avatar"`
 	Banner       string            `json:"banner"`
-	Price        uint64            `json:"price"`
+	Price        int64             `json:"price"`
 }
 
 type DaoUpdateReq struct {
@@ -34,7 +34,7 @@ type DaoUpdateReq struct {
 	Visibility   model.DaoVisibleT  `json:"visibility"`
 	Avatar       string             `json:"avatar"`
 	Banner       string             `json:"banner"`
-	Price        uint64             `json:"price"`
+	Price        int64              `json:"price"`
 }
 
 type DaoFollowReq struct {
@@ -340,6 +340,7 @@ func CheckJoinedDAO(address string, daoID primitive.ObjectID) bool {
 
 func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID string, status core.DaoSubscribeT, err error) {
 	var (
+		oid    string
 		notify *psub.Notify
 	)
 	defer func() {
@@ -350,6 +351,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 
 	// create order
 	err = ds.SubscribeDAO(address, daoID, func(ctx context.Context, orderID string, dao *model.Dao) error {
+		oid = orderID
 		// sub order
 		notify, err = pubsub.NewSubscribe(orderID)
 		if err != nil {
@@ -359,23 +361,21 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		txID, err = point.Pay(ctx, pointSystem.PayRequest{
 			UseWallet: address,
 			ToSubject: dao.Address,
-			Amount:    int64(dao.Price),
+			Amount:    dao.Price,
 			Decimal:   0,
 			Comment:   "",
 			Channel:   "sub_dao",
 			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
 		})
-		if err == nil {
-			e := ds.UpdateSubscribeDAOTxID(orderID, txID)
-			if e != nil {
-				logrus.Errorf("ds.UpdateSubscribeDAOTxID order_id:%s tx_id:%s", orderID, txID)
-				// When an error occurs, wait for the callback to fix the txID again
-			}
-		}
 		return err
 	})
 	if err != nil {
 		return
+	}
+	e := ds.UpdateSubscribeDAOTxID(oid, txID)
+	if e != nil {
+		logrus.Errorf("ds.UpdateSubscribeDAOTxID order_id:%s tx_id:%s err:%s", oid, txID, e)
+		// When an error occurs, wait for the callback to fix the txID again
 	}
 	// wait pay notify
 	select {

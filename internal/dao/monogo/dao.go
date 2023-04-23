@@ -306,9 +306,10 @@ func (s *daoManageServant) SubscribeDAO(address string, daoID primitive.ObjectID
 			return err
 		}
 		sub := &model.DaoSubscribe{
-			Address: address,
-			DaoID:   daoID,
-			Status:  model.DaoSubscribeSubmit,
+			Address:   address,
+			DaoID:     daoID,
+			Status:    model.DaoSubscribeSubmit,
+			PayAmount: dao.Price,
 		}
 		res, err := sub.Create(ctx, s.db)
 		if err != nil {
