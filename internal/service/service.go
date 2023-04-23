@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
@@ -10,36 +11,38 @@ import (
 	"favor-dao-backend/pkg/comet"
 	"favor-dao-backend/pkg/firebase"
 	"favor-dao-backend/pkg/pointSystem"
+	"favor-dao-backend/pkg/psub"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var (
-	ds     core.DataService
-	ts     core.TweetSearchService
-	eth    *ethclient.Client
-	chat   *comet.ChatGateway
-	point  *pointSystem.Gateway
-	pay    *Pay
-	notify *firebase.Client
+	ds             core.DataService
+	ts             core.TweetSearchService
+	eth            *ethclient.Client
+	chat           *comet.ChatGateway
+	point          *pointSystem.Gateway
+	pubsub         *psub.Service
+	notifyFirebase *firebase.Client
 )
 
 func Initialize() {
 	ds = dao.DataService()
 	ts = dao.TweetSearchService()
 
-	pay = New()
+	pubsub = psub.New()
 	// MUST connect!
 	client, err := ethclient.Dial(conf.EthSetting.Endpoint)
 	if err != nil {
 		panic(fmt.Sprintf("dial eth: %s", err))
 	}
 	eth = client
-	notify, err = firebase.New(conf.FirebaseSetting.Config)
+	notifyFirebase, err = firebase.New(conf.FirebaseSetting.Config)
 	if err != nil {
 		panic(err)
 	}
 	chat = comet.New(conf.ChatSetting.AppId, conf.ChatSetting.Region, conf.ChatSetting.ApiKey)
-	point = pointSystem.New(conf.PointSetting.Gateway, conf.PointSetting.Callback)
+	point = pointSystem.New(conf.PointSetting.Gateway)
+	conf.PointSetting.Callback = strings.TrimRight(conf.PointSetting.Callback, "/")
 }
 
 func persistMediaContents(contents []*PostContentItem) (items []string, err error) {

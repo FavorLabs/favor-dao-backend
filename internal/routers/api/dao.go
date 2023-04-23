@@ -3,9 +3,10 @@ package api
 import (
 	"context"
 	"errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
@@ -200,7 +201,12 @@ func SubDao(c *gin.Context) {
 		return
 	}
 	user, _ := userFrom(c)
-	status := service.SubDao(daoID, user.Address)
+	_, status, err := service.SubDao(c.Request.Context(), daoID, user.Address)
+	if err != nil {
+		logrus.Errorf("service.SubDao err: %v\n", err)
+		response.ToErrorResponse(errcode.NewServerError(err.Error()))
+		return
+	}
 	response.ToResponse(gin.H{
 		"status": status,
 	})

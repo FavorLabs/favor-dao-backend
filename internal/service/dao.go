@@ -6,9 +6,12 @@ import (
 	"math"
 	"time"
 
+	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/errcode"
+	"favor-dao-backend/pkg/pointSystem"
+	"favor-dao-backend/pkg/psub"
 	geth "github.com/ethereum/go-ethereum/mobile"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -314,8 +317,55 @@ func CheckSubscribeDAO(address string, daoID primitive.ObjectID) bool {
 	return ds.IsSubscribeDAO(address, daoID)
 }
 
-func SubDao(daoID primitive.ObjectID, address string) PayStatus {
-	// todo
-	n := pay.Sub("")
-	return n.status
+func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID string, status core.DaoSubscribeT, err error) {
+	var (
+		notify *psub.Notify
+	)
+	defer func() {
+		if notify != nil {
+			notify.Cancel()
+		}
+	}()
+
+	// create order
+	err = ds.SubscribeDAO(address, daoID, func(ctx context.Context, orderID string, dao *model.Dao) error {
+		// sub order
+		notify, err = pubsub.NewSubscribe(orderID)
+		if err != nil {
+			return err
+		}
+		// pay
+		txID, err = point.Pay(ctx, pointSystem.PayRequest{
+			UseWallet: address,
+			ToSubject: dao.Address,
+			Amount:    dao.Price.GetInt64(),
+			Decimal:   0,
+			Comment:   "",
+			Channel:   "sub_dao",
+			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
+		})
+		if err == nil {
+			e := ds.UpdateSubscribeDAOTxID(orderID, txID)
+			if e != nil {
+				logrus.Errorf("ds.UpdateSubscribeDAOTxID order_id:%s tx_id:%s", orderID, txID)
+				// When an error occurs, wait for the callback to fix the txID again
+			}
+		}
+		return err
+	})
+	if err != nil {
+		return
+	}
+	// wait pay notify
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case val := <-notify.Ch:
+		status = val.(core.DaoSubscribeT)
+	}
+	return
+}
+
+func UpdateSubscribeDAO(orderID, txID string, status model.DaoSubscribeT) error {
+	return ds.UpdateSubscribeDAO(orderID, txID, status)
 }

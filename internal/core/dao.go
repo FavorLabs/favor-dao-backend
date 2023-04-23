@@ -25,4 +25,7 @@ type DaoManageService interface {
 	GetDaoList(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error)
 	RealDeleteDAO(address string, chatAction func(context.Context, *model.Dao) (string, error)) error
 	IsSubscribeDAO(address string, daoID primitive.ObjectID) bool
+	SubscribeDAO(address string, daoID primitive.ObjectID, fn func(ctx context.Context, orderID string, dao *model.Dao) error) error
+	UpdateSubscribeDAO(orderID, txID string, status model.DaoSubscribeT) error
+	UpdateSubscribeDAOTxID(orderID, txID string) error
 }

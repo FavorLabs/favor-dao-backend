@@ -17,6 +17,11 @@ const (
 	PostVisitPrivate = model.PostVisitPrivate
 
 	PostMember1 = model.PostMember1
+
+	DaoSubscribeSuccess = model.DaoSubscribeSuccess
+	DaoSubscribeFailed  = model.DaoSubscribeFailed
+	DaoSubscribeSubmit  = model.DaoSubscribeSubmit
+	DaoSubscribeRefund  = model.DaoSubscribeRefund
 )
 
 var (
@@ -24,6 +29,7 @@ var (
 )
 
 type (
-	PostVisibleT = model.PostVisibleT
-	PostType     = model.PostType
+	PostVisibleT  = model.PostVisibleT
+	PostType      = model.PostType
+	DaoSubscribeT = model.DaoSubscribeT
 )

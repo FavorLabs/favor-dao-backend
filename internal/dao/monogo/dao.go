@@ -276,3 +276,66 @@ func (s *daoManageServant) IsSubscribeDAO(address string, daoID primitive.Object
 	}
 	return true
 }
+
+func (s *daoManageServant) SubscribeDAO(address string, daoID primitive.ObjectID, fn func(ctx context.Context, orderID string, dao *model.Dao) error) error {
+	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		dao, err := (&model.Dao{ID: daoID}).Get(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		sub := &model.DaoSubscribe{
+			Address: address,
+			DaoID:   daoID,
+			Status:  model.DaoSubscribeSubmit,
+		}
+		res, err := sub.Create(ctx, s.db)
+		if err != nil {
+			return err
+		}
+		if fn != nil {
+			return fn(ctx, res.ID.Hex(), dao)
+		}
+		return nil
+	})
+}
+
+func (s *daoManageServant) UpdateSubscribeDAO(orderID, txID string, status model.DaoSubscribeT) error {
+	id, err := primitive.ObjectIDFromHex(orderID)
+	if err != nil {
+		return err
+	}
+	md := model.DaoSubscribe{}
+	filter := bson.M{
+		"_id": id,
+	}
+	update := bson.D{{"$set", bson.D{
+		{"modified_on", time.Now().Unix()},
+		{"tx_id", txID},
+		{"status", status},
+	}}}
+	res := s.db.Collection(md.Table()).FindOneAndUpdate(context.TODO(), filter, update)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
+}
+
+func (s *daoManageServant) UpdateSubscribeDAOTxID(orderID, txID string) error {
+	id, err := primitive.ObjectIDFromHex(orderID)
+	if err != nil {
+		return err
+	}
+	md := model.DaoSubscribe{}
+	filter := bson.M{
+		"_id": id,
+	}
+	update := bson.D{{"$set", bson.D{
+		{"modified_on", time.Now().Unix()},
+		{"tx_id", txID},
+	}}}
+	res := s.db.Collection(md.Table()).FindOneAndUpdate(context.TODO(), filter, update)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
+}

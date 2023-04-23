@@ -12,16 +12,14 @@ import (
 )
 
 type Gateway struct {
-	baseUrl  string
-	callback string
-	client   *http.Client
+	baseUrl string
+	client  *http.Client
 }
 
-func New(baseUrl, callback string) *Gateway {
+func New(baseUrl string) *Gateway {
 	return &Gateway{
-		baseUrl:  strings.TrimRight(baseUrl, "/"),
-		callback: callback,
-		client:   http.DefaultClient,
+		baseUrl: strings.TrimRight(baseUrl, "/"),
+		client:  http.DefaultClient,
 	}
 }
 
