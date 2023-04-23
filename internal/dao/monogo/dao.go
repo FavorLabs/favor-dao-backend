@@ -262,6 +262,9 @@ func (s *daoManageServant) RealDeleteDAO(address string, chatAction func(context
 }
 
 func (s *daoManageServant) IsJoinedDAO(address string, daoID primitive.ObjectID) bool {
+	if address == "" {
+		return false
+	}
 	filter := bson.M{
 		"address": address,
 		"dao_id":  daoID,
@@ -278,6 +281,9 @@ func (s *daoManageServant) IsJoinedDAO(address string, daoID primitive.ObjectID)
 }
 
 func (s *daoManageServant) IsSubscribeDAO(address string, daoID primitive.ObjectID) bool {
+	if address == "" {
+		return false
+	}
 	filter := bson.M{
 		"address": address,
 		"dao_id":  daoID,

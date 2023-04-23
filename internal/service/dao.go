@@ -181,7 +181,7 @@ func GetDao(daoId string) (*core.Dao, error) {
 	return ds.GetDao(dao)
 }
 
-func GetDaoFormatted(daoId string) (*model.DaoFormatted, error) {
+func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
 	id, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
 		return nil, err
@@ -194,6 +194,10 @@ func GetDaoFormatted(daoId string) (*model.DaoFormatted, error) {
 		return nil, err
 	}
 	out := res.Format()
+
+	out.IsJoined = CheckJoinedDAO(user, id)
+	out.IsSubscribed = CheckSubscribeDAO(user, id)
+
 	out.LastPosts = []*model.PostFormatted{}
 	// sms
 	conditions := model.ConditionsT{
@@ -204,7 +208,7 @@ func GetDaoFormatted(daoId string) (*model.DaoFormatted, error) {
 		},
 		"ORDER": bson.M{"_id": -1},
 	}
-	resp, _ := GetPostList(&PostListReq{
+	resp, _ := GetPostList(user, &PostListReq{
 		Conditions: &conditions,
 		Offset:     0,
 		Limit:      1,
@@ -219,7 +223,7 @@ func GetDaoFormatted(daoId string) (*model.DaoFormatted, error) {
 		},
 		"ORDER": bson.M{"_id": -1},
 	}
-	resp2, _ := GetPostList(&PostListReq{
+	resp2, _ := GetPostList(user, &PostListReq{
 		Conditions: &conditions2,
 		Offset:     0,
 		Limit:      1,
@@ -328,6 +332,10 @@ func CheckIsMyDAO(address string, daoID primitive.ObjectID) *errcode.Error {
 
 func CheckSubscribeDAO(address string, daoID primitive.ObjectID) bool {
 	return ds.IsSubscribeDAO(address, daoID)
+}
+
+func CheckJoinedDAO(address string, daoID primitive.ObjectID) bool {
+	return ds.IsJoinedDAO(address, daoID)
 }
 
 func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID string, status core.DaoSubscribeT, err error) {

@@ -32,6 +32,7 @@ func NewRouter() *gin.Engine {
 	noAuthApi := r.Group("/").Use(middleware.Session())
 	{
 		noAuthApi.GET("/post", api.GetPost)
+		noAuthApi.GET("/dao", api.GetDao)
 
 		noAuthApi.GET("/tags", api.GetPostTags)
 
@@ -100,7 +101,6 @@ func NewRouter() *gin.Engine {
 
 		// dao
 		authApi.GET("/daos", api.GetDaos)
-		authApi.GET("/dao", api.GetDao)
 		authApi.GET("/dao/my", api.GetMyDaoList)
 		authApi.POST("/dao", api.CreateDao)
 		authApi.PUT("/dao", api.UpdateDao)

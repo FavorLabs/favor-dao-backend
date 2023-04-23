@@ -118,7 +118,12 @@ func GetPost(c *gin.Context) {
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
-	postFormatted, err := service.GetPost(postId)
+	var userAddress string
+	user, _ := userFrom(c)
+	if user != nil {
+		userAddress = user.Address
+	}
+	postFormatted, err := service.GetPost(userAddress, postId)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			response.ToErrorResponse(errcode.NotFound)
@@ -128,7 +133,6 @@ func GetPost(c *gin.Context) {
 		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
 	}
-	user, _ := userFrom(c)
 	postFormatted = service.FilterMemberContent(user, postFormatted)
 
 	response.ToResponse(postFormatted)
@@ -366,7 +370,7 @@ func StickPost(c *gin.Context) {
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
-	postFormatted, err := service.GetPost(postId)
+	postFormatted, err := service.GetPost("", postId)
 	if err != nil {
 		logrus.Errorf("service.GetPost err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)

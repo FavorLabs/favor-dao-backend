@@ -47,6 +47,7 @@ func (s *indexPostsServant) IndexPosts(user *model.User, offset int, limit int) 
 	}
 	if user == nil {
 		predicates["query"] = bson.M{"visibility": model.PostVisitPublic}
+		user = &model.User{}
 	} else {
 		predicates["query"] = bson.M{"visibility": model.PostVisitPublic,
 			"$or": bson.M{"visibility": model.PostVisitPrivate, "address": user.Address}}
@@ -57,7 +58,7 @@ func (s *indexPostsServant) IndexPosts(user *model.User, offset int, limit int) 
 		logrus.Debugf("gormIndexPostsServant.IndexPosts err: %v", err)
 		return nil, err
 	}
-	formatPosts, err := s.ths.MergePosts(posts)
+	formatPosts, err := s.ths.MergePosts(user.Address, posts)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func (s *indexPostsServant) IndexPosts(user *model.User, offset int, limit int) 
 }
 
 // IndexPosts simpleCacheIndexGetPosts simpleCacheIndex Proprietary get square tweet list function
-func (s *simpleIndexPostsServant) IndexPosts(_user *model.User, offset int, limit int) (*rest.IndexTweetsResp, error) {
+func (s *simpleIndexPostsServant) IndexPosts(user *model.User, offset int, limit int) (*rest.IndexTweetsResp, error) {
 	predicates := model.ConditionsT{
 		"query": bson.M{"visibility": model.PostVisitPublic},
 		"ORDER": bson.M{"is_top": -1},
@@ -85,8 +86,10 @@ func (s *simpleIndexPostsServant) IndexPosts(_user *model.User, offset int, limi
 		logrus.Debugf("gormSimpleIndexPostsServant.IndexPosts err: %v", err)
 		return nil, err
 	}
-
-	formatPosts, err := s.ths.MergePosts(posts)
+	if user == nil {
+		user = &model.User{}
+	}
+	formatPosts, err := s.ths.MergePosts(user.Address, posts)
 	if err != nil {
 		return nil, err
 	}

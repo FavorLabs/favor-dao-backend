@@ -92,7 +92,11 @@ func GetDao(c *gin.Context) {
 	daoId := convert.StrTo(c.Query("dao_id")).String()
 	response := app.NewResponse(c)
 
-	dao, err := service.GetDaoFormatted(daoId)
+	address, _ := c.Get("address")
+	if address == nil {
+		address = ""
+	}
+	dao, err := service.GetDaoFormatted(address.(string), daoId)
 	if err != nil {
 		logrus.Errorf("service.GetDao err: %v\n", err)
 		response.ToErrorResponse(errcode.GetDaoFailed)

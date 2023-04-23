@@ -226,7 +226,7 @@ func GetUserCollections(userAddress string, offset, limit int) ([]*model.PostFor
 	for _, collection := range collections {
 		posts = append(posts, collection.Post)
 	}
-	postsFormatted, err := ds.MergePosts(posts)
+	postsFormatted, err := ds.MergePosts(userAddress, posts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -248,7 +248,7 @@ func GetUserStars(userAddress string, offset, limit int) ([]*model.PostFormatted
 	for _, star := range stars {
 		posts = append(posts, star.Post)
 	}
-	postsFormatted, err := ds.MergePosts(posts)
+	postsFormatted, err := ds.MergePosts(userAddress, posts)
 	if err != nil {
 		return nil, 0, err
 	}
