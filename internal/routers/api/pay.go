@@ -20,7 +20,7 @@ func PayNotify(c *gin.Context) {
 	err := service.PayNotify(param)
 	if err != nil {
 		logrus.Errorf("service.PayNotify err: %s", err)
-		response.ToErrorResponse(errcode.NewServerError(err.Error()))
+		response.ToErrorResponse(errcode.PayNotifyError.WithDetails(err.Error()))
 		return
 	}
 	response.ToResponse(nil)

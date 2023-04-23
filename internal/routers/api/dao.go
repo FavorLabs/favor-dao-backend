@@ -81,7 +81,7 @@ func UpdateDao(c *gin.Context) {
 
 	if err != nil {
 		logrus.Errorf("service.UpdateDao err: %v\n", err)
-		response.ToErrorResponse(errcode.UpdateDaoFailed)
+		response.ToErrorResponse(errcode.UpdateDaoFailed.WithDetails(err.Error()))
 		return
 	}
 
@@ -204,7 +204,7 @@ func SubDao(c *gin.Context) {
 	_, status, err := service.SubDao(c.Request.Context(), daoID, user.Address)
 	if err != nil {
 		logrus.Errorf("service.SubDao err: %v\n", err)
-		response.ToErrorResponse(errcode.NewServerError(err.Error()))
+		response.ToErrorResponse(errcode.SubscribeDAO.WithDetails(err.Error()))
 		return
 	}
 	response.ToResponse(gin.H{

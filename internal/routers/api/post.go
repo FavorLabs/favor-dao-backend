@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -13,6 +14,7 @@ import (
 	"github.com/gogf/gf/util/gconv"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func parseQueryReq(c *gin.Context) *core.QueryReq {
@@ -112,14 +114,18 @@ func GetPost(c *gin.Context) {
 	response := app.NewResponse(c)
 	postId, err := primitive.ObjectIDFromHex(postID)
 	if err != nil {
-		logrus.Errorf("service.GetPost err: %v\n", err)
+		logrus.Errorf("primitive.ObjectIDFromHex err: %v\n", err)
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
 	postFormatted, err := service.GetPost(postId)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			response.ToErrorResponse(errcode.NotFound)
+			return
+		}
 		logrus.Errorf("service.GetPost err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostFailed)
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
 	}
 	user, _ := userFrom(c)

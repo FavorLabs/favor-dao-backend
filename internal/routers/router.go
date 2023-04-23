@@ -27,7 +27,9 @@ func NewRouter() *gin.Engine {
 
 	r.POST("/auth/login", api.Login)
 
-	noAuthApi := r.Group("/")
+	r.GET("/pay/notify", api.PayNotify).Use(middleware.AllowHost())
+
+	noAuthApi := r.Group("/").Use(middleware.Session())
 	{
 		noAuthApi.GET("/post", api.GetPost)
 
@@ -43,11 +45,10 @@ func NewRouter() *gin.Engine {
 
 		noAuthApi.GET("/dao/posts", api.GetDaoPosts)
 
-		noAuthApi.GET("/pay/notify", api.PayNotify).Use(middleware.AllowHost())
 	}
 
-	authApi := r.Group("/").Use(middleware.Session())
-	privApi := r.Group("/").Use(middleware.Session())
+	authApi := r.Group("/").Use(middleware.Login())
+	privApi := r.Group("/").Use(middleware.Login())
 	{
 		authApi.DELETE("/account", api.DeleteAccount)
 

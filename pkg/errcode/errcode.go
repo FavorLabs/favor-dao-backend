@@ -21,10 +21,6 @@ func NewError(code int, msg string) *Error {
 	return &Error{code: code, msg: msg}
 }
 
-func NewServerError(msg string) *Error {
-	return NewError(10000, msg)
-}
-
 func (e *Error) Error() string {
 	return fmt.Sprintf("error code: %d, error msg: %s", e.Code(), e.Msg())
 }
@@ -57,6 +53,8 @@ func (e *Error) StatusCode() int {
 	switch e.Code() {
 	case Success.Code():
 		return http.StatusOK
+	case NotFound.code:
+		return http.StatusNotFound
 	case ServerError.Code():
 		return http.StatusInternalServerError
 	case InvalidParams.Code():

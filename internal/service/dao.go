@@ -12,7 +12,6 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
-	geth "github.com/ethereum/go-ethereum/mobile"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -25,16 +24,17 @@ type DaoCreationReq struct {
 	Visibility   model.DaoVisibleT `json:"visibility"`
 	Avatar       string            `json:"avatar"`
 	Banner       string            `json:"banner"`
-	Price        geth.BigInt       `json:"price"`
+	Price        uint64            `json:"price"`
 }
 
 type DaoUpdateReq struct {
 	Id           primitive.ObjectID `json:"id"            binding:"required"`
-	Name         string             `json:"name"          binding:"required"`
+	Name         string             `json:"name"`
 	Introduction string             `json:"introduction"`
 	Visibility   model.DaoVisibleT  `json:"visibility"`
 	Avatar       string             `json:"avatar"`
 	Banner       string             `json:"banner"`
+	Price        uint64             `json:"price"`
 }
 
 type DaoFollowReq struct {
@@ -59,10 +59,8 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		Price:        param.Price,
 		FollowCount:  1, // default owner joined
 	}
-	if param.Price.GetInt64() == 0 {
-		price := geth.BigInt{}
-		price.SetInt64(10)
-		dao.Price = price // default subscribe price
+	if param.Price == 0 {
+		dao.Price = 10 // default subscribe price
 	}
 	res, err := ds.CreateDao(dao, chatAction)
 	if err != nil {
@@ -123,19 +121,34 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	if dao.Address != userAddress {
 		return errcode.NoPermission
 	}
+	change := false
 	if param.Name != "" {
 		dao.Name = param.Name
+		change = true
 	}
 	if param.Avatar != "" {
 		dao.Avatar = param.Avatar
+		change = true
 	}
 	if param.Introduction != "" {
 		dao.Introduction = param.Introduction
+		change = true
 	}
 	if param.Banner != "" {
 		dao.Banner = param.Banner
+		change = true
 	}
-	dao.Visibility = param.Visibility
+	if param.Price != 0 {
+		dao.Price = param.Price
+		change = true
+	}
+	if dao.Visibility != param.Visibility {
+		dao.Visibility = param.Visibility
+		change = true
+	}
+	if !change {
+		return errcode.DAONothingChange
+	}
 	err = ds.UpdateDao(dao, func(ctx context.Context, dao *model.Dao) error {
 		return UpdateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
 	})
@@ -338,7 +351,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		txID, err = point.Pay(ctx, pointSystem.PayRequest{
 			UseWallet: address,
 			ToSubject: dao.Address,
-			Amount:    dao.Price.GetInt64(),
+			Amount:    int64(dao.Price),
 			Decimal:   0,
 			Comment:   "",
 			Channel:   "sub_dao",
