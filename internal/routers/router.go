@@ -27,7 +27,7 @@ func NewRouter() *gin.Engine {
 
 	r.POST("/auth/login", api.Login)
 
-	r.GET("/pay/notify", api.PayNotify).Use(middleware.AllowHost())
+	r.Group("/pay").Use(middleware.AllowHost()).GET("/notify", api.PayNotify)
 
 	noAuthApi := r.Group("/").Use(middleware.Session())
 	{

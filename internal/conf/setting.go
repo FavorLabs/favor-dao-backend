@@ -110,8 +110,9 @@ type ChatSettingS struct {
 }
 
 type PointSettingS struct {
-	Gateway  string
-	Callback string
+	Gateway   string
+	WhiteList []string
+	Callback  string
 }
 
 type FirebaseSettingS struct {

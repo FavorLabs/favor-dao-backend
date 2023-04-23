@@ -1,24 +1,20 @@
 package middleware
 
 import (
+	"favor-dao-backend/internal/conf"
 	"github.com/gin-gonic/gin"
 )
-
-var allowHost = []string{
-	"localhost",
-	"127.0.0.1",
-}
 
 func AllowHost() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		host := c.RemoteIP()
-		for _, v := range allowHost {
+		for _, v := range conf.PointSetting.WhiteList {
 			if v == host {
 				c.Next()
 				return
 			}
 		}
-		c.Abort()
+		c.AbortWithStatus(403)
 		return
 	}
 }
