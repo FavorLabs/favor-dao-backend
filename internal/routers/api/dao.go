@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -204,12 +205,24 @@ func SubDao(c *gin.Context) {
 		response.ToErrorResponse(errcode.GetPostFailed)
 		return
 	}
-	user, _ := userFrom(c)
-	if service.CheckSubscribeDAO(user.Address, daoID) {
+	param := service.AuthByWalletRequest{}
+	valid, errs := app.BindAndValid(c, &param)
+	if !valid {
+		logrus.Errorf("app.BindAndValid errs: %v", errs)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
+		return
+	}
+	guessMessage := fmt.Sprintf("%s subscribe DAO at %d", param.WalletAddr, param.Timestamp)
+	ok, err := service.VerifySignMessage(c.Request.Context(), &param, guessMessage)
+	if err != nil || !ok {
+		response.ToErrorResponse(errcode.InvalidWalletSignature)
+		return
+	}
+	if service.CheckSubscribeDAO(param.WalletAddr, daoID) {
 		response.ToErrorResponse(errcode.AlreadySubscribedDAO)
 		return
 	}
-	_, status, err := service.SubDao(c.Request.Context(), daoID, user.Address)
+	_, status, err := service.SubDao(c.Request.Context(), daoID, param.WalletAddr)
 	if err != nil {
 		logrus.Errorf("service.SubDao err: %v\n", err)
 		response.ToErrorResponse(errcode.SubscribeDAO.WithDetails(err.Error()))

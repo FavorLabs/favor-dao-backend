@@ -127,6 +127,11 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthByWallet'
       responses:
         '405':
           description: Invalid input

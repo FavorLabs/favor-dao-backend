@@ -75,7 +75,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		}
 
 		guessMessage := fmt.Sprintf("%s login FavorDAO at %d", param.WalletAddr, param.Timestamp)
-		ok, err := verifySignMessage(ctx, param, guessMessage)
+		ok, err := VerifySignMessage(ctx, param, guessMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func DeleteUser(ctx context.Context, param *AuthByWalletRequest) error {
 	uid := userId(user.Address)
 
 	guessMessage := fmt.Sprintf("delete %s account at %d", param.WalletAddr, param.Timestamp)
-	ok, err := verifySignMessage(ctx, param, guessMessage)
+	ok, err := VerifySignMessage(ctx, param, guessMessage)
 	if err != nil {
 		return err
 	}
