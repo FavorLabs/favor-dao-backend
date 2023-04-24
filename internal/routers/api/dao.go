@@ -90,7 +90,7 @@ func UpdateDao(c *gin.Context) {
 }
 
 func GetDao(c *gin.Context) {
-	daoId := convert.StrTo(c.Query("dao_id")).String()
+	daoId := c.Query("dao_id")
 	response := app.NewResponse(c)
 
 	address, _ := c.Get("address")
