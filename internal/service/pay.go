@@ -1,48 +1,57 @@
 package service
 
-import "sync"
+import (
+	"errors"
 
-type PayStatus int
-
-const (
-	PAYING PayStatus = iota
+	"favor-dao-backend/internal/core"
+	"github.com/sirupsen/logrus"
 )
 
-type Pay struct {
-	// order_id: chan
-	subPub sync.Map
+type PayCallbackParam struct {
+	OrderId     string `form:"order_id"`
+	Method      string `form:"method"`
+	TxID        string `form:"tx_id"`
+	TxStatus    string `form:"tx_status"`
+	TxTimestamp string `form:"tx_timestamp"`
 }
 
-type Notify struct {
-	// todo
-	orderId string
-	status  PayStatus
-}
+const (
+	TxPending    = "pending"
+	TxInProgress = "in_progress"
+	TxCompleted  = "completed"
+	TxFailed     = "failed"
+	TxCancelled  = "cancelled"
+	TxRollback   = "rollback"
+	TxCrashed    = "crashed"
+)
 
-func New() *Pay {
-	return &Pay{}
-}
-
-func PayNotify(notify Notify) {
-	pay.Pub(notify)
-}
-
-func (p *Pay) Pub(notify Notify) {
-	c, ok := p.subPub.Load(notify.orderId)
-	if !ok {
-		return
+func PayNotify(notify PayCallbackParam) (err error) {
+	logrus.Infof("PayNotify method:%s order_id:%s tx_id:%s tx_status:%s", notify.Method, notify.OrderId, notify.TxID, notify.TxStatus)
+	switch notify.Method {
+	case "sub_dao":
+		return eventSubDAO(notify)
+	default:
+		return errors.New("unknown method")
 	}
-	ch := c.(chan Notify)
-	ch <- notify
+
 }
 
-func (p *Pay) Sub(orderId string) *Notify {
-	ch := make(chan Notify, 1)
-	p.subPub.Store(orderId, ch)
-	defer p.subPub.Delete(orderId)
-	defer close(ch)
-	for {
-		n := <-ch
-		return &n
+func eventSubDAO(notify PayCallbackParam) error {
+	var subStatus core.DaoSubscribeT
+	switch notify.TxStatus {
+	case TxCompleted:
+		// success
+		subStatus = core.DaoSubscribeSuccess
+	case TxRollback, TxCancelled:
+		// failed
+		subStatus = core.DaoSubscribeFailed
+	default:
+		return nil
 	}
+	err := UpdateSubscribeDAO(notify.OrderId, notify.TxID, subStatus)
+	if err != nil {
+		return err
+	}
+	pubsub.Notify(notify.OrderId, subStatus)
+	return nil
 }

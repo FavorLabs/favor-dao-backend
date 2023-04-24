@@ -25,6 +25,7 @@ type DaoSubscribe struct {
 	Address    string             `json:"address"          bson:"address"`
 	DaoID      primitive.ObjectID `json:"dao_id"           bson:"dao_id"`
 	TxID       string             `json:"tx_id"            bson:"tx_id"`
+	PayAmount  int64              `json:"pay_amount"       bson:"pay_amount"`
 	Status     DaoSubscribeT      `json:"status"           bson:"status"`
 }
 
@@ -68,4 +69,20 @@ func (m *DaoSubscribe) Get(ctx context.Context, db *mongo.Database) (*DaoSubscri
 		return nil, err
 	}
 	return &dao, nil
+}
+
+func (m *DaoSubscribe) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*DaoSubscribe) {
+	cursor, err := db.Collection(m.Table()).Find(ctx, filter)
+	if err != nil {
+		return
+	}
+	list = []*DaoSubscribe{}
+	for cursor.Next(context.TODO()) {
+		var t DaoSubscribe
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, &t)
+	}
+	return
 }

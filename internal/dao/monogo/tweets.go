@@ -53,7 +53,7 @@ func newTweetHelpService(db *mongo.Database) core.TweetHelpService {
 }
 
 // MergePosts post data integration
-func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatted, error) {
+func (s *tweetHelpServant) MergePosts(user string, posts []*model.Post) ([]*model.PostFormatted, error) {
 	postIds := make([]primitive.ObjectID, len(posts))
 	refItems := make(map[primitive.ObjectID]model.PostRefType, 0)
 	addresses := make([]string, len(posts))
@@ -82,6 +82,17 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 		return nil, err
 	}
 
+	joined := s.getDAOsByIdsWithJoined(user, daoIds)
+	joinedMap := make(map[string]struct{}, len(joined))
+	for _, v := range joined {
+		joinedMap[v.DaoID.Hex()] = struct{}{}
+	}
+	subscribed := s.getDAOsByIdsWithSubscribed(user, daoIds)
+	subscribedMap := make(map[string]struct{}, len(subscribed))
+	for _, v := range subscribed {
+		subscribedMap[v.DaoID.Hex()] = struct{}{}
+	}
+
 	userMap := make(map[string]*model.UserFormatted, len(users))
 	for _, user := range users {
 		userMap[user.Address] = user.Format()
@@ -90,6 +101,12 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
 	for _, dao := range daoS {
 		daoMap[dao.ID.Hex()] = dao.Format()
+		if _, ok := joinedMap[dao.ID.Hex()]; ok {
+			daoMap[dao.ID.Hex()].IsJoined = true
+		}
+		if _, ok := subscribedMap[dao.ID.Hex()]; ok {
+			daoMap[dao.ID.Hex()].IsSubscribed = true
+		}
 	}
 
 	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormatted, len(postContents))
@@ -138,14 +155,14 @@ func (s *tweetHelpServant) MergePosts(posts []*model.Post) ([]*model.PostFormatt
 				postFormatted.OrigContents = append(postFormatted.OrigContents, refReplies.PostFormat())
 			}
 		}
-
-		postsFormatted[i] = postFormatted
+		// filter member content
+		postsFormatted[i] = s.filterMemberContent(user, postFormatted)
 	}
 	return postsFormatted, nil
 }
 
 // RevampPosts post data shaping repair
-func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.PostFormatted, error) {
+func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted) ([]*model.PostFormatted, error) {
 	postIds := make([]primitive.ObjectID, 0, len(posts))
 	refItems := make(map[primitive.ObjectID]model.PostRefType, 0)
 	addresses := make([]string, 0, len(posts))
@@ -175,7 +192,16 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 	if err != nil {
 		return nil, err
 	}
-
+	joined := s.getDAOsByIdsWithJoined(user, daoIds)
+	joinedMap := make(map[string]struct{}, len(joined))
+	for _, v := range joined {
+		joinedMap[v.DaoID.Hex()] = struct{}{}
+	}
+	subscribed := s.getDAOsByIdsWithSubscribed(user, daoIds)
+	subscribedMap := make(map[string]struct{}, len(subscribed))
+	for _, v := range subscribed {
+		subscribedMap[v.DaoID.Hex()] = struct{}{}
+	}
 	userMap := make(map[string]*model.UserFormatted, len(users))
 	for _, user := range users {
 		userMap[user.Address] = user.Format()
@@ -184,6 +210,12 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
 	for _, dao := range daoS {
 		daoMap[dao.ID.Hex()] = dao.Format()
+		if _, ok := joinedMap[dao.ID.Hex()]; ok {
+			daoMap[dao.ID.Hex()].IsJoined = true
+		}
+		if _, ok := subscribedMap[dao.ID.Hex()]; ok {
+			daoMap[dao.ID.Hex()].IsSubscribed = true
+		}
 	}
 
 	contentMap := make(map[primitive.ObjectID][]*model.PostContentFormatted, len(postContents))
@@ -238,8 +270,39 @@ func (s *tweetHelpServant) RevampPosts(posts []*model.PostFormatted) ([]*model.P
 				post.OrigContents = append(post.OrigContents, refReplies.PostFormat())
 			}
 		}
+
+		// filter member content
+		post = s.filterMemberContent(user, post)
 	}
 	return posts, nil
+}
+
+func (s *tweetHelpServant) filterMemberContent(user string, post *model.PostFormatted) *model.PostFormatted {
+	if user == "" {
+		return post
+	}
+	// Warning, Other related places Service.FilterMemberContent
+	if post.Member == model.PostMemberNothing {
+		return post
+	}
+	if post.Type == model.VIDEO {
+		if user != post.Address && !post.Dao.IsSubscribed {
+			for k, v := range post.Contents {
+				if v.Type == model.CONTENT_TYPE_VIDEO {
+					post.Contents[k].Content = ""
+				}
+			}
+		}
+	} else if post.OrigType == model.VIDEO {
+		if user != post.AuthorId && !post.AuthorDao.IsSubscribed {
+			for k, v := range post.OrigContents {
+				if v.Type == model.CONTENT_TYPE_VIDEO {
+					post.OrigContents[k].Content = ""
+				}
+			}
+		}
+	}
+	return post
 }
 
 func (s *tweetHelpServant) getPostContentsByIDs(ids []primitive.ObjectID) ([]*model.PostContent, error) {
@@ -279,6 +342,24 @@ func (s *tweetHelpServant) getDAOsByIds(ids []primitive.ObjectID) ([]*model.Dao,
 	return dao.List(s.db, &model.ConditionsT{
 		"query": bson.M{"_id": bson.M{"$in": ids}},
 	}, 0, 0)
+}
+
+func (s *tweetHelpServant) getDAOsByIdsWithJoined(address string, ids []primitive.ObjectID) []*model.DaoBookmark {
+	book := &model.DaoBookmark{}
+	return book.FindList(context.TODO(), s.db, bson.M{
+		"address": address,
+		"is_del":  0,
+		"dao_id":  bson.M{"$in": ids},
+	})
+}
+
+func (s *tweetHelpServant) getDAOsByIdsWithSubscribed(address string, ids []primitive.ObjectID) []*model.DaoSubscribe {
+	book := &model.DaoSubscribe{}
+	return book.FindList(context.TODO(), s.db, bson.M{
+		"address": address,
+		"status":  core.DaoSubscribeSuccess,
+		"dao_id":  bson.M{"$in": ids},
+	})
 }
 
 func (s *tweetManageServant) CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error) {

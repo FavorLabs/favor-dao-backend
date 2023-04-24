@@ -174,11 +174,11 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 
 	PushPostToSearch(post)
 
-	formattedPosts, err := ds.RevampPosts([]*model.PostFormatted{post.Format()})
+	formattedPosts, err := ds.RevampPosts(user.Address, []*model.PostFormatted{post.Format()})
 	if err != nil {
 		return nil, err
 	}
-	return FilterMemberContent(user, formattedPosts[0]), nil
+	return formattedPosts[0], nil
 }
 
 func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
@@ -368,7 +368,7 @@ func DeletePostCollection(collection *model.PostCollection) error {
 	return nil
 }
 
-func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
+func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 	post, err := ds.GetPostByID(id)
 	if err != nil {
 		return nil, err
@@ -446,6 +446,8 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	postFormatted.User = userMap[post.Address].Format()
 	postFormatted.Dao = daoMap[post.DaoId].Format()
+	postFormatted.Dao.IsJoined = CheckJoinedDAO(user, post.DaoId)
+	postFormatted.Dao.IsSubscribed = CheckSubscribeDAO(user, post.DaoId)
 
 	if postFormatted.AuthorId != "" {
 		postFormatted.Author = userMap[post.AuthorId].Format()
@@ -453,6 +455,8 @@ func GetPost(id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	if !postFormatted.AuthorDaoId.IsZero() {
 		postFormatted.AuthorDao = daoMap[post.AuthorDaoId].Format()
+		postFormatted.AuthorDao.IsJoined = CheckJoinedDAO(user, post.AuthorDaoId)
+		postFormatted.AuthorDao.IsSubscribed = CheckSubscribeDAO(user, post.AuthorDaoId)
 	}
 
 	return postFormatted, nil
@@ -466,14 +470,14 @@ func GetIndexPosts(user *model.User, offset int, limit int) (*rest.IndexTweetsRe
 	return ds.IndexPosts(user, offset, limit)
 }
 
-func GetPostList(req *PostListReq) ([]*model.PostFormatted, error) {
+func GetPostList(user string, req *PostListReq) ([]*model.PostFormatted, error) {
 	posts, err := ds.GetPosts(req.Conditions, req.Offset, req.Limit)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return ds.MergePosts(posts)
+	return ds.MergePosts(user, posts)
 }
 
 func GetPostCount(conditions *model.ConditionsT) (int64, error) {
@@ -485,12 +489,12 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	if err != nil {
 		return nil, 0, err
 	}
-	posts, err := ds.RevampPosts(resp.Items)
+	if user == nil {
+		user = &model.User{}
+	}
+	posts, err := ds.RevampPosts(user.Address, resp.Items)
 	if err != nil {
 		return nil, 0, err
-	}
-	for k, v := range posts {
-		posts[k] = FilterMemberContent(user, v)
 	}
 	return posts, resp.Total, nil
 }
@@ -562,7 +566,7 @@ func PushPostsToSearch() {
 	nums := int(pages)
 
 	for i := 0; i < nums; i++ {
-		posts, _ := GetPostList(&PostListReq{
+		posts, _ := GetPostList("", &PostListReq{
 			Conditions: &model.ConditionsT{},
 			Offset:     i * splitNum,
 			Limit:      splitNum,
@@ -658,11 +662,15 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 }
 
 func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.PostFormatted {
-	if post.Member == model.PostMemberNothing || user.Address == post.Address || user.Address == post.AuthorId {
+	if user == nil {
+		return post
+	}
+	// Warning, Other related places tweetHelpServant.filterMemberContent
+	if post.Member == model.PostMemberNothing {
 		return post
 	}
 	if post.Type == model.VIDEO {
-		if user == nil || !CheckSubscribeDAO(user.Address, post.DaoId) {
+		if user.Address != post.Address && !CheckSubscribeDAO(user.Address, post.DaoId) {
 			for k, v := range post.Contents {
 				if v.Type == model.CONTENT_TYPE_VIDEO {
 					post.Contents[k].Content = ""
@@ -670,7 +678,7 @@ func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.Pos
 			}
 		}
 	} else if post.OrigType == model.VIDEO {
-		if user == nil || !CheckSubscribeDAO(user.Address, post.AuthorDaoId) {
+		if user.Address != post.AuthorId && !CheckSubscribeDAO(user.Address, post.AuthorDaoId) {
 			for k, v := range post.OrigContents {
 				if v.Type == model.CONTENT_TYPE_VIDEO {
 					post.OrigContents[k].Content = ""

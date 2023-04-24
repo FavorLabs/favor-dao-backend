@@ -12,16 +12,14 @@ import (
 )
 
 type Gateway struct {
-	baseUrl  string
-	callback string
-	client   *http.Client
+	baseUrl string
+	client  *http.Client
 }
 
-func New(baseUrl, callback string) *Gateway {
+func New(baseUrl string) *Gateway {
 	return &Gateway{
-		baseUrl:  strings.TrimRight(baseUrl, "/"),
-		callback: callback,
-		client:   http.DefaultClient,
+		baseUrl: strings.TrimRight(baseUrl, "/"),
+		client:  http.DefaultClient,
 	}
 }
 
@@ -36,6 +34,8 @@ func (s *Gateway) request(ctx context.Context, method, url string, body, respDat
 	if err != nil {
 		return err
 	}
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("content-type", "application/json")
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return err

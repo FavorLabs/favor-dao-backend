@@ -3,9 +3,10 @@ package api
 import (
 	"context"
 	"errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
@@ -80,7 +81,7 @@ func UpdateDao(c *gin.Context) {
 
 	if err != nil {
 		logrus.Errorf("service.UpdateDao err: %v\n", err)
-		response.ToErrorResponse(errcode.UpdateDaoFailed)
+		response.ToErrorResponse(errcode.UpdateDaoFailed.WithDetails(err.Error()))
 		return
 	}
 
@@ -91,7 +92,11 @@ func GetDao(c *gin.Context) {
 	daoId := convert.StrTo(c.Query("dao_id")).String()
 	response := app.NewResponse(c)
 
-	dao, err := service.GetDaoFormatted(daoId)
+	address, _ := c.Get("address")
+	if address == nil {
+		address = ""
+	}
+	dao, err := service.GetDaoFormatted(address.(string), daoId)
 	if err != nil {
 		logrus.Errorf("service.GetDao err: %v\n", err)
 		response.ToErrorResponse(errcode.GetDaoFailed)
@@ -192,7 +197,7 @@ func ActionDaoBookmark(c *gin.Context) {
 
 func SubDao(c *gin.Context) {
 	response := app.NewResponse(c)
-	daoId := c.Param("daoId")
+	daoId := c.Param("dao_id")
 	daoID, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
 		logrus.Errorf("service.GetPostCollection err: %v\n", err)
@@ -200,7 +205,16 @@ func SubDao(c *gin.Context) {
 		return
 	}
 	user, _ := userFrom(c)
-	status := service.SubDao(daoID, user.Address)
+	if service.CheckSubscribeDAO(user.Address, daoID) {
+		response.ToErrorResponse(errcode.AlreadySubscribedDAO)
+		return
+	}
+	_, status, err := service.SubDao(c.Request.Context(), daoID, user.Address)
+	if err != nil {
+		logrus.Errorf("service.SubDao err: %v\n", err)
+		response.ToErrorResponse(errcode.SubscribeDAO.WithDetails(err.Error()))
+		return
+	}
 	response.ToResponse(gin.H{
 		"status": status,
 	})
