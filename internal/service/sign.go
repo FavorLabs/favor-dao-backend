@@ -37,7 +37,7 @@ type AuthByWalletRequest struct {
 	Type       WalletType `json:"type"          binding:"required"`
 }
 
-func verifySignMessage(ctx context.Context, auth *AuthByWalletRequest, guessMessage string) (bool, error) {
+func VerifySignMessage(ctx context.Context, auth *AuthByWalletRequest, guessMessage string) (bool, error) {
 	walletBytes, err := hexutil.Decode(auth.WalletAddr)
 	if err != nil {
 		return false, errcode.InvalidParams

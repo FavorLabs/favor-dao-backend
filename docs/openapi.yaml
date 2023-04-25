@@ -28,13 +28,39 @@ paths:
       tags:
         - POST
       summary: Add a new post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dao_id
+                - type
+                - visibility
+              properties:
+                dao_id:
+                  type: string
+                  example: 643508d47408f36e6595087a
+                type:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                  description: 0 SMS, 1 VIDEO, 2 Retweet, 3 RetweetComment
+                visibility:
+                  enum:
+                    - 0
+                    - 1
+                    - 2
+                  description: 0 draft, 1 public, 2 private
+                  type: integer
       responses:
         '405':
           description: Invalid input
       security:
         - api_key: []
-      requestBody:
-        $ref: '#/components/requestBodies/Post'
 
     get:
       tags:
@@ -57,7 +83,7 @@ paths:
     get:
       tags:
         - POST
-      summary: post list
+      summary: Post list
       parameters:
         - name: query
           in: query
@@ -67,10 +93,31 @@ paths:
             type: string
         - name: type
           in: query
-          description: -1 DAO, all(All but DAO), 0 SMS 1 VIDEO ;Multiple commas can be used to separate
+          description: -1 DAO, post(All but DAO), 0 SMS 1 VIDEO ;Multiple commas can be used to separate
           required: false
           schema:
             type: string
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: address
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: daoId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          example: "dao_follow_count:desc,created_on:desc"
+          schema:
+            type: string
+
       responses:
         '200':
           description: successful operation
@@ -87,7 +134,7 @@ paths:
       parameters:
         - name: dao_id
           in: query
-          required: false
+          required: true
           schema:
             type: string
       responses:
@@ -95,17 +142,69 @@ paths:
           description: Invalid input
       security:
         - api_key: [ ]
-    put:
+
+    post:
       tags:
         - DAO
-      summary: update DAO
+      summary: Create a DAO
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                introduction:
+                  type: string
+                visibility:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "0 public, 1 private"
+                avatar:
+                  type: string
+                banner:
+                  type: string
+                price:
+                  type: integer
+                  default: 10
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - api_key: [ ]
+
+    put:
+      tags:
+        - DAO
+      summary: Update a DAO
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
               properties:
                 id:
+                  type: string
+                name:
+                  type: string
+                introduction:
+                  type: string
+                visibility:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: "0 public, 1 private"
+                avatar:
+                  type: string
+                banner:
                   type: string
                 price:
                   type: integer
@@ -120,23 +219,29 @@ paths:
     post:
       tags:
         - DAO
-      summary: subscribe a DAO
+      summary: Subscribe a DAO
       parameters:
         - name: dao_id
           in: path
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthByWallet'
       responses:
         '405':
           description: Invalid input
       security:
         - api_key: [ ]
+
   /auth/login:
     post:
       tags:
         - USER
-      summary: Logs user into the system
+      summary: Login
       requestBody:
         content:
           application/json:
@@ -155,11 +260,14 @@ paths:
       tags:
         - USER
       summary: Delete a user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthByWallet'
       responses:
         '200':
           description: successful operation
-        '400':
-          description: Invalid Order
       security:
         - api_key: []
 
@@ -167,7 +275,7 @@ paths:
     get:
       tags:
         - USER
-      summary: get user info
+      summary: Get user info
       parameters:
         - name: user_address
           in: query
@@ -190,62 +298,7 @@ components:
           format: int32
         message:
           type: string
-    DAO:
-      type: object
-      properties:
-        id:
-          type: string
-        address:
-          type: string
-        introduction:
-          type: string
-        follow_count:
-          type: integer
-        avatar:
-          type: string
-        banner:
-          type: string
-        name:
-          type: string
-        price:
-          type: number
-    Post:
-      type: object
-      required:
-        - id
-        - dao_id
-        - address
-      properties:
-        id:
-          description: The id given to a post
-          type: string
-          example: 643508d47408f36e6595087a
-        created_on:
-          description: The UTC time unix
-          type: integer
-        modified_on:
-          description: The UTC time unix
-          type: integer
-        latest_replied_on:
-          description: The UTC time unix
-          type: integer
-        dao_id:
-          type: string
-          example: 643508d47408f36e6595087a
-        dao:
-          allOf:
-            - $ref: '#/components/schemas/DAO'
-        address:
-          type: string
-        user:
-          allOf:
-            - $ref: '#/components/schemas/User'
-        type:
-          type: integer
-          description: -1 DAO, 0 SMS, 1 VIDEO, 2 Retweet, 3 RetweetComment
-        visibility:
-          description: 0 draft, 1 public, 2 private
-          type: integer
+
     User:
       type: object
       properties:
@@ -277,14 +330,6 @@ components:
             - unipass_eth
 
   requestBodies:
-    Post:
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/Post'
-      description: ''
-      required: true
     AuthByWallet:
       content:
         application/json:
@@ -293,16 +338,6 @@ components:
               - $ref: '#/components/schemas/AuthByWallet'
       description: ''
       required: true
-
-  responses:
-    PostArray:
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: '#/components/schemas/Post'
-      description: List of post object
 
   securitySchemes:
     api_key:
