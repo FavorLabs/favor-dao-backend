@@ -13,6 +13,7 @@ type PayRequest struct {
 	Comment   string `json:"comment,omitempty"`
 	Channel   string `json:"channel,omitempty"`
 	ReturnURI string `json:"return_uri,omitempty"`
+	BindOrder string `json:"bind_order,omitempty"`
 }
 
 type PayResponse struct {

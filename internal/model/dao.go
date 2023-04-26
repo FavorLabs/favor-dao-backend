@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	chatModel "favor-dao-backend/internal/model/chat"
@@ -34,6 +35,7 @@ type Dao struct {
 	Banner       string             `json:"banner"           bson:"banner"`
 	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
 	Price        int64              `json:"price"            bson:"price"`
+	Tags         string             `json:"tags"             bson:"tags"`
 }
 
 type DaoFormatted struct {
@@ -46,12 +48,17 @@ type DaoFormatted struct {
 	Banner       string           `json:"banner"`
 	FollowCount  int64            `json:"follow_count"`
 	Price        int64            `json:"price"`
+	Tags         map[string]int8  `json:"tags"`
 	LastPosts    []*PostFormatted `json:"last_posts"`
 	IsJoined     bool             `json:"is_joined"`
 	IsSubscribed bool             `json:"is_subscribed"`
 }
 
 func (m *Dao) Format() *DaoFormatted {
+	tagsMap := map[string]int8{}
+	for _, tag := range strings.Split(m.Tags, ",") {
+		tagsMap[tag] = 1
+	}
 	return &DaoFormatted{
 		ID:           m.ID.Hex(),
 		Address:      m.Address,
@@ -62,6 +69,7 @@ func (m *Dao) Format() *DaoFormatted {
 		Banner:       m.Banner,
 		FollowCount:  m.FollowCount,
 		Price:        m.Price,
+		Tags:         tagsMap,
 		LastPosts:    []*PostFormatted{},
 	}
 }

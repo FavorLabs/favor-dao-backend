@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math"
+	"strings"
 	"time"
 
 	"favor-dao-backend/internal/conf"
@@ -20,6 +21,7 @@ import (
 
 type DaoCreationReq struct {
 	Name         string            `json:"name"          binding:"required"`
+	Tags         []string          `json:"tags"`
 	Introduction string            `json:"introduction"`
 	Visibility   model.DaoVisibleT `json:"visibility"`
 	Avatar       string            `json:"avatar"`
@@ -29,6 +31,7 @@ type DaoCreationReq struct {
 
 type DaoUpdateReq struct {
 	Id           primitive.ObjectID `json:"id"            binding:"required"`
+	Tags         []string           `json:"tags"`
 	Name         string             `json:"name"`
 	Introduction string             `json:"introduction"`
 	Visibility   model.DaoVisibleT  `json:"visibility"`
@@ -49,7 +52,9 @@ func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 }
 
 func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAction func(context.Context, *model.Dao) (string, error)) (_ *model.DaoFormatted, err error) {
+	tags := tagsFrom(param.Tags)
 	dao := &model.Dao{
+		Tags:         strings.Join(tags, ","),
 		Address:      userAddress,
 		Name:         param.Name,
 		Visibility:   param.Visibility,
@@ -68,6 +73,13 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 	}
 
 	if dao.Visibility == model.DaoVisitPublic {
+		for _, t := range tags {
+			tag := &model.Tag{
+				Address: userAddress,
+				Tag:     t,
+			}
+			ds.CreateTag(tag)
+		}
 		// push to search
 		_, err = PushDaoToSearch(dao)
 		if err != nil {
@@ -121,7 +133,12 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	if dao.Address != userAddress {
 		return errcode.NoPermission
 	}
+	tags := tagsFrom(param.Tags)
 	change := false
+	if len(tags) != 0 {
+		dao.Tags = strings.Join(tags, ",")
+		change = true
+	}
 	if param.Name != "" {
 		dao.Name = param.Name
 		change = true
@@ -156,6 +173,13 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 		return err
 	}
 	if dao.Visibility == model.DaoVisitPublic {
+		for _, t := range tags {
+			tag := &model.Tag{
+				Address: userAddress,
+				Tag:     t,
+			}
+			ds.CreateTag(tag)
+		}
 		// push to search
 		_, err = PushDaoToSearch(dao)
 		if err != nil {
@@ -255,21 +279,26 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 	contentFormatted := dao.Name + "\n"
 	contentFormatted += dao.Introduction + "\n"
 
+	tagMaps := map[string]int8{}
+	for _, tag := range strings.Split(dao.Tags, ",") {
+		tagMaps[tag] = 1
+	}
+
 	data := core.DocItems{{
-		"id":               dao.ID,
-		"address":          dao.Address,
-		"dao_id":           dao.ID.Hex(),
-		"dao_follow_count": dao.FollowCount,
-		"view_count":       0,
-		"collection_count": 0,
-		"upvote_count":     0,
-		"comment_count":    0,
-		"member":           0,
-		"visibility":       model.PostVisitPublic, // Only the public dao will enter the search engine
-		"is_top":           0,
-		"is_essence":       0,
-		"content":          contentFormatted,
-		// "tags":              tagMaps,
+		"id":                dao.ID,
+		"address":           dao.Address,
+		"dao_id":            dao.ID.Hex(),
+		"dao_follow_count":  dao.FollowCount,
+		"view_count":        0,
+		"collection_count":  0,
+		"upvote_count":      0,
+		"comment_count":     0,
+		"member":            0,
+		"visibility":        model.PostVisitPublic, // Only the public dao will enter the search engine
+		"is_top":            0,
+		"is_essence":        0,
+		"content":           contentFormatted,
+		"tags":              tagMaps,
 		"type":              model.DAO,
 		"created_on":        dao.CreatedOn,
 		"modified_on":       dao.ModifiedOn,
@@ -366,6 +395,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			Comment:   "",
 			Channel:   "sub_dao",
 			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
+			BindOrder: orderID,
 		})
 		return err
 	})
