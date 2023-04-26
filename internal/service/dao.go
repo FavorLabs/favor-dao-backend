@@ -366,6 +366,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			Comment:   "",
 			Channel:   "sub_dao",
 			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
+			BindOrder: orderID,
 		})
 		return err
 	})

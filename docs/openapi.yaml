@@ -56,6 +56,16 @@ paths:
                     - 2
                   description: 0 draft, 1 public, 2 private
                   type: integer
+                tags:
+                  type: array
+                  description: "string of tag"
+                member:
+                  enum:
+                    - 0
+                    - 1
+                  default: 0
+                  description: "0 not member, 1 member1; If this post requires a subscription to access, please fill in 1"
+                  type: integer
       responses:
         '405':
           description: Invalid input
