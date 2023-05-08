@@ -24,11 +24,16 @@ func New(baseUrl string) *Gateway {
 }
 
 func (s *Gateway) request(ctx context.Context, method, url string, body, respData interface{}) error {
-	rawBody, err := json.Marshal(body)
-	if err != nil {
-		return err
+	var reqBody io.Reader
+	if body != nil {
+		rawBody, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		reqBody = bytes.NewReader(rawBody)
+	} else {
+		reqBody = nil
 	}
-	reqBody := bytes.NewReader(rawBody)
 
 	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
 	if err != nil {
@@ -65,6 +70,43 @@ func (s *Gateway) Pay(ctx context.Context, param PayRequest) (txID string, err e
 		return "", errors.New(resp.Msg)
 	}
 	return resp.Data.Id, nil
+}
+
+func (s *Gateway) CreateAccount(ctx context.Context, param CreateAccountRequest) (ac *Account, err error) {
+	url := s.baseUrl + "/v1/account"
+
+	var resp struct {
+		BaseResponse
+		Data Account `json:"data,omitempty"`
+	}
+	err = s.request(ctx, http.MethodPost, url, param, &resp)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Code != 0 {
+		return nil, errors.New(resp.Msg)
+	}
+	return &resp.Data, nil
+}
+
+func (s *Gateway) FindAccounts(ctx context.Context, uid string) (list []Account, err error) {
+	url := s.baseUrl + "/v1/accounts?uid=" + uid
+
+	var resp struct {
+		BaseResponse
+		Data struct {
+			List  []Account `json:"list"`
+			Pager Pager     `json:"pager"`
+		} `json:"data,omitempty"`
+	}
+	err = s.request(ctx, http.MethodGet, url, nil, &resp)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Code != 0 {
+		return nil, errors.New(resp.Msg)
+	}
+	return resp.Data.List, nil
 }
 
 func (s *Gateway) Transaction() (txID string, err error) {

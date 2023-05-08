@@ -26,6 +26,7 @@ type DaoSubscribe struct {
 	DaoID      primitive.ObjectID `json:"dao_id"           bson:"dao_id"`
 	TxID       string             `json:"tx_id"            bson:"tx_id"`
 	PayAmount  int64              `json:"pay_amount"       bson:"pay_amount"`
+	Decimal    int                `json:"decimal"          bson:"decimal"`
 	Status     DaoSubscribeT      `json:"status"           bson:"status"`
 }
 
