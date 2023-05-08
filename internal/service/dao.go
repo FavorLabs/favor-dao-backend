@@ -27,6 +27,7 @@ type DaoCreationReq struct {
 	Avatar       string            `json:"avatar"`
 	Banner       string            `json:"banner"`
 	Price        int64             `json:"price"`
+	Decimal      int               `json:"decimal"`
 }
 
 type DaoUpdateReq struct {
@@ -38,6 +39,7 @@ type DaoUpdateReq struct {
 	Avatar       string             `json:"avatar"`
 	Banner       string             `json:"banner"`
 	Price        int64              `json:"price"`
+	Decimal      int                `json:"decimal"`
 }
 
 type DaoFollowReq struct {
@@ -62,6 +64,7 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		Avatar:       param.Avatar,
 		Banner:       param.Banner,
 		Price:        param.Price,
+		Decimal:      param.Decimal,
 		FollowCount:  1, // default owner joined
 	}
 	if param.Price == 0 {
@@ -157,6 +160,10 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	}
 	if param.Price != 0 {
 		dao.Price = param.Price
+		change = true
+	}
+	if param.Decimal != 0 {
+		dao.Decimal = param.Decimal
 		change = true
 	}
 	if dao.Visibility != param.Visibility {
@@ -391,7 +398,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			UseWallet: address,
 			ToSubject: dao.Address,
 			Amount:    dao.Price,
-			Decimal:   0,
+			Decimal:   dao.Decimal,
 			Comment:   "",
 			Channel:   "sub_dao",
 			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,

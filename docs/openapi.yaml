@@ -182,6 +182,9 @@ paths:
                 price:
                   type: integer
                   default: 10
+                decimal:
+                  type: integer
+                  default: 0
       responses:
         '405':
           description: Invalid input
@@ -218,7 +221,8 @@ paths:
                   type: string
                 price:
                   type: integer
-                  default: 10
+                decimal:
+                  type: integer
       responses:
         '405':
           description: Invalid input
@@ -298,6 +302,35 @@ paths:
           description: successful operation
       security:
         - api_key: []
+
+  /user/accounts:
+    get:
+      tags:
+        - USER
+      summary: Get accounts for user
+      responses:
+        default:
+          description: successful operation
+          content:
+            application/json:
+              example: {
+                "code": 0,
+                "data": [
+                  {
+                    "user": "",
+                    "wallet": "",
+                    "created_at": "2023-04-24T06:30:01.014Z",
+                    "updated_at": "2023-04-24T10:26:50.578Z",
+                    "balance": 9950,
+                    "frozen": 0,
+                    "decimal": 0
+                  }
+                ],
+                "msg": "success",
+              }
+      security:
+        - api_key: [ ]
+
 components:
   schemas:
     ApiResponse:

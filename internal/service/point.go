@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"favor-dao-backend/internal/core"
+	"favor-dao-backend/pkg/pointSystem"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,4 +56,26 @@ func eventSubDAO(notify PayCallbackParam) error {
 	}
 	pubsub.Notify(notify.OrderId, subStatus)
 	return nil
+}
+
+func CheckAndCreateAccount(ctx context.Context, uid, address string) error {
+	accounts, err := point.FindAccounts(ctx, uid)
+	if err != nil {
+		return err
+	}
+	if len(accounts) == 0 {
+		// create account
+		_, err = point.CreateAccount(ctx, pointSystem.CreateAccountRequest{
+			BindUser:   uid,
+			BindWallet: address,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func FindAccounts(ctx context.Context, uid string) (accounts []pointSystem.Account, err error) {
+	return point.FindAccounts(ctx, uid)
 }

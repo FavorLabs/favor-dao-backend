@@ -33,6 +33,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	err = service.CheckAndCreateAccount(c, user.ID.Hex(), user.Address)
+	if err != nil {
+		logrus.Errorf("service.CheckAndCreateAccount err: %v", err)
+		response.ToErrorResponse(errcode.CreateAccountError)
+		return
+	}
 	// Create user and auth token by chat
 	token, err := service.GetAuthToken(c, user.Address)
 	if err != nil {
@@ -98,6 +104,19 @@ func GetUserInfo(c *gin.Context) {
 		"address":  user.Address,
 		"avatar":   user.Avatar,
 	})
+}
+
+func GetAccounts(c *gin.Context) {
+	response := app.NewResponse(c)
+
+	user, _ := userFrom(c)
+
+	ac, err := service.FindAccounts(c, user.ID.Hex())
+	if err != nil {
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
+		return
+	}
+	response.ToResponse(ac)
 }
 
 func GetUserStatistic(c *gin.Context) {

@@ -54,6 +54,7 @@ func NewRouter() *gin.Engine {
 		authApi.DELETE("/account", api.DeleteAccount)
 
 		authApi.GET("/user/info", api.GetUserInfo)
+		authApi.GET("/user/accounts", api.GetAccounts)
 
 		authApi.GET("/user/statistic", api.GetUserStatistic)
 

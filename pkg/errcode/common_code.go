@@ -12,5 +12,6 @@ var (
 	UnauthorizedTokenGenerate = NewError(10007, "Unauthorized Token Generate")
 	TooManyRequests           = NewError(10008, "Too Many Requests")
 	InvalidWalletSignature    = NewError(10009, "Invalid wallet signature")
+	CreateAccountError        = NewError(10010, "Create Account Error")
 	WaitForDelete             = NewError(40000, "Wait for delete")
 )

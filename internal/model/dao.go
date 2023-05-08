@@ -35,6 +35,7 @@ type Dao struct {
 	Banner       string             `json:"banner"           bson:"banner"`
 	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
 	Price        int64              `json:"price"            bson:"price"`
+	Decimal      int                `json:"decimal"          bson:"decimal"`
 	Tags         string             `json:"tags"             bson:"tags"`
 }
 
@@ -48,6 +49,7 @@ type DaoFormatted struct {
 	Banner       string           `json:"banner"`
 	FollowCount  int64            `json:"follow_count"`
 	Price        int64            `json:"price"`
+	Decimal      int              `json:"decimal"`
 	Tags         map[string]int8  `json:"tags"`
 	LastPosts    []*PostFormatted `json:"last_posts"`
 	IsJoined     bool             `json:"is_joined"`
@@ -69,6 +71,7 @@ func (m *Dao) Format() *DaoFormatted {
 		Banner:       m.Banner,
 		FollowCount:  m.FollowCount,
 		Price:        m.Price,
+		Decimal:      m.Decimal,
 		Tags:         tagsMap,
 		LastPosts:    []*PostFormatted{},
 	}
