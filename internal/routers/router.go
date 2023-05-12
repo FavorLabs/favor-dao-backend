@@ -40,6 +40,9 @@ func NewRouter() *gin.Engine {
 
 		noAuthApi.GET("/posts", api.GetPostList)
 
+		noAuthApi.POST("/post/view", api.PostView)
+		noAuthApi.GET("/post/view", api.GetPostView)
+
 		noAuthApi.GET("/post/comments", api.GetPostComments)
 
 		noAuthApi.GET("/user/posts", api.GetUserPosts)
@@ -80,10 +83,6 @@ func NewRouter() *gin.Engine {
 
 		privApi.POST("/post/star", api.PostStar)
 
-		authApi.GET("/post/view", api.GetPostView)
-
-		privApi.POST("/post/view", api.PostView)
-
 		authApi.GET("/post/collection", api.GetPostCollection)
 
 		privApi.POST("/post/collection", api.PostCollection)
@@ -99,6 +98,15 @@ func NewRouter() *gin.Engine {
 		privApi.POST("/post/comment/reply", api.CreatePostCommentReply)
 
 		privApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
+
+		// red packet
+		privApi.POST("/redpacket", api.CreateRedpacket)
+		privApi.POST("/redpacket/:redpacket_id", api.ClaimRedpacket)
+		privApi.GET("/redpacket/:redpacket_id", api.RedpacketInfo)
+		privApi.GET("/redpacket/stats/claims", api.RedpacketStatsClaims)
+		privApi.GET("/redpacket/stats/sends", api.RedpacketStatsSends)
+		privApi.GET("/redpacket/claims", api.RedpacketClaimList)
+		privApi.GET("/redpacket/sends", api.RedpacketSendList)
 
 		// dao
 		authApi.GET("/daos", api.GetDaos)

@@ -1,6 +1,10 @@
 package convert
 
-import "strconv"
+import (
+	"errors"
+	"math/big"
+	"strconv"
+)
 
 type StrTo string
 
@@ -45,4 +49,17 @@ func (s StrTo) Float64() (float64, error) {
 func (s StrTo) MustFloat64() float64 {
 	v, _ := strconv.ParseFloat(s.String(), 64)
 	return v
+}
+
+func (s StrTo) MustBigInt() *big.Int {
+	out, _ := new(big.Int).SetString(s.String(), 10)
+	return out
+}
+
+func (s StrTo) BigInt() (*big.Int, error) {
+	out, ok := new(big.Int).SetString(s.String(), 10)
+	if !ok {
+		return nil, errors.New("invalid bigint")
+	}
+	return out, nil
 }

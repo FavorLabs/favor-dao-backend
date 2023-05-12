@@ -310,7 +310,6 @@ func (s *daoManageServant) SubscribeDAO(address string, daoID primitive.ObjectID
 			DaoID:     daoID,
 			Status:    model.DaoSubscribeSubmit,
 			PayAmount: dao.Price,
-			Decimal:   dao.Decimal,
 		}
 		res, err := sub.Create(ctx, s.db)
 		if err != nil {

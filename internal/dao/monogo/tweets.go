@@ -278,15 +278,12 @@ func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted
 }
 
 func (s *tweetHelpServant) filterMemberContent(user string, post *model.PostFormatted) *model.PostFormatted {
-	if user == "" {
-		return post
-	}
 	// Warning, Other related places Service.FilterMemberContent
 	if post.Member == model.PostMemberNothing {
 		return post
 	}
 	if post.Type == model.VIDEO {
-		if user != post.Address && !post.Dao.IsSubscribed {
+		if user == "" || (user != post.Address && !post.Dao.IsSubscribed) {
 			for k, v := range post.Contents {
 				if v.Type == model.CONTENT_TYPE_VIDEO {
 					post.Contents[k].Content = ""
@@ -294,7 +291,7 @@ func (s *tweetHelpServant) filterMemberContent(user string, post *model.PostForm
 			}
 		}
 	} else if post.OrigType == model.VIDEO {
-		if user != post.AuthorId && !post.AuthorDao.IsSubscribed {
+		if user == "" || (user != post.AuthorId && !post.AuthorDao.IsSubscribed) {
 			for k, v := range post.OrigContents {
 				if v.Type == model.CONTENT_TYPE_VIDEO {
 					post.OrigContents[k].Content = ""

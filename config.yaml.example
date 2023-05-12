@@ -8,6 +8,7 @@ External:
   UseBucket: bucketname
   Region: regionname
   NetworkID: 19
+  RedPacketAddress:
 Server:
   RunMode: debug
   HttpIp: 0.0.0.0

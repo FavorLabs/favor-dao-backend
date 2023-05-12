@@ -14,15 +14,183 @@ tags:
     description: Access to DAO
   - name: USER
     description: Operations about user
+  - name: Redpacket
+    description: redpacket about user
 x-tagGroups:
   - name: General
     tags:
       - POST
       - DAO
+      - Redpacket
   - name: User Management
     tags:
       - USER
 paths:
+  /redpacket:
+    post:
+      tags:
+        - Redpacket
+      summary: create a redpacket
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - title
+                - amount
+                - total
+                - auth
+              properties:
+                auth:
+                  $ref: '#/components/schemas/AuthByWallet'
+                type:
+                  type: integer
+                  enum:
+                    - 0
+                    - 1
+                  description: 0 lucked 1 average
+                title:
+                  type: string
+                amount:
+                  type: string
+                  description: String of bigint, If type is equal to 1, it means the amount of single red packet
+                total:
+                  type: integer
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: []
+  /redpacket/{redpacket_id}:
+    post:
+      tags:
+        - Redpacket
+      summary: claim a redpacket
+      parameters:
+        - name: redpacket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: []
+    get:
+      tags:
+        - Redpacket
+      summary: get a redpacket info
+      parameters:
+        - name: redpacket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: [ ]
+
+  /redpacket/stats/claims:
+    get:
+      tags:
+        - Redpacket
+      summary: stats for user claims
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: number
+          example: 2023
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: [ ]
+
+  /redpacket/stats/sends:
+    get:
+      tags:
+        - Redpacket
+      summary: stats for user sends
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: number
+          example: 2023
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: [ ]
+
+  /redpacket/sends:
+    get:
+      tags:
+        - Redpacket
+      summary: send packets list for my
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: page_size
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: number
+          example: 2023
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: [ ]
+
+  /redpacket/claims:
+    get:
+      tags:
+        - Redpacket
+      summary: claim packets list for my
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: page_size
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: number
+          example: 2023
+        - name: redpacket_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: [ ]
+
   /post:
     post:
       tags:
@@ -180,11 +348,8 @@ paths:
                 banner:
                   type: string
                 price:
-                  type: integer
-                  default: 10
-                decimal:
-                  type: integer
-                  default: 0
+                  type: string
+                  default: "10000"
       responses:
         '405':
           description: Invalid input
@@ -220,9 +385,7 @@ paths:
                 banner:
                   type: string
                 price:
-                  type: integer
-                decimal:
-                  type: integer
+                  type: string
       responses:
         '405':
           description: Invalid input

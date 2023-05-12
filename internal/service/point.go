@@ -32,6 +32,10 @@ func PayNotify(notify PayCallbackParam) (err error) {
 	switch notify.Method {
 	case "sub_dao":
 		return eventSubDAO(notify)
+	case "send_redpacket":
+		return eventSendRedpacket(notify)
+	case "claim_redpacket":
+		return eventClaimRedpacket(notify)
 	default:
 		return errors.New("unknown method")
 	}
