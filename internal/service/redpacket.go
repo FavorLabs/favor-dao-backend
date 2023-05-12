@@ -49,7 +49,7 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 		Total:   parm.Total,
 		Balance: parm.Amount,
 	}
-	if parm.Type == model.Average {
+	if parm.Type == model.RedpacketTypeAverage {
 		redpacket.AvgAmount = parm.Amount
 		redpacket.Amount = amount.Mul(amount, new(big.Int).SetInt64(parm.Total)).String()
 		redpacket.Balance = redpacket.Amount
@@ -68,13 +68,13 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 		}
 		// pay
 		redpacket.TxID, err = point.Pay(ctx, pointSystem.PayRequest{
-			UseWallet: address,
-			ToSubject: conf.ExternalAppSetting.RedpacketAddress,
-			Amount:    redpacket.Amount,
-			Comment:   "",
-			Channel:   "send_redpacket",
-			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=send_redpacket&order_id=" + id,
-			BindOrder: id,
+			FromObject: address,
+			ToSubject:  conf.ExternalAppSetting.RedpacketAddress,
+			Amount:     redpacket.Amount,
+			Comment:    "",
+			Channel:    "send_redpacket",
+			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=send_redpacket&order_id=" + id,
+			BindOrder:  id,
 		})
 		return err
 	})
@@ -240,7 +240,7 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		}
 		var price, balance string
 		// ---
-		if redpacket.Type == model.Average {
+		if redpacket.Type == model.RedpacketTypeAverage {
 			price = redpacket.AvgAmount
 			b := convert.StrTo(redpacket.Balance).MustBigInt()
 			b.Sub(b, convert.StrTo(price).MustBigInt())
@@ -265,13 +265,13 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		}
 		// pay
 		redpacket.TxID, err = point.Pay(ctx, pointSystem.PayRequest{
-			UseWallet: conf.ExternalAppSetting.RedpacketAddress,
-			ToSubject: address,
-			Amount:    rr.Amount,
-			Comment:   "",
-			Channel:   "claim_redpacket",
-			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=claim_redpacket&order_id=" + rr.ID.Hex(),
-			BindOrder: rr.ID.Hex(),
+			FromObject: conf.ExternalAppSetting.RedpacketAddress,
+			ToSubject:  address,
+			Amount:     rr.Amount,
+			Comment:    "",
+			Channel:    "claim_redpacket",
+			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=claim_redpacket&order_id=" + rr.ID.Hex(),
+			BindOrder:  rr.ID.Hex(),
 		})
 		return err
 	})

@@ -33,12 +33,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	err = service.CheckAndCreateAccount(c, user.ID.Hex(), user.Address)
-	if err != nil {
-		logrus.Errorf("service.CheckAndCreateAccount err: %v", err)
-		response.ToErrorResponse(errcode.CreateAccountError)
-		return
-	}
 	// Create user and auth token by chat
 	token, err := service.GetAuthToken(c, user.Address)
 	if err != nil {

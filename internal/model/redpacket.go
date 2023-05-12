@@ -12,8 +12,8 @@ import (
 type RedpacketType int
 
 const (
-	Lucked RedpacketType = iota
-	Average
+	RedpacketTypeLucked RedpacketType = iota
+	RedpacketTypeAverage
 )
 
 type Redpacket struct {

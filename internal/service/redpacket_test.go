@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"testing"
 
+	"favor-dao-backend/internal/conf"
+	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/convert"
 	"github.com/go-redis/redis/v8"
 )
@@ -88,4 +90,19 @@ func TestClaimRedpacket(t *testing.T) {
 	if i <= 0 {
 		t.Fatalf("expected x, got <=0")
 	}
+}
+
+func TestCreateRedpacket(t *testing.T) {
+	conf.Initialize([]string{}, false, "../../")
+	Initialize()
+	rid, err := CreateRedpacket("0x1717fa888b3392db23258ad46298ff75b597a060", RedpacketRequest{
+		Type:   model.RedpacketTypeLucked,
+		Title:  "test lucked",
+		Amount: "103",
+		Total:  2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("redpacket_id: %s", rid)
 }

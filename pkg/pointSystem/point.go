@@ -72,23 +72,6 @@ func (s *Gateway) Pay(ctx context.Context, param PayRequest) (txID string, err e
 	return resp.Data.Id, nil
 }
 
-func (s *Gateway) CreateAccount(ctx context.Context, param CreateAccountRequest) (ac *Account, err error) {
-	url := s.baseUrl + "/v1/account"
-
-	var resp struct {
-		BaseResponse
-		Data Account `json:"data,omitempty"`
-	}
-	err = s.request(ctx, http.MethodPost, url, param, &resp)
-	if err != nil {
-		return nil, err
-	}
-	if resp.Code != 0 {
-		return nil, errors.New(resp.Msg)
-	}
-	return &resp.Data, nil
-}
-
 func (s *Gateway) FindAccounts(ctx context.Context, uid string) (list []Account, err error) {
 	url := s.baseUrl + "/v1/accounts?uid=" + uid
 

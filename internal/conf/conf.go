@@ -33,8 +33,8 @@ var (
 	FirebaseSetting         *FirebaseSettingS
 )
 
-func setupSetting(suite []string, noDefault bool) error {
-	setting, err := NewSetting()
+func setupSetting(suite []string, noDefault bool, configPath ...string) error {
+	setting, err := NewSetting(configPath...)
 	if err != nil {
 		return err
 	}
@@ -82,8 +82,8 @@ func setupSetting(suite []string, noDefault bool) error {
 	return nil
 }
 
-func Initialize(suite []string, noDefault bool) {
-	err := setupSetting(suite, noDefault)
+func Initialize(suite []string, noDefault bool, configPath ...string) {
+	err := setupSetting(suite, noDefault, configPath...)
 	if err != nil {
 		log.Fatalf("init.setupSetting err: %v", err)
 	}
