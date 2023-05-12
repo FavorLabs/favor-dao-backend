@@ -398,13 +398,13 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		}
 		// pay
 		txID, err = point.Pay(ctx, pointSystem.PayRequest{
-			UseWallet: address,
-			ToSubject: dao.Address,
-			Amount:    dao.Price,
-			Comment:   "",
-			Channel:   "sub_dao",
-			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
-			BindOrder: orderID,
+			FromObject: address,
+			ToSubject:  dao.Address,
+			Amount:     dao.Price,
+			Comment:    "",
+			Channel:    "sub_dao",
+			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
+			BindOrder:  orderID,
 		})
 		return err
 	})

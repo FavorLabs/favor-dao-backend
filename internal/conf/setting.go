@@ -158,11 +158,15 @@ type RedisSettingS struct {
 	DB       int
 }
 
-func NewSetting() (*Setting, error) {
+func NewSetting(configPath ...string) (*Setting, error) {
 	vp := viper.New()
+	if len(configPath) > 0 {
+		vp.AddConfigPath(configPath[0])
+	} else {
+		vp.AddConfigPath(".")
+		vp.AddConfigPath("configs/")
+	}
 	vp.SetConfigName("config")
-	vp.AddConfigPath(".")
-	vp.AddConfigPath("configs/")
 	vp.SetConfigType("yaml")
 	err := vp.ReadInConfig()
 	if err != nil {
