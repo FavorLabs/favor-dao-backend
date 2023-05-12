@@ -10,6 +10,7 @@ import (
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
+	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
@@ -26,8 +27,7 @@ type DaoCreationReq struct {
 	Visibility   model.DaoVisibleT `json:"visibility"`
 	Avatar       string            `json:"avatar"`
 	Banner       string            `json:"banner"`
-	Price        int64             `json:"price"`
-	Decimal      int               `json:"decimal"`
+	Price        string            `json:"price"`
 }
 
 type DaoUpdateReq struct {
@@ -38,8 +38,7 @@ type DaoUpdateReq struct {
 	Visibility   model.DaoVisibleT  `json:"visibility"`
 	Avatar       string             `json:"avatar"`
 	Banner       string             `json:"banner"`
-	Price        int64              `json:"price"`
-	Decimal      int                `json:"decimal"`
+	Price        string             `json:"price"`
 }
 
 type DaoFollowReq struct {
@@ -64,11 +63,15 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		Avatar:       param.Avatar,
 		Banner:       param.Banner,
 		Price:        param.Price,
-		Decimal:      param.Decimal,
 		FollowCount:  1, // default owner joined
 	}
-	if param.Price == 0 {
-		dao.Price = 10 // default subscribe price
+	if param.Price == "" {
+		dao.Price = "10000" // default subscribe price
+	} else {
+		_, err = convert.StrTo(param.Price).BigInt()
+		if err != nil {
+			return nil, err
+		}
 	}
 	res, err := ds.CreateDao(dao, chatAction)
 	if err != nil {
@@ -158,12 +161,12 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 		dao.Banner = param.Banner
 		change = true
 	}
-	if param.Price != 0 {
+	if param.Price != "" {
+		_, err = convert.StrTo(param.Price).BigInt()
+		if err != nil {
+			return err
+		}
 		dao.Price = param.Price
-		change = true
-	}
-	if param.Decimal != 0 {
-		dao.Decimal = param.Decimal
 		change = true
 	}
 	if dao.Visibility != param.Visibility {
@@ -274,7 +277,7 @@ func GetDaoBookmark(userAddress string, daoId string) (*model.DaoBookmark, error
 	return ds.GetDaoBookmarkByAddressAndDaoID(userAddress, daoId)
 }
 
-func CreateDaoBookmark(myAddress string, daoId string, chatAction func(context.Context, *model.Dao) (string, error)) (*model.DaoBookmark, error) {
+func CreateDaoBookmark(myAddress string, daoId string, chatAction func(context.Context, *model.Dao) (gid string, e error)) (*model.DaoBookmark, error) {
 	return ds.CreateDaoFollow(myAddress, daoId, chatAction)
 }
 
@@ -398,7 +401,6 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			UseWallet: address,
 			ToSubject: dao.Address,
 			Amount:    dao.Price,
-			Decimal:   dao.Decimal,
 			Comment:   "",
 			Channel:   "sub_dao",
 			ReturnURI: conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,

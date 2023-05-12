@@ -662,15 +662,12 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 }
 
 func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.PostFormatted {
-	if user == nil {
-		return post
-	}
 	// Warning, Other related places tweetHelpServant.filterMemberContent
 	if post.Member == model.PostMemberNothing {
 		return post
 	}
 	if post.Type == model.VIDEO {
-		if user.Address != post.Address && !CheckSubscribeDAO(user.Address, post.DaoId) {
+		if user == nil || (user.Address != post.Address && !CheckSubscribeDAO(user.Address, post.DaoId)) {
 			for k, v := range post.Contents {
 				if v.Type == model.CONTENT_TYPE_VIDEO {
 					post.Contents[k].Content = ""
@@ -678,7 +675,7 @@ func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.Pos
 			}
 		}
 	} else if post.OrigType == model.VIDEO {
-		if user.Address != post.AuthorId && !CheckSubscribeDAO(user.Address, post.AuthorDaoId) {
+		if user == nil || (user.Address != post.AuthorId && !CheckSubscribeDAO(user.Address, post.AuthorDaoId)) {
 			for k, v := range post.OrigContents {
 				if v.Type == model.CONTENT_TYPE_VIDEO {
 					post.OrigContents[k].Content = ""

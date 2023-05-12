@@ -20,8 +20,7 @@ type Pager struct {
 type PayRequest struct {
 	UseWallet string `json:"use_wallet"          binding:"required"`
 	ToSubject string `json:"to_subject"          binding:"required"`
-	Amount    int64  `json:"amount"              binding:"required"`
-	Decimal   int    `json:"decimal,omitempty"`
+	Amount    string `json:"amount"              binding:"required"`
 	Comment   string `json:"comment,omitempty"`
 	Channel   string `json:"channel,omitempty"`
 	ReturnURI string `json:"return_uri,omitempty"`
@@ -42,7 +41,6 @@ type Account struct {
 	Wallet    string             `json:"wallet"`
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`
-	Balance   int64              `json:"balance"`
-	Frozen    int64              `json:"frozen"`
-	Decimal   int                `json:"decimal"`
+	Balance   string             `json:"balance"`
+	Frozen    string             `json:"frozen"`
 }

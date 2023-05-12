@@ -22,6 +22,8 @@ var (
 	GetReplyFailed      = NewError(40006, "Get Reply Failed")
 	MaxCommentCount     = NewError(40007, "Max Comment Count")
 
+	RedpacketHasBeenCollectedCompletely = NewError(50001, "It has been collected completely")
+
 	GetCollectionsFailed = NewError(60001, "Get Collections Failed")
 
 	CreateDaoFailed          = NewError(80001, "Create Dao Failed")

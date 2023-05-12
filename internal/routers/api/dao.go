@@ -154,18 +154,7 @@ func ActionDaoBookmark(c *gin.Context) {
 	logrus.Debugf("ActionDaoBookmark service.GetDaoBookmark: %s", time.Since(start))
 	if err != nil {
 		// create follow
-		_, err = service.CreateDaoBookmark(address.(string), param.DaoID, func(ctx context.Context, dao *model.Dao) (string, error) {
-			logrus.Debugf("ActionDaoBookmark service.JoinOrLeaveGroup join: %s", time.Since(start))
-			resp, err := service.JoinOrLeaveGroup(ctx, dao.ID.Hex(), true, token)
-			if err != nil {
-				return "", err
-			}
-			_, err = service.PushDaoToSearch(dao)
-			if err != nil {
-				return "", err
-			}
-			return resp, err
-		})
+		err = joinDao(address.(string), param.DaoID, token)
 		logrus.Debugf("ActionDaoBookmark service.CreateDaoBookmark: %s", time.Since(start))
 		status = true
 	} else {
@@ -194,6 +183,21 @@ func ActionDaoBookmark(c *gin.Context) {
 	response.ToResponse(gin.H{
 		"status": status,
 	})
+}
+
+func joinDao(address string, daoID string, token string) error {
+	_, err := service.CreateDaoBookmark(address, daoID, func(ctx context.Context, dao *model.Dao) (string, error) {
+		gid, err := service.JoinOrLeaveGroup(ctx, dao.ID.Hex(), true, token)
+		if err != nil {
+			return "", err
+		}
+		_, err = service.PushDaoToSearch(dao)
+		if err != nil {
+			return "", err
+		}
+		return gid, err
+	})
+	return err
 }
 
 func SubDao(c *gin.Context) {
@@ -227,6 +231,15 @@ func SubDao(c *gin.Context) {
 		logrus.Errorf("service.SubDao err: %v\n", err)
 		response.ToErrorResponse(errcode.SubscribeDAO.WithDetails(err.Error()))
 		return
+	}
+	// join DAO
+	_, err = service.GetDaoBookmark(param.WalletAddr, daoId)
+	if err != nil {
+		token := c.GetHeader("X-Session-Token")
+		err = joinDao(param.WalletAddr, daoId, token)
+		if err != nil {
+			logrus.Errorf("after subsribe DAO, joinDao err: %s", err)
+		}
 	}
 	response.ToResponse(gin.H{
 		"status": status,

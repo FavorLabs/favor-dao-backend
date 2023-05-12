@@ -59,9 +59,10 @@ type AppSettingS struct {
 }
 
 type ExternalAppSettingS struct {
-	UseBucket string
-	Region    string
-	NetworkID int
+	UseBucket        string
+	Region           string
+	NetworkID        int
+	RedpacketAddress string
 }
 
 type CacheIndexSettingS struct {
