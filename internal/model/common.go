@@ -21,7 +21,8 @@ func findQuery(query []bson.M) bson.M {
 type PayStatus uint8
 
 const (
-	PaySuccess PayStatus = iota
+	PaySubmit PayStatus = iota
+	PaySuccess
 	PayFailed
 	PayRefund
 )

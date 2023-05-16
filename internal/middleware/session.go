@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"favor-dao-backend/internal/conf"
+	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
 	"favor-dao-backend/pkg/errcode"
@@ -62,8 +63,8 @@ func Login() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
-		raw, err := redis.Get(c, fmt.Sprintf("token_%s", token)).Bytes()
+		key := fmt.Sprintf("token_%s", token)
+		raw, err := redis.Get(c, key).Bytes()
 		if err == nil {
 			var session service.Session
 			err = json.Unmarshal(raw, &session)
@@ -79,7 +80,7 @@ func Login() gin.HandlerFunc {
 				}
 			}
 		} else {
-			ecode = errcode.UnauthorizedTokenError
+			ecode = errcode.UnauthorizedTokenTimeout
 		}
 
 		if ecode != errcode.Success {
@@ -88,7 +89,7 @@ func Login() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
+		redis.Expire(c, key, core.TokenExpiration)
 		c.Next()
 	}
 }

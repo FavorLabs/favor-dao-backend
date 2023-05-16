@@ -13,9 +13,9 @@ var (
 	loggerFileSetting  *LoggerFileSettingS
 	loggerZincSetting  *LoggerZincSettingS
 	loggerMeiliSetting *LoggerMeiliSettingS
-	redisSetting       *RedisSettingS
 	features           *FeaturesSettingS
 
+	RedisSetting            *RedisSettingS
 	DatabaseSetting         *DatabaseSettingS
 	MongoDBSetting          *MongoDBSettingS
 	ServerSetting           *ServerSettingS
@@ -62,7 +62,7 @@ func setupSetting(suite []string, noDefault bool, configPath ...string) error {
 		"TweetSearch":      &TweetSearchSetting,
 		"Zinc":             &ZincSetting,
 		"Meili":            &MeiliSetting,
-		"Redis":            &redisSetting,
+		"Redis":            &RedisSetting,
 		"Eth":              &EthSetting,
 		"Chat":             &ChatSetting,
 		"Point":            &PointSetting,

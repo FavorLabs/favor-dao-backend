@@ -27,7 +27,7 @@ type RedpacketClaimFormatted struct {
 }
 
 func (a *RedpacketClaim) Table() string {
-	return "redpacket_records"
+	return "redpacket_claim"
 }
 
 func (a *RedpacketClaim) Create(ctx context.Context, db *mongo.Database) error {
@@ -74,17 +74,17 @@ func (a *RedpacketClaim) FindList(ctx context.Context, db *mongo.Database, match
 			"from": red.Table(),
 			"let":  bson.M{"rpd": "$redpacket_id", "user": "$address"},
 			"pipeline": bson.A{
-				bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.M{"$_id": "$$rpd"}}}},
+				bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$_id", "$$rpd"}}}},
 				bson.M{"$lookup": bson.M{
 					"from": user.Table(),
 					"pipeline": bson.A{
-						bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.M{"$address": "$$user"}}}},
+						bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$address", "$$user"}}}},
 						bson.M{"$project": bson.M{"_id": 0, "avatar": 1}},
 					},
 					"as": "user",
 				}},
 				bson.M{"$unwind": "$user"},
-				bson.M{"$project": bson.M{"_id": 0, "title": 1}},
+				bson.M{"$project": bson.M{"_id": 0, "title": 1, "user": 1}},
 			},
 			"as": "ext",
 		}}},

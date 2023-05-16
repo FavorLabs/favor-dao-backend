@@ -12,7 +12,7 @@ import (
 )
 
 func CreateRedpacket(c *gin.Context) {
-	param := service.RedpacketRequest{}
+	param := service.RedpacketRequestAuth{}
 	response := app.NewResponse(c)
 	valid, errs := app.BindAndValid(c, &param)
 	if !valid {
@@ -29,7 +29,26 @@ func CreateRedpacket(c *gin.Context) {
 
 	user, _ := userFrom(c)
 
-	RedpacketID, err := service.CreateRedpacket(user.Address, param)
+	RedpacketID, err := service.CreateRedpacket(user.Address, param.RedpacketRequest)
+	if err != nil {
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
+		return
+	}
+	response.ToResponse(gin.H{
+		"redpacket_id": RedpacketID,
+	})
+}
+
+func CreateRedpacketTest(c *gin.Context) {
+	param := service.RedpacketRequest{}
+	response := app.NewResponse(c)
+	valid, errs := app.BindAndValid(c, &param)
+	if !valid {
+		logrus.Errorf("app.BindAndValid errs: %v", errs)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
+		return
+	}
+	RedpacketID, err := service.CreateRedpacket(c.Query("user"), param)
 	if err != nil {
 		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
@@ -49,6 +68,22 @@ func ClaimRedpacket(c *gin.Context) {
 	}
 	user, _ := userFrom(c)
 	info, e := service.ClaimRedpacket(c, user.Address, rpID)
+	if e != nil {
+		response.ToErrorResponse(e)
+		return
+	}
+	response.ToResponse(info)
+}
+
+func ClaimRedpacketTest(c *gin.Context) {
+	response := app.NewResponse(c)
+	rpd := c.Param("redpacket_id")
+	rpID, err := primitive.ObjectIDFromHex(rpd)
+	if err != nil {
+		response.ToErrorResponse(errcode.InvalidParams)
+		return
+	}
+	info, e := service.ClaimRedpacket(c, c.Query("user"), rpID)
 	if e != nil {
 		response.ToErrorResponse(e)
 		return

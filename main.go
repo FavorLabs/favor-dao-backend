@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"favor-dao-backend/internal"
 	"favor-dao-backend/internal/conf"
@@ -83,8 +87,16 @@ func main() {
 	fmt.Fprintf(color.Output, "favor dao service listen on %s\n",
 		color.GreenString(fmt.Sprintf("http://%s:%s", conf.ServerSetting.HttpIp, conf.ServerSetting.HttpPort)),
 	)
-
-	if err := s.ListenAndServe(); err != nil {
-		log.Fatalf("run app failed: %s", err)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
+	go func() {
+		if err := s.ListenAndServe(); err != nil {
+			log.Fatalf("app stoped: %s", err)
+		}
+		sigs <- syscall.SIGTERM
+	}()
+	select {
+	case <-sigs:
 	}
+	s.Shutdown(context.TODO())
 }

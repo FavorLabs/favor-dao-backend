@@ -1,12 +1,9 @@
 package pointSystem
 
-import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
-
 type BaseResponse struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
+	Code    int      `json:"code"`
+	Msg     string   `json:"msg"`
+	Details []string `json:"details,omitempty"`
 }
 
 type Pager struct {
@@ -31,8 +28,8 @@ type PayResponse struct {
 }
 
 type Account struct {
-	User      primitive.ObjectID `json:"user"`
-	TokenName string             `json:"token_name"`
-	Balance   string             `json:"balance"`
-	Frozen    string             `json:"frozen"`
+	User      string `json:"ref_id"`
+	TokenName string `json:"token_name"`
+	Balance   string `json:"balance"`
+	Frozen    string `json:"frozen"`
 }

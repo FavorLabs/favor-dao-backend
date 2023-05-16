@@ -74,7 +74,7 @@ func (a *Redpacket) FindList(ctx context.Context, db *mongo.Database, match inte
 			"from": user.Table(),
 			"let":  bson.M{"user": "$address"},
 			"pipeline": bson.A{
-				bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.M{"$address": "$$user"}}}},
+				bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$address", "$$user"}}}},
 				bson.M{"$project": bson.M{"_id": 0, "avatar": 1}},
 			},
 			"as": "ext",

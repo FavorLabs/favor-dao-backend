@@ -36,6 +36,8 @@ func PayNotify(notify PayCallbackParam) (err error) {
 		return eventSendRedpacket(notify)
 	case "claim_redpacket":
 		return eventClaimRedpacket(notify)
+	case "refund_redpacket":
+		return eventRefundRedpacket(notify)
 	default:
 		return errors.New("unknown method")
 	}
