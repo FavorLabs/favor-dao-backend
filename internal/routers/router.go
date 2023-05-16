@@ -121,11 +121,11 @@ func NewRouter() *gin.Engine {
 		authApi.GET("/chat/groups", api.GetChatGroups)
 	}
 
-	test := r.Group("/test")
-	{
-		test.POST("/redpacket", api.CreateRedpacketTest)
-		test.POST("/redpacket/:redpacket_id", api.ClaimRedpacketTest)
-	}
+	// test := r.Group("/test")
+	// {
+	// 	test.POST("/redpacket", api.CreateRedpacketTest)
+	// 	test.POST("/redpacket/:redpacket_id", api.ClaimRedpacketTest)
+	// }
 
 	// default 404
 	e.NoRoute(func(c *gin.Context) {
