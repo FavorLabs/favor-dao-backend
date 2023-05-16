@@ -64,7 +64,7 @@ func TestRedpacket(t *testing.T) {
 }
 
 func TestClaimRedpacket(t *testing.T) {
-	// t.Skip("redpacket feat, need run server")
+	t.Skip("redpacket feat, need run server")
 
 	redpacketID := "64634f5c4497b9aee6f9c70a"
 	totalUser := 300
