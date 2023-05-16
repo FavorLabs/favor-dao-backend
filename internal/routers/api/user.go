@@ -46,7 +46,7 @@ func Login(c *gin.Context) {
 		FriendlyName: c.DefaultQuery("name", "UnknownDevice"),
 		WalletAddr:   param.WalletAddr,
 	})
-	if err := conf.Redis.Set(c, fmt.Sprintf("token_%s", token), session, 0).Err(); err != nil {
+	if err := conf.Redis.Set(c, fmt.Sprintf("token_%s", token), session, core.TokenExpiration).Err(); err != nil {
 		logrus.Errorf("conf.Redis.Set err: %v", err)
 		response.ToErrorResponse(errcode.UnauthorizedTokenError)
 		return

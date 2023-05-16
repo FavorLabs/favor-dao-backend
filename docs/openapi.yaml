@@ -139,12 +139,10 @@ paths:
       parameters:
         - name: page
           in: query
-          required: true
           schema:
             type: number
         - name: page_size
           in: query
-          required: true
           schema:
             type: number
         - name: year
@@ -167,12 +165,10 @@ paths:
       parameters:
         - name: page
           in: query
-          required: true
           schema:
             type: number
         - name: page_size
           in: query
-          required: true
           schema:
             type: number
         - name: year

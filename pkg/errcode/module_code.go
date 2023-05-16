@@ -23,6 +23,7 @@ var (
 	MaxCommentCount     = NewError(40007, "Max Comment Count")
 
 	RedpacketHasBeenCollectedCompletely = NewError(50001, "It has been collected completely")
+	RedpacketAlreadyClaim               = NewError(50002, "Already claim")
 
 	GetCollectionsFailed = NewError(60001, "Get Collections Failed")
 

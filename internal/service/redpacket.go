@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"math/big"
+	"time"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
@@ -12,20 +14,49 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
+	"github.com/go-redis/redis_rate/v10"
+	"github.com/hibiken/asynq"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+const (
+	PrefixRedisKeyRedpacket      = "redpacket_send:"
+	PrefixRedisKeyRedpacketClaim = "redpacket_claim:"
+	TypeRedpacketDone            = "redpacket:done"
+	TypeRedpacketClaim           = "redpacket:claim"
+	QueueRedpacket               = "redpacket"
+)
+
+type RedpacketRequestAuth struct {
+	Auth             AuthByWalletRequest `json:"auth"     binding:"required"`
+	RedpacketRequest `json:",inline"`
+}
+
 type RedpacketRequest struct {
-	Auth   AuthByWalletRequest `json:"auth"     binding:"required"`
-	Type   model.RedpacketType `json:"type"     binding:"required"`
+	Type   model.RedpacketType `json:"type"`
 	Title  string              `json:"title"    binding:"required"`
 	Amount string              `json:"amount"   binding:"required"`
 	Total  int64               `json:"total"    binding:"required"`
 }
 
+type ClaimChRequest struct {
+	Id      primitive.ObjectID
+	Address string
+	Count   int64
+}
+
+type ClaimChResponse struct {
+	Info *model.RedpacketClaim
+	err  *errcode.Error
+}
+
 func CreateRedpacket(address string, parm RedpacketRequest) (id string, err error) {
+	if parm.Total > 100 {
+		err = errors.New("exceed the maximum 100")
+		return
+	}
 	amount, err := convert.StrTo(parm.Amount).BigInt()
 	if err != nil {
 		return
@@ -93,6 +124,12 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 	case val := <-notify.Ch:
 		if !val.(bool) {
 			err = errors.New("create redpacket failed")
+		} else {
+			task := NewRedpacketDoneTask(redpacket.ID.Hex())
+			_, er := queue.Enqueue(task, asynq.ProcessIn(time.Hour*24), asynq.Queue(QueueRedpacket))
+			if er != nil {
+				logrus.Errorf("enqueue RedpacketDoneTask %s", er)
+			}
 		}
 	}
 	return
@@ -101,6 +138,7 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 func eventSendRedpacket(notify PayCallbackParam) error {
 	ctx := context.Background()
 	m := &model.Redpacket{}
+	m.ID, _ = primitive.ObjectIDFromHex(notify.OrderId)
 	err := m.First(ctx, conf.MustMongoDB())
 	if err != nil {
 		logrus.Errorf("send_redpacket on notify: redpacket.First _id:%s err:%s", notify.OrderId, err)
@@ -123,15 +161,7 @@ func eventSendRedpacket(notify PayCallbackParam) error {
 		if err != nil {
 			return err
 		}
-		key := "redpacket_" + notify.OrderId
-		// var packets []string
-		// switch m.Type {
-		// case model.Lucked:
-		// 	packets = redpacketLucked(m.TotalAmount, m.Total)
-		// case model.Average:
-		// 	packets = redpacketAverage(m.Amount, m.Total)
-		// }
-		// err = conf.Redis.RPush(ctx, key, packets).Err()
+		key := PrefixRedisKeyRedpacket + notify.OrderId
 		err = conf.Redis.Set(ctx, key, m.Total, 0).Err()
 		if err != nil {
 			logrus.Errorf("send_redpacket on notify: redis set redpacket_%s err:%s", notify.OrderId, err)
@@ -177,7 +207,7 @@ func redpacketLucked(totalAmount string, numbers int64) []string {
 }
 
 func redpacketRand(balance string, count int64) (amount, nowBalance string) {
-	if count == 1 {
+	if count <= 1 {
 		return balance, "0"
 	}
 	restPrice := convert.StrTo(balance).MustBigInt()
@@ -204,79 +234,40 @@ func redpacketAverage(price string, numbers int64) (packets []string) {
 }
 
 func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.ObjectID) (rr *model.RedpacketClaim, e *errcode.Error) {
-	key := "redpacket_" + redpacketID.Hex()
-	// price, err := conf.Redis.RPop(ctx, key).Result()
-	// if err != nil {
-	// 	return nil, errcode.RedpacketHasBeenCollectedCompletely
-	// }
-	// defer func() {
-	// 	if e != nil {
-	// 		conf.Redis.RPush(ctx, key, price)
-	// 	}
-	// }()
-	err := conf.Redis.Exists(ctx, key).Err()
-	if err != nil {
-		return nil, errcode.RedpacketHasBeenCollectedCompletely
+	claimKey := fmt.Sprintf("%s%s:%s", PrefixRedisKeyRedpacketClaim, redpacketID.Hex(), address)
+	res, err := limiter.Allow(ctx, claimKey, redis_rate.PerMinute(3))
+	if err != nil || res.Allowed == 0 {
+		return nil, errcode.TooManyRequests
 	}
-	count := conf.Redis.Decr(ctx, key).Val()
-	if count < 0 {
-		return nil, errcode.RedpacketHasBeenCollectedCompletely
-	}
-	defer func() {
-		if e != nil {
-			// todo Ensuring Success
-			conf.Redis.Incr(ctx, key)
-		}
-	}()
 
-	err = model.UseTransaction(ctx, conf.MustMongoDB(), func(ctx context.Context) error {
-		// Calculation amount
-		redpacket := &model.Redpacket{}
-		redpacket.ID = redpacketID
-		err = redpacket.First(ctx, conf.MustMongoDB())
-		if err != nil {
-			logrus.Errorf("ClaimRedpacket redpacket.First err:%s", err)
-			return err
-		}
-		var price, balance string
-		// ---
-		if redpacket.Type == model.RedpacketTypeAverage {
-			price = redpacket.AvgAmount
-			b := convert.StrTo(redpacket.Balance).MustBigInt()
-			b.Sub(b, convert.StrTo(price).MustBigInt())
-			balance = b.String()
-		} else {
-			price, balance = redpacketRand(redpacket.Balance, count+1)
-		}
-		// records
-		rr = &model.RedpacketClaim{}
-		rr.RedpacketId = redpacketID
-		rr.Address = address
-		rr.Amount = price
-		err = rr.Create(ctx, conf.MustMongoDB())
-		if err != nil {
-			return err
-		}
-		err = redpacket.FindAndUpdate(ctx, conf.MustMongoDB(), bson.M{
-			"$set": bson.M{"balance": balance, "claim_count": redpacket.ClaimCount - 1},
-		})
-		if err != nil {
-			return err
-		}
-		// pay
-		redpacket.TxID, err = point.Pay(ctx, pointSystem.PayRequest{
-			FromObject: conf.ExternalAppSetting.RedpacketAddress,
-			ToSubject:  address,
-			Amount:     rr.Amount,
-			Comment:    "",
-			Channel:    "claim_redpacket",
-			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=claim_redpacket&order_id=" + rr.ID.Hex(),
-			BindOrder:  rr.ID.Hex(),
-		})
-		return err
-	})
+	key := PrefixRedisKeyRedpacket + redpacketID.Hex()
+
+	count, err := conf.Redis.Get(ctx, key).Int64()
+	if err != nil || count <= 0 {
+		return nil, errcode.RedpacketHasBeenCollectedCompletely
+	}
+
+	// sub claimKey
+	notify, err := pubsub.NewSubscribe(claimKey)
 	if err != nil {
-		return rr, errcode.ServerError.WithDetails(err.Error())
+		return nil, errcode.RedpacketAlreadyClaim
+	}
+
+	task := NewRedpacketClaimTask(redpacketID, address)
+	_, err = queue.Enqueue(task, asynq.Queue(QueueRedpacket), asynq.MaxRetry(0))
+	if err != nil {
+		return nil, errcode.ServerError.WithDetails(err.Error())
+	}
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case val := <-notify.Ch:
+		info := val.(*ClaimChResponse)
+		if info.err != nil {
+			return nil, info.err
+		}
+		rr = info.Info
 	}
 	return rr, nil
 }
@@ -284,6 +275,7 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 func eventClaimRedpacket(notify PayCallbackParam) error {
 	ctx := context.Background()
 	m := &model.RedpacketClaim{}
+	m.ID, _ = primitive.ObjectIDFromHex(notify.OrderId)
 	err := m.First(ctx, conf.MustMongoDB())
 	if err != nil {
 		logrus.Errorf("claim_redpacket on notify: RedpacketRecords.First _id:%s err:%s", notify.OrderId, err)
@@ -326,7 +318,7 @@ func RedpacketInfo(ctx context.Context, redpacketID primitive.ObjectID, address 
 	}
 	info.UserAvatar = user.Avatar
 	record := model.RedpacketClaim{}
-	_ = record.FindOne(ctx, conf.MustMongoDB(), bson.M{"address": address, "redpacket_id": redpacketID.Hex()})
+	_ = record.FindOne(ctx, conf.MustMongoDB(), bson.M{"address": address, "redpacket_id": redpacketID})
 	info.ClaimAmount = record.Amount
 	return info, nil
 }
@@ -379,7 +371,7 @@ func RedpacketSendList(ctx context.Context, req RedpacketQueryParam, limit, offs
 func RedpacketClaimList(ctx context.Context, req RedpacketQueryParam, limit, offset int) (total int64, out []*model.RedpacketClaimFormatted) {
 	filter := bson.M{}
 	if req.RedpacketID != "" {
-		filter["redpacket_id"] = req.RedpacketID
+		filter["redpacket_id"], _ = primitive.ObjectIDFromHex(req.RedpacketID)
 	} else {
 		filter["created_on"] = bson.M{
 			"$gte": req.StartTime,

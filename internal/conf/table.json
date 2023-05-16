@@ -156,5 +156,34 @@
         }
       ]
     ]
+  },
+  {
+    "TableName": "redpacket",
+    "Indexes": [
+      [
+        {
+          "created_on": 1
+        },
+        {
+          "address": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "redpacket_claim",
+    "Indexes": [
+      [
+        {
+          "created_on": 1
+        },
+        {
+          "address": 1
+        },
+        {
+          "redpacket_id": 1
+        }
+      ]
+    ]
   }
 ]

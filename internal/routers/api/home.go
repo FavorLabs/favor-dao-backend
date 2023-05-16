@@ -52,7 +52,7 @@ func GetCaptcha(c *gin.Context) {
 
 	key := util.EncodeMD5(uuid.Must(uuid.NewV4()).String())
 
-	conf.Redis.SetEX(c, "DaoCaptcha:"+key, password, time.Minute*5)
+	conf.Redis.Set(c, "DaoCaptcha:"+key, password, time.Minute*5)
 
 	response := app.NewResponse(c)
 	response.ToResponse(gin.H{

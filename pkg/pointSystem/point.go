@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -45,14 +46,27 @@ func (s *Gateway) request(ctx context.Context, method, url string, body, respDat
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
-	respBody, err := io.ReadAll(resp.Body)
+	defer func() {
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	rawBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(respBody, respData)
+
+	if resp.StatusCode != http.StatusOK {
+		var restErr BaseResponse
+
+		err = json.Unmarshal(rawBody, &restErr)
+		if err != nil {
+			return fmt.Errorf("%s,%s", resp.Status, err)
+		}
+		return fmt.Errorf("code:%d msg:%s details:%s", restErr.Code, restErr.Msg, restErr.Details)
+	}
+	return json.Unmarshal(rawBody, respData)
 }
 
 func (s *Gateway) Pay(ctx context.Context, param PayRequest) (txID string, err error) {

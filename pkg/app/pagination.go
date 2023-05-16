@@ -47,9 +47,6 @@ func GetPageOffset(c *gin.Context) (offset, limit int) {
 
 func GetYear(c *gin.Context) (start, end int64) {
 	y := convert.StrTo(c.Query("year")).MustInt()
-	if y <= 2022 {
-		y = 2023
-	}
 	start = time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 	end = time.Date(y+1, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 	return

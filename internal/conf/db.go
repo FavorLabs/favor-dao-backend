@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -57,9 +57,9 @@ func newDBEngine() (*mongo.Database, error) {
 
 func setupDBEngine() {
 	Redis = redis.NewClient(&redis.Options{
-		Addr:     redisSetting.Host,
-		Password: redisSetting.Password,
-		DB:       redisSetting.DB,
+		Addr:     RedisSetting.Host,
+		Password: RedisSetting.Password,
+		DB:       RedisSetting.DB,
 	})
 	if err := Redis.Ping(context.TODO()).Err(); err != nil {
 		logrus.Fatalf("new redis failed: %s", err)
