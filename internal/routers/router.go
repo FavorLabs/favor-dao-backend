@@ -33,6 +33,7 @@ func NewRouter() *gin.Engine {
 	{
 		noAuthApi.GET("/post", api.GetPost)
 		noAuthApi.GET("/dao", api.GetDao)
+		noAuthApi.GET("/dao/recommend", api.GetDaoList)
 
 		noAuthApi.GET("/tags", api.GetPostTags)
 
