@@ -45,6 +45,12 @@ type DaoFollowReq struct {
 	DaoID string `json:"dao_id" binding:"required"`
 }
 
+type DaoListReq struct {
+	Conditions *model.ConditionsT
+	Offset     int
+	Limit      int
+}
+
 func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 	dao := &model.Dao{
 		Name: name,
@@ -332,7 +338,7 @@ func PushDAOsToSearch() {
 	nums := int(pages)
 
 	for i := 0; i < nums; i++ {
-		posts, _ := GetDaoList(&PostListReq{
+		posts, _ := GetDaoList(&DaoListReq{
 			Conditions: &model.ConditionsT{},
 			Offset:     i * splitNum,
 			Limit:      splitNum,
@@ -353,7 +359,7 @@ func GetDaoCount(conditions *model.ConditionsT) (int64, error) {
 	return ds.GetDaoCount(conditions)
 }
 
-func GetDaoList(req *PostListReq) ([]*model.Dao, error) {
+func GetDaoList(req *DaoListReq) ([]*model.Dao, error) {
 	posts, err := ds.GetDaoList(req.Conditions, req.Offset, req.Limit)
 	return posts, err
 }

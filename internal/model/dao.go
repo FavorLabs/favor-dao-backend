@@ -21,6 +21,13 @@ const (
 	DaoVisitPrivate
 )
 
+type DaoType uint8
+
+const (
+	DaoDefault DaoType = iota
+	DaoWithURL
+)
+
 type Dao struct {
 	ID           primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
 	CreatedOn    int64              `json:"created_on"       bson:"created_on"`
@@ -33,9 +40,11 @@ type Dao struct {
 	Introduction string             `json:"introduction"     bson:"introduction"`
 	Avatar       string             `json:"avatar"           bson:"avatar"`
 	Banner       string             `json:"banner"           bson:"banner"`
+	HomePage     string             `json:"home_page,omitempty"        bson:"homePage,omitempty"`
 	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
 	Price        string             `json:"price"            bson:"price"`
 	Tags         string             `json:"tags"             bson:"tags"`
+	Type         DaoType            `json:"type"             bson:"type,omitempty"`
 }
 
 type DaoFormatted struct {
@@ -46,9 +55,11 @@ type DaoFormatted struct {
 	Visibility   DaoVisibleT      `json:"visibility"`
 	Avatar       string           `json:"avatar"`
 	Banner       string           `json:"banner"`
+	HomePage     string           `json:"home_page,omitempty"`
 	FollowCount  int64            `json:"follow_count"`
 	Price        string           `json:"price"`
 	Tags         map[string]int8  `json:"tags"`
+	Type         DaoType          `json:"type"`
 	LastPosts    []*PostFormatted `json:"last_posts"`
 	IsJoined     bool             `json:"is_joined"`
 	IsSubscribed bool             `json:"is_subscribed"`
@@ -67,9 +78,11 @@ func (m *Dao) Format() *DaoFormatted {
 		Visibility:   m.Visibility,
 		Avatar:       m.Avatar,
 		Banner:       m.Banner,
+		HomePage:     m.HomePage,
 		FollowCount:  m.FollowCount,
 		Price:        m.Price,
 		Tags:         tagsMap,
+		Type:         m.Type,
 		LastPosts:    []*PostFormatted{},
 	}
 }

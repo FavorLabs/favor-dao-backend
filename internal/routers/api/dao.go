@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"favor-dao-backend/internal/core"
@@ -104,6 +105,33 @@ func GetDao(c *gin.Context) {
 		return
 	}
 	response.ToResponse(dao)
+}
+
+func GetDaoList(c *gin.Context) {
+	response := app.NewResponse(c)
+	offset, limit := app.GetPageOffset(c)
+
+	list, err := service.GetDaoList(&service.DaoListReq{
+		Conditions: &model.ConditionsT{
+			"query": bson.M{
+				"type": model.DaoWithURL,
+			},
+			"ORDER": bson.M{"_id": -1},
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		logrus.Errorf("service.GetDaoList err: %v\n", err)
+		response.ToErrorResponse(errcode.GetDaoFailed)
+		return
+	}
+
+	if len(list) == 0 {
+		list = make([]*model.Dao, 0)
+	}
+
+	response.ToResponseList(list, int64(len(list)))
 }
 
 func GetMyDaoList(c *gin.Context) {
