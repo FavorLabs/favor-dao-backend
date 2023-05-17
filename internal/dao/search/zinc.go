@@ -122,9 +122,13 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 			},
 		})
 	} else {
+		vs := types.AnySlice{}
+		for _, v := range q.Visibility {
+			vs = append(vs, v)
+		}
 		must = append(must, map[string]types.Any{
 			"terms": map[string]types.Any{
-				"visibility": q.Visibility,
+				"visibility": vs,
 			},
 		})
 	}
