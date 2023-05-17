@@ -300,6 +300,53 @@ paths:
       security:
         - api_key: []
 
+  /dao/posts:
+    get:
+      tags:
+        - POST
+      summary: Post list
+      parameters:
+        - name: query
+          in: query
+          description: address,title,content of post
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: -1 DAO, post(All but DAO), 0 SMS 1 VIDEO ;Multiple commas can be used to separate
+          required: false
+          schema:
+            type: string
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: address
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: daoId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          example: "dao_follow_count:desc,created_on:desc"
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid ID supplied
+      security:
+        - api_key: [ ]
+
   /dao:
     get:
       tags:
