@@ -457,7 +457,7 @@ paths:
           schema:
             type: string
       responses:
-        default:
+        200:
           description: successful operation
       security:
         - api_key: []
@@ -468,7 +468,7 @@ paths:
         - USER
       summary: Get accounts for user
       responses:
-        default:
+        200:
           description: successful operation
           content:
             application/json:
@@ -476,13 +476,9 @@ paths:
                 "code": 0,
                 "data": [
                   {
-                    "user": "",
-                    "wallet": "",
-                    "created_at": "2023-04-24T06:30:01.014Z",
-                    "updated_at": "2023-04-24T10:26:50.578Z",
-                    "balance": 9950,
-                    "frozen": 0,
-                    "decimal": 0
+                    "asset": "FAVT",
+                    "balance": "889801",
+                    "frozen": "0"
                   }
                 ],
                 "msg": "success",
