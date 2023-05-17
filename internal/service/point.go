@@ -64,6 +64,6 @@ func eventSubDAO(notify PayCallbackParam) error {
 	return nil
 }
 
-func FindAccounts(ctx context.Context, uid string) (accounts []pointSystem.Account, err error) {
-	return point.FindAccounts(ctx, uid)
+func FindAccounts(ctx context.Context, address string) (accounts []pointSystem.Account, err error) {
+	return point.FindAccounts(ctx, address)
 }

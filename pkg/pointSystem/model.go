@@ -28,8 +28,7 @@ type PayResponse struct {
 }
 
 type Account struct {
-	User      string `json:"ref_id"`
-	TokenName string `json:"token_name"`
-	Balance   string `json:"balance"`
-	Frozen    string `json:"frozen"`
+	Asset   string `json:"asset"`
+	Balance string `json:"balance"`
+	Frozen  string `json:"frozen"`
 }

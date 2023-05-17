@@ -70,13 +70,13 @@ func (s *Gateway) request(ctx context.Context, method, url string, body, respDat
 }
 
 func (s *Gateway) Pay(ctx context.Context, param PayRequest) (txID string, err error) {
-	url := s.baseUrl + "/v1/pay"
+	u := s.baseUrl + "/v1/pay"
 
 	var resp struct {
 		BaseResponse
 		Data PayResponse `json:"data,omitempty"`
 	}
-	err = s.request(ctx, http.MethodPost, url, param, &resp)
+	err = s.request(ctx, http.MethodPost, u, param, &resp)
 	if err != nil {
 		return "", err
 	}
@@ -86,24 +86,37 @@ func (s *Gateway) Pay(ctx context.Context, param PayRequest) (txID string, err e
 	return resp.Data.Id, nil
 }
 
-func (s *Gateway) FindAccounts(ctx context.Context, uid string) (list []Account, err error) {
-	url := s.baseUrl + "/v1/accounts?uid=" + uid
+func (s *Gateway) FindAccounts(ctx context.Context, address string) (list []Account, err error) {
+	u := s.baseUrl + "/v1/accounts?ref_id=" + address
+
+	type Ac struct {
+		TokenName string `json:"token_name"`
+		Balance   string `json:"balance"`
+		Frozen    string `json:"frozen"`
+	}
 
 	var resp struct {
 		BaseResponse
 		Data struct {
-			List  []Account `json:"list"`
-			Pager Pager     `json:"pager"`
+			List  []Ac  `json:"list"`
+			Pager Pager `json:"pager"`
 		} `json:"data,omitempty"`
 	}
-	err = s.request(ctx, http.MethodGet, url, nil, &resp)
+	err = s.request(ctx, http.MethodGet, u, nil, &resp)
 	if err != nil {
 		return nil, err
 	}
 	if resp.Code != 0 {
 		return nil, errors.New(resp.Msg)
 	}
-	return resp.Data.List, nil
+	for _, v := range resp.Data.List {
+		list = append(list, Account{
+			Asset:   v.TokenName,
+			Balance: v.Balance,
+			Frozen:  v.Frozen,
+		})
+	}
+	return
 }
 
 func (s *Gateway) Transaction() (txID string, err error) {

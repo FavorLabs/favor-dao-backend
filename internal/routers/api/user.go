@@ -105,7 +105,7 @@ func GetAccounts(c *gin.Context) {
 
 	user, _ := userFrom(c)
 
-	ac, err := service.FindAccounts(c, user.ID.Hex())
+	ac, err := service.FindAccounts(c, user.Address)
 	if err != nil {
 		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
