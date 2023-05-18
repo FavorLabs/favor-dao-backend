@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,56 +18,34 @@ const (
 )
 
 type DaoSubscribe struct {
-	ID         primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
-	CreatedOn  int64              `json:"created_on"       bson:"created_on"`
-	ModifiedOn int64              `json:"modified_on"      bson:"modified_on"`
-	Address    string             `json:"address"          bson:"address"`
-	DaoID      primitive.ObjectID `json:"dao_id"           bson:"dao_id"`
-	TxID       string             `json:"tx_id"            bson:"tx_id"`
-	PayAmount  string             `json:"pay_amount"       bson:"pay_amount"`
-	Status     DaoSubscribeT      `json:"status"           bson:"status"`
+	DefaultModel `bson:",inline"`
+	Address      string             `json:"address"          bson:"address"`
+	DaoID        primitive.ObjectID `json:"dao_id"           bson:"dao_id"`
+	TxID         string             `json:"tx_id"            bson:"tx_id"`
+	PayAmount    string             `json:"pay_amount"       bson:"pay_amount"`
+	Status       DaoSubscribeT      `json:"status"           bson:"status"`
 }
 
 func (m *DaoSubscribe) Table() string {
 	return "dao_subscribe"
 }
 
-func (m *DaoSubscribe) Create(ctx context.Context, db *mongo.Database) (*DaoSubscribe, error) {
-	now := time.Now().Unix()
-	m.CreatedOn = now
-	m.ModifiedOn = now
-	res, err := db.Collection(m.Table()).InsertOne(ctx, &m)
-	if err != nil {
-		return nil, err
-	}
-	m.ID = res.InsertedID.(primitive.ObjectID)
-	return m, nil
+func (m *DaoSubscribe) Create(ctx context.Context, db *mongo.Database) error {
+	return create(ctx, db, m)
 }
 
 func (m *DaoSubscribe) Update(ctx context.Context, db *mongo.Database) error {
-	filter := bson.D{{"_id", m.ID}}
-	res := db.Collection(m.Table()).FindOneAndReplace(ctx, filter, &m)
-	if res.Err() != nil {
-		return res.Err()
-	}
-	return nil
+	return update(ctx, db, m)
 }
 
-func (m *DaoSubscribe) Get(ctx context.Context, db *mongo.Database) (*DaoSubscribe, error) {
-	if m.ID.IsZero() {
-		return nil, mongo.ErrNoDocuments
-	}
-	filter := bson.D{{"_id", m.ID}}
-	res := db.Collection(m.Table()).FindOne(ctx, filter)
-	if res.Err() != nil {
-		return nil, res.Err()
-	}
-	var dao DaoSubscribe
-	err := res.Decode(&dao)
-	if err != nil {
-		return nil, err
-	}
-	return &dao, nil
+func (m *DaoSubscribe) Get(ctx context.Context, db *mongo.Database) error {
+	filter := bson.M{ID: m.GetID()}
+
+	return findOne(ctx, db, m, filter)
+}
+
+func (m *DaoSubscribe) FindOne(ctx context.Context, db *mongo.Database, filter interface{}) error {
+	return findOne(ctx, db, m, filter)
 }
 
 func (m *DaoSubscribe) FindList(ctx context.Context, db *mongo.Database, filter interface{}) (list []*DaoSubscribe) {
