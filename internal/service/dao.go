@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DaoCreationReq struct {
@@ -394,33 +396,51 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		}
 	}()
 
-	// create order
-	err = ds.SubscribeDAO(address, daoID, func(ctx context.Context, orderID string, dao *model.Dao) error {
-		oid = orderID
-		// sub order
-		notify, err = pubsub.NewSubscribe(orderID)
-		if err != nil {
-			return err
-		}
-		// pay
-		txID, err = point.Pay(ctx, pointSystem.PayRequest{
-			FromObject: address,
-			ToSubject:  dao.Address,
-			Amount:     dao.Price,
-			Comment:    "",
-			Channel:    "sub_dao",
-			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
-			BindOrder:  orderID,
-		})
-		return err
-	})
-	if err != nil {
+	// check old subscribe
+	sub := model.DaoSubscribe{}
+	err = sub.FindOne(ctx, conf.MustMongoDB(), bson.M{"address": address, "dao_id": daoID})
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return
 	}
-	e := ds.UpdateSubscribeDAOTxID(oid, txID)
-	if e != nil {
-		logrus.Errorf("ds.UpdateSubscribeDAOTxID order_id:%s tx_id:%s err:%s", oid, txID, e)
-		// When an error occurs, wait for the callback to fix the txID again
+	if err != nil {
+		// ErrNoDocuments
+		// create order
+		err = ds.SubscribeDAO(address, daoID, func(ctx context.Context, orderID string, dao *model.Dao) error {
+			oid = orderID
+			// sub order
+			notify, err = pubsub.NewSubscribe(orderID)
+			if err != nil {
+				return err
+			}
+			// pay
+			txID, err = point.Pay(ctx, pointSystem.PayRequest{
+				FromObject: address,
+				ToSubject:  dao.Address,
+				Amount:     dao.Price,
+				Comment:    "",
+				Channel:    "sub_dao",
+				ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
+				BindOrder:  orderID,
+			})
+			return err
+		})
+		if err != nil {
+			return
+		}
+		e := ds.UpdateSubscribeDAOTxID(oid, txID)
+		if e != nil {
+			logrus.Errorf("ds.UpdateSubscribeDAOTxID order_id:%s tx_id:%s err:%s", oid, txID, e)
+			// When an error occurs, wait for the callback to fix the txID again
+		}
+	} else {
+		txID = sub.TxID
+		status = sub.Status
+		if status != model.DaoSubscribeSubmit {
+			return
+		}
+		// sub order
+		oid = sub.ID.Hex()
+		notify, _ = pubsub.NewSubscribe(oid)
 	}
 	// wait pay notify
 	select {

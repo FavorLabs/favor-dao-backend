@@ -311,12 +311,12 @@ func (s *daoManageServant) SubscribeDAO(address string, daoID primitive.ObjectID
 			Status:    model.DaoSubscribeSubmit,
 			PayAmount: dao.Price,
 		}
-		res, err := sub.Create(ctx, s.db)
+		err = sub.Create(ctx, s.db)
 		if err != nil {
 			return err
 		}
 		if fn != nil {
-			return fn(ctx, res.ID.Hex(), dao)
+			return fn(ctx, sub.ID.Hex(), dao)
 		}
 		return nil
 	})
