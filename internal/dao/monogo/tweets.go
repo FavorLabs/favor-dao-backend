@@ -395,27 +395,23 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 
 				post.Tags = origPost.Tags
 
+				// replace the newest post type
+				post.OrigType = origPost.Type
+				post.AuthorId = origPost.Address
+				post.AuthorDaoId = origPost.DaoId
+
+				// if re-post type is retweet, we'll find original post id
 				if len(contents) == 0 {
-					// if re-post type is retweet, we'll find original post id
 					if !origPost.RefId.IsZero() {
 						post.RefId = origPost.RefId
 						post.OrigType = origPost.OrigType
 					}
-					if origPost.AuthorId == "" {
-						post.AuthorId = origPost.Address
-					} else {
+					if origPost.AuthorId != "" {
 						post.AuthorId = origPost.AuthorId
 					}
-					if origPost.AuthorDaoId.IsZero() {
-						post.AuthorDaoId = origPost.DaoId
-					} else {
+					if !origPost.AuthorDaoId.IsZero() {
 						post.AuthorDaoId = origPost.AuthorDaoId
 					}
-				} else {
-					// replace the newest post type
-					post.OrigType = origPost.Type
-					post.AuthorId = origPost.Address
-					post.AuthorDaoId = origPost.DaoId
 				}
 			case model.RefComment:
 				comment, err := (&model.Comment{ID: post.RefId}).Get(ctx, s.db)
