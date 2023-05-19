@@ -23,24 +23,26 @@ import (
 )
 
 type DaoCreationReq struct {
-	Name         string            `json:"name"          binding:"required"`
-	Tags         []string          `json:"tags"`
-	Introduction string            `json:"introduction"`
-	Visibility   model.DaoVisibleT `json:"visibility"`
-	Avatar       string            `json:"avatar"`
-	Banner       string            `json:"banner"`
-	Price        string            `json:"price"`
+	Name                  string             `json:"name"          binding:"required"`
+	Tags                  []string           `json:"tags"`
+	Introduction          string             `json:"introduction"`
+	Visibility            model.DaoVisibleT  `json:"visibility"`
+	DefaultPostVisibility model.PostVisibleT `json:"default_post_visibility"`
+	Avatar                string             `json:"avatar"`
+	Banner                string             `json:"banner"`
+	Price                 string             `json:"price"`
 }
 
 type DaoUpdateReq struct {
-	Id           primitive.ObjectID `json:"id"            binding:"required"`
-	Tags         []string           `json:"tags"`
-	Name         string             `json:"name"`
-	Introduction string             `json:"introduction"`
-	Visibility   model.DaoVisibleT  `json:"visibility"`
-	Avatar       string             `json:"avatar"`
-	Banner       string             `json:"banner"`
-	Price        string             `json:"price"`
+	Id                    primitive.ObjectID `json:"id"            binding:"required"`
+	Tags                  []string           `json:"tags"`
+	Name                  string             `json:"name"`
+	Introduction          string             `json:"introduction"`
+	Visibility            model.DaoVisibleT  `json:"visibility"`
+	DefaultPostVisibility model.PostVisibleT `json:"default_post_visibility"`
+	Avatar                string             `json:"avatar"`
+	Banner                string             `json:"banner"`
+	Price                 string             `json:"price"`
 }
 
 type DaoFollowReq struct {
@@ -48,7 +50,7 @@ type DaoFollowReq struct {
 }
 
 type DaoListReq struct {
-	Conditions *model.ConditionsT
+	Conditions model.ConditionsT
 	Offset     int
 	Limit      int
 }
@@ -63,15 +65,16 @@ func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAction func(context.Context, *model.Dao) (string, error)) (_ *model.DaoFormatted, err error) {
 	tags := tagsFrom(param.Tags)
 	dao := &model.Dao{
-		Tags:         strings.Join(tags, ","),
-		Address:      userAddress,
-		Name:         param.Name,
-		Visibility:   param.Visibility,
-		Introduction: param.Introduction,
-		Avatar:       param.Avatar,
-		Banner:       param.Banner,
-		Price:        param.Price,
-		FollowCount:  1, // default owner joined
+		Tags:                  strings.Join(tags, ","),
+		Address:               userAddress,
+		Name:                  param.Name,
+		Visibility:            param.Visibility,
+		DefaultPostVisibility: param.DefaultPostVisibility,
+		Introduction:          param.Introduction,
+		Avatar:                param.Avatar,
+		Banner:                param.Banner,
+		Price:                 param.Price,
+		FollowCount:           1, // default owner joined
 	}
 	if param.Price == "" {
 		dao.Price = "10000" // default subscribe price
@@ -86,19 +89,17 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		return nil, err
 	}
 
-	if dao.Visibility == model.DaoVisitPublic {
-		for _, t := range tags {
-			tag := &model.Tag{
-				Address: userAddress,
-				Tag:     t,
-			}
-			ds.CreateTag(tag)
+	for _, t := range tags {
+		tag := &model.Tag{
+			Address: userAddress,
+			Tag:     t,
 		}
-		// push to search
-		_, err = PushDaoToSearch(dao)
-		if err != nil {
-			logrus.Warnf("%s when create, push dao to search err: %v", userAddress, err)
-		}
+		ds.CreateTag(tag)
+	}
+	// push to search
+	_, err = PushDaoToSearch(dao)
+	if err != nil {
+		logrus.Warnf("%s when create, push dao to search err: %v", userAddress, err)
 	}
 
 	return res.Format(), nil
@@ -181,6 +182,10 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 		dao.Visibility = param.Visibility
 		change = true
 	}
+	if dao.DefaultPostVisibility != param.DefaultPostVisibility {
+		dao.DefaultPostVisibility = param.DefaultPostVisibility
+		change = true
+	}
 	if !change {
 		return errcode.DAONothingChange
 	}
@@ -190,24 +195,17 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	if err != nil {
 		return err
 	}
-	if dao.Visibility == model.DaoVisitPublic {
-		for _, t := range tags {
-			tag := &model.Tag{
-				Address: userAddress,
-				Tag:     t,
-			}
-			ds.CreateTag(tag)
+	for _, t := range tags {
+		tag := &model.Tag{
+			Address: userAddress,
+			Tag:     t,
 		}
-		// push to search
-		_, err = PushDaoToSearch(dao)
-		if err != nil {
-			logrus.Warnf("%s when update, push dao to search err: %v", userAddress, err)
-		}
-	} else {
-		err = DeleteSearchDao(dao)
-		if err != nil {
-			logrus.Warnf("%s when update, delete dao from search err: %v", userAddress, err)
-		}
+		ds.CreateTag(tag)
+	}
+	// push to search
+	_, err = PushDaoToSearch(dao)
+	if err != nil {
+		logrus.Warnf("%s when update, push dao to search err: %v", userAddress, err)
 	}
 	return err
 }
@@ -332,16 +330,14 @@ func DeleteSearchDao(post *model.Dao) error {
 
 func PushDAOsToSearch() {
 	splitNum := 1000
-	totalRows, _ := GetDaoCount(&model.ConditionsT{
-		"query": bson.M{"visibility": model.DaoVisitPublic},
-	})
+	totalRows, _ := GetDaoCount(nil)
 
 	pages := math.Ceil(float64(totalRows) / float64(splitNum))
 	nums := int(pages)
 
 	for i := 0; i < nums; i++ {
 		posts, _ := GetDaoList(&DaoListReq{
-			Conditions: &model.ConditionsT{},
+			Conditions: model.ConditionsT{},
 			Offset:     i * splitNum,
 			Limit:      splitNum,
 		})
@@ -357,7 +353,7 @@ func PushDAOsToSearch() {
 	}
 }
 
-func GetDaoCount(conditions *model.ConditionsT) (int64, error) {
+func GetDaoCount(conditions model.ConditionsT) (int64, error) {
 	return ds.GetDaoCount(conditions)
 }
 

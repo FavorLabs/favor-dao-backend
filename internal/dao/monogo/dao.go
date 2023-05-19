@@ -94,11 +94,11 @@ func (s *daoManageServant) DeleteDao(dao *model.Dao) error {
 	return dao.Delete(context.TODO(), s.db)
 }
 
-func (s *daoManageServant) GetDaoCount(conditions *model.ConditionsT) (int64, error) {
+func (s *daoManageServant) GetDaoCount(conditions model.ConditionsT) (int64, error) {
 	return (&model.Dao{}).Count(s.db, conditions)
 }
 
-func (s *daoManageServant) GetDaoList(conditions *model.ConditionsT, offset, limit int) ([]*model.Dao, error) {
+func (s *daoManageServant) GetDaoList(conditions model.ConditionsT, offset, limit int) ([]*model.Dao, error) {
 	return (&model.Dao{}).List(s.db, conditions, offset, limit)
 }
 

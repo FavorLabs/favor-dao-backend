@@ -112,7 +112,7 @@ func GetDaoList(c *gin.Context) {
 	offset, limit := app.GetPageOffset(c)
 
 	list, err := service.GetDaoList(&service.DaoListReq{
-		Conditions: &model.ConditionsT{
+		Conditions: model.ConditionsT{
 			"query": bson.M{
 				"type": model.DaoWithURL,
 			},
