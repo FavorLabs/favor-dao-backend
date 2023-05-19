@@ -23,26 +23,24 @@ import (
 )
 
 type DaoCreationReq struct {
-	Name                  string             `json:"name"          binding:"required"`
-	Tags                  []string           `json:"tags"`
-	Introduction          string             `json:"introduction"`
-	Visibility            model.DaoVisibleT  `json:"visibility"`
-	DefaultPostVisibility model.PostVisibleT `json:"default_post_visibility"`
-	Avatar                string             `json:"avatar"`
-	Banner                string             `json:"banner"`
-	Price                 string             `json:"price"`
+	Name         string            `json:"name"          binding:"required"`
+	Tags         []string          `json:"tags"`
+	Introduction string            `json:"introduction"`
+	Visibility   model.DaoVisibleT `json:"visibility"`
+	Avatar       string            `json:"avatar"`
+	Banner       string            `json:"banner"`
+	Price        string            `json:"price"`
 }
 
 type DaoUpdateReq struct {
-	Id                    primitive.ObjectID `json:"id"            binding:"required"`
-	Tags                  []string           `json:"tags"`
-	Name                  string             `json:"name"`
-	Introduction          string             `json:"introduction"`
-	Visibility            model.DaoVisibleT  `json:"visibility"`
-	DefaultPostVisibility model.PostVisibleT `json:"default_post_visibility"`
-	Avatar                string             `json:"avatar"`
-	Banner                string             `json:"banner"`
-	Price                 string             `json:"price"`
+	Id           primitive.ObjectID `json:"id"            binding:"required"`
+	Tags         []string           `json:"tags"`
+	Name         string             `json:"name"`
+	Introduction string             `json:"introduction"`
+	Visibility   model.DaoVisibleT  `json:"visibility"`
+	Avatar       string             `json:"avatar"`
+	Banner       string             `json:"banner"`
+	Price        string             `json:"price"`
 }
 
 type DaoFollowReq struct {
@@ -65,16 +63,15 @@ func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
 func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAction func(context.Context, *model.Dao) (string, error)) (_ *model.DaoFormatted, err error) {
 	tags := tagsFrom(param.Tags)
 	dao := &model.Dao{
-		Tags:                  strings.Join(tags, ","),
-		Address:               userAddress,
-		Name:                  param.Name,
-		Visibility:            param.Visibility,
-		DefaultPostVisibility: param.DefaultPostVisibility,
-		Introduction:          param.Introduction,
-		Avatar:                param.Avatar,
-		Banner:                param.Banner,
-		Price:                 param.Price,
-		FollowCount:           1, // default owner joined
+		Tags:         strings.Join(tags, ","),
+		Address:      userAddress,
+		Name:         param.Name,
+		Visibility:   param.Visibility,
+		Introduction: param.Introduction,
+		Avatar:       param.Avatar,
+		Banner:       param.Banner,
+		Price:        param.Price,
+		FollowCount:  1, // default owner joined
 	}
 	if param.Price == "" {
 		dao.Price = "10000" // default subscribe price
@@ -180,10 +177,6 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	}
 	if dao.Visibility != param.Visibility {
 		dao.Visibility = param.Visibility
-		change = true
-	}
-	if dao.DefaultPostVisibility != param.DefaultPostVisibility {
-		dao.DefaultPostVisibility = param.DefaultPostVisibility
 		change = true
 	}
 	if !change {
@@ -300,6 +293,13 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		tagMaps[tag] = 1
 	}
 
+	var visibility core.PostVisibleT
+	if dao.Visibility == model.DaoVisitPrivate {
+		visibility = core.PostVisitPrivate
+	} else {
+		visibility = core.PostVisitPublic
+	}
+
 	data := core.DocItems{{
 		"id":                dao.ID,
 		"address":           dao.Address,
@@ -310,7 +310,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		"upvote_count":      0,
 		"comment_count":     0,
 		"member":            0,
-		"visibility":        model.PostVisitPublic, // Only the public dao will enter the search engine
+		"visibility":        visibility, // Only the public dao will enter the search engine
 		"is_top":            0,
 		"is_essence":        0,
 		"content":           contentFormatted,
