@@ -233,24 +233,12 @@ func GetUserPosts(c *gin.Context) {
 
 func GetDaoPosts(c *gin.Context) {
 	response := app.NewResponse(c)
-	daoId := c.Query("daoId")
-	daoInfo, err := service.GetDao(daoId)
-	if err != nil {
-		logrus.Errorf("service.GetDaoPosts err: %v\n", err)
-		response.ToErrorResponse(errcode.NoExistDao)
-		return
-	}
-
 	q := parseQueryReq(c)
-
 	if len(q.Type) == 0 {
 		q.Type = core.AllQueryPostType
 	}
-	visibilities := []model.PostVisibleT{model.PostVisitPublic}
-	my, ok := userFrom(c)
-	if ok && my.Address == daoInfo.Address {
-		q.Visibility = append(visibilities, model.PostVisitPrivate)
-	}
+	q.Visibility = []model.PostVisibleT{model.PostVisitPublic, model.PostVisitPrivate}
+	my, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
 
 	// Contains dao private when query dao it's me
