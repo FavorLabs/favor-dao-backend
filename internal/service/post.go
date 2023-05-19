@@ -427,7 +427,7 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 	if err != nil {
 		return nil, err
 	}
-	daoList, err := ds.GetDaoList(&model.ConditionsT{
+	daoList, err := ds.GetDaoList(model.ConditionsT{
 		"query": bson.M{"_id": bson.M{"$in": []primitive.ObjectID{post.DaoId, post.AuthorDaoId}}},
 	}, 0, 0)
 	if err != nil {

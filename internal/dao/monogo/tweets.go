@@ -336,7 +336,7 @@ func (s *tweetHelpServant) getUsersByAddress(addresses []string) ([]*model.User,
 
 func (s *tweetHelpServant) getDAOsByIds(ids []primitive.ObjectID) ([]*model.Dao, error) {
 	dao := &model.Dao{}
-	return dao.List(s.db, &model.ConditionsT{
+	return dao.List(s.db, model.ConditionsT{
 		"query": bson.M{"_id": bson.M{"$in": ids}},
 	}, 0, 0)
 }
