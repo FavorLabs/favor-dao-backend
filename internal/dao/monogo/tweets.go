@@ -394,6 +394,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 				}
 
 				post.Tags = origPost.Tags
+				post.OrigCreatedAt = origPost.CreatedOn
 
 				// replace the newest post type
 				post.OrigType = origPost.Type
@@ -412,6 +413,9 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 					if !origPost.AuthorDaoId.IsZero() {
 						post.AuthorDaoId = origPost.AuthorDaoId
 					}
+					if origPost.OrigCreatedAt > 0 {
+						post.OrigCreatedAt = origPost.OrigCreatedAt
+					}
 				}
 			case model.RefComment:
 				comment, err := (&model.Comment{ID: post.RefId}).Get(ctx, s.db)
@@ -420,6 +424,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 				}
 
 				post.AuthorId = comment.Address
+				post.OrigCreatedAt = comment.CreatedOn
 			case model.RefCommentReply:
 				reply, err := (&model.CommentReply{ID: post.RefId}).Get(ctx, s.db)
 				if err != nil {
@@ -427,6 +432,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 				}
 
 				post.AuthorId = reply.Address
+				post.OrigCreatedAt = reply.CreatedOn
 			}
 		}
 
