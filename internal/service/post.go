@@ -125,13 +125,12 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 		})
 	}
 
-	switch param.Type {
-	case model.RetweetComment:
-		if len(contents) < 1 {
-			return nil, fmt.Errorf("empty post content in RetweetComment")
-		}
-		fallthrough
-	case model.Retweet:
+	// HACKING!
+	if param.Type > 1 {
+		param.Type = 0
+	}
+
+	if !param.RefId.IsZero() {
 		// create post ref
 		post, err = ds.CreatePost(&model.Post{
 			Address:    user.Address,
@@ -145,7 +144,7 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 		if err != nil {
 			return nil, err
 		}
-	default:
+	} else {
 		tags := tagsFrom(param.Tags)
 		post, err = ds.CreatePost(&model.Post{
 			Address:    user.Address,
@@ -376,23 +375,17 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	postFormatted := post.Format()
 
-	switch postFormatted.Type {
-	case model.Retweet:
-	case model.RetweetComment:
-		fallthrough
-	default:
-		postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
-		if err != nil {
-			return nil, err
-		}
-		for _, content := range postContents {
-			if content.PostID == post.ID {
-				postFormatted.Contents = append(postFormatted.Contents, content.Format())
-			}
+	postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
+	if err != nil {
+		return nil, err
+	}
+	for _, content := range postContents {
+		if content.PostID == post.ID {
+			postFormatted.Contents = append(postFormatted.Contents, content.Format())
 		}
 	}
 
-	if postFormatted.Type == model.Retweet || postFormatted.Type == model.RetweetComment {
+	if !post.RefId.IsZero() {
 		switch postFormatted.RefType {
 		case model.RefPost:
 			refContents, err := ds.GetPostContentByID(post.RefId)

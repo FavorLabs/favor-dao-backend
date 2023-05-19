@@ -37,8 +37,6 @@ const (
 	DAO PostType = iota - 1
 	SMS
 	VIDEO
-	Retweet
-	RetweetComment
 )
 
 type PostRefType int
