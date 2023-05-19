@@ -34,9 +34,9 @@ func (p *Service) Notify(key string, notify interface{}) {
 }
 
 func (p *Service) NewSubscribe(key string) (*Notify, error) {
-	_, ok := p.subPub.Load(key)
+	notify, ok := p.subPub.Load(key)
 	if ok {
-		return nil, errors.New("key already exists")
+		return notify.(*Notify), errors.New("key already exists")
 	}
 	ch := make(chan interface{}, 1)
 	p.subPub.Store(key, ch)
