@@ -478,6 +478,13 @@ func GetPostCount(conditions *model.ConditionsT) (int64, error) {
 }
 
 func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
+	if len(q.Type) == 1 && q.Type[0] == model.DAO {
+		if q.Query != "" {
+			q.Visibility = []core.PostVisibleT{core.PostVisitPublic, core.PostVisitPrivate}
+		} else {
+			q.Visibility = []core.PostVisibleT{core.PostVisitPublic}
+		}
+	}
 	resp, err := ts.Search(q, offset, limit)
 	if err != nil {
 		return nil, 0, err
