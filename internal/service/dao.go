@@ -293,6 +293,13 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		tagMaps[tag] = 1
 	}
 
+	var visibility core.PostVisibleT
+	if dao.Visibility == model.DaoVisitPrivate {
+		visibility = core.PostVisitPrivate
+	} else {
+		visibility = core.PostVisitPublic
+	}
+
 	data := core.DocItems{{
 		"id":                dao.ID,
 		"address":           dao.Address,
@@ -303,7 +310,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		"upvote_count":      0,
 		"comment_count":     0,
 		"member":            0,
-		"visibility":        model.PostVisitPublic, // Only the public dao will enter the search engine
+		"visibility":        visibility, // Only the public dao will enter the search engine
 		"is_top":            0,
 		"is_essence":        0,
 		"content":           contentFormatted,
