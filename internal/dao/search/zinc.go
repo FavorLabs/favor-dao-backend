@@ -85,19 +85,8 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 	must := types.AnySlice{}
 	if len(q.Type) > 0 {
 		must = append(must, map[string]types.Any{
-			"bool": map[string]types.Any{
-				"should": types.AnySlice{
-					map[string]types.Any{
-						"terms": map[string]types.Any{
-							"type": q.Type,
-						},
-					},
-					map[string]types.Any{
-						"terms": map[string]types.Any{
-							"orig_type": q.Type,
-						},
-					},
-				},
+			"terms": map[string]types.Any{
+				"type": q.Type,
 			},
 		})
 	}

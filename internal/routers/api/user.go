@@ -265,9 +265,9 @@ func GetDaoPosts(c *gin.Context) {
 
 func GetUserCollections(c *gin.Context) {
 	response := app.NewResponse(c)
-
+	offset, limit := app.GetPageOffset(c)
 	address, _ := c.Get("address")
-	posts, totalRows, err := service.GetUserCollections(address.(string), (app.GetPage(c)-1)*app.GetPageSize(c), app.GetPageSize(c))
+	posts, totalRows, err := service.GetUserCollections(address.(string), offset, limit)
 
 	if err != nil {
 		logrus.Errorf("service.GetUserCollections err: %v\n", err)
@@ -280,9 +280,9 @@ func GetUserCollections(c *gin.Context) {
 
 func GetUserStars(c *gin.Context) {
 	response := app.NewResponse(c)
-
+	offset, limit := app.GetPageOffset(c)
 	address, _ := c.Get("address")
-	posts, totalRows, err := service.GetUserStars(address.(string), (app.GetPage(c)-1)*app.GetPageSize(c), app.GetPageSize(c))
+	posts, totalRows, err := service.GetUserStars(address.(string), offset, limit)
 	if err != nil {
 		logrus.Errorf("service.GetUserStars err: %v\n", err)
 		response.ToErrorResponse(errcode.GetCollectionsFailed)

@@ -10,7 +10,6 @@ import (
 
 type PostStar struct {
 	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Post    *Post              `json:"-" bson:"posts"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
 	IsDel   int                `json:"is_del" bson:"is_del"`
