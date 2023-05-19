@@ -54,6 +54,7 @@ type Post struct {
 	Tags            string             `json:"tags"              bson:"tags"`
 	Type            PostType           `json:"type"              bson:"type"`
 	OrigType        PostType           `json:"orig_type"         bson:"orig_type"`
+	OrigCreatedAt   int64              `json:"origCreatedAt"     bson:"origCreatedAt"`
 	AuthorId        string             `json:"author_id"         bson:"author_id"`
 	AuthorDaoId     primitive.ObjectID `json:"author_dao_id"     bson:"author_dao_id"`
 	RefId           primitive.ObjectID `json:"ref_id"            bson:"ref_id"`
@@ -83,6 +84,7 @@ type PostFormatted struct {
 	Tags            map[string]int8         `json:"tags"`
 	Type            PostType                `json:"type"`
 	OrigType        PostType                `json:"orig_type"`
+	OrigCreatedAt   int64                   `json:"origCreatedAt"`
 	AuthorId        string                  `json:"author_id"`
 	AuthorDaoId     primitive.ObjectID      `json:"author_dao_id"`
 	Author          *UserFormatted          `json:"author"`
@@ -121,6 +123,7 @@ func (p *Post) Format() *PostFormatted {
 		Type:            p.Type,
 		OrigType:        p.OrigType,
 		CreatedOn:       p.CreatedOn,
+		OrigCreatedAt:   p.OrigCreatedAt,
 		AuthorId:        p.AuthorId,
 		AuthorDaoId:     p.AuthorDaoId,
 		Author:          &UserFormatted{},
