@@ -386,12 +386,6 @@ paths:
                     - 0
                     - 1
                   description: "0 public, 1 private"
-                default_post_visibility:
-                  type: integer
-                  enum:
-                    - 1
-                    - 2
-                  description: "1 public, 2 private"
                 avatar:
                   type: string
                 banner:
@@ -429,12 +423,6 @@ paths:
                     - 0
                     - 1
                   description: "0 public, 1 private"
-                default_post_visibility:
-                  type: integer
-                  enum:
-                    - 1
-                    - 2
-                  description: "1 public, 2 private"
                 avatar:
                   type: string
                 banner:

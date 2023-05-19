@@ -29,42 +29,40 @@ const (
 )
 
 type Dao struct {
-	ID                    primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
-	CreatedOn             int64              `json:"created_on"       bson:"created_on"`
-	ModifiedOn            int64              `json:"modified_on"      bson:"modified_on"`
-	DeletedOn             int64              `json:"deleted_on"       bson:"deleted_on"`
-	IsDel                 int                `json:"is_del"           bson:"is_del"`
-	Address               string             `json:"address"          bson:"address"`
-	Name                  string             `json:"name"             bson:"name"`
-	Visibility            DaoVisibleT        `json:"visibility"       bson:"visibility"`
-	Introduction          string             `json:"introduction"     bson:"introduction"`
-	Avatar                string             `json:"avatar"           bson:"avatar"`
-	Banner                string             `json:"banner"           bson:"banner"`
-	HomePage              string             `json:"home_page,omitempty"        bson:"homePage,omitempty"`
-	FollowCount           int64              `json:"follow_count"     bson:"follow_count"`
-	Price                 string             `json:"price"            bson:"price"`
-	Tags                  string             `json:"tags"             bson:"tags"`
-	Type                  DaoType            `json:"type"             bson:"type,omitempty"`
-	DefaultPostVisibility PostVisibleT       `json:"default_post_visibility" bson:"default_post_visibility"`
+	ID           primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
+	CreatedOn    int64              `json:"created_on"       bson:"created_on"`
+	ModifiedOn   int64              `json:"modified_on"      bson:"modified_on"`
+	DeletedOn    int64              `json:"deleted_on"       bson:"deleted_on"`
+	IsDel        int                `json:"is_del"           bson:"is_del"`
+	Address      string             `json:"address"          bson:"address"`
+	Name         string             `json:"name"             bson:"name"`
+	Visibility   DaoVisibleT        `json:"visibility"       bson:"visibility"`
+	Introduction string             `json:"introduction"     bson:"introduction"`
+	Avatar       string             `json:"avatar"           bson:"avatar"`
+	Banner       string             `json:"banner"           bson:"banner"`
+	HomePage     string             `json:"home_page,omitempty"        bson:"homePage,omitempty"`
+	FollowCount  int64              `json:"follow_count"     bson:"follow_count"`
+	Price        string             `json:"price"            bson:"price"`
+	Tags         string             `json:"tags"             bson:"tags"`
+	Type         DaoType            `json:"type"             bson:"type,omitempty"`
 }
 
 type DaoFormatted struct {
-	ID                    string           `json:"id"`
-	Address               string           `json:"address"`
-	Name                  string           `json:"name"`
-	Introduction          string           `json:"introduction"`
-	Visibility            DaoVisibleT      `json:"visibility"`
-	Avatar                string           `json:"avatar"`
-	Banner                string           `json:"banner"`
-	HomePage              string           `json:"home_page,omitempty"`
-	FollowCount           int64            `json:"follow_count"`
-	Price                 string           `json:"price"`
-	Tags                  map[string]int8  `json:"tags"`
-	Type                  DaoType          `json:"type"`
-	DefaultPostVisibility PostVisibleT     `json:"default_post_visibility"`
-	LastPosts             []*PostFormatted `json:"last_posts"`
-	IsJoined              bool             `json:"is_joined"`
-	IsSubscribed          bool             `json:"is_subscribed"`
+	ID           string           `json:"id"`
+	Address      string           `json:"address"`
+	Name         string           `json:"name"`
+	Introduction string           `json:"introduction"`
+	Visibility   DaoVisibleT      `json:"visibility"`
+	Avatar       string           `json:"avatar"`
+	Banner       string           `json:"banner"`
+	HomePage     string           `json:"home_page,omitempty"`
+	FollowCount  int64            `json:"follow_count"`
+	Price        string           `json:"price"`
+	Tags         map[string]int8  `json:"tags"`
+	Type         DaoType          `json:"type"`
+	LastPosts    []*PostFormatted `json:"last_posts"`
+	IsJoined     bool             `json:"is_joined"`
+	IsSubscribed bool             `json:"is_subscribed"`
 }
 
 func (m *Dao) Format() *DaoFormatted {
@@ -73,20 +71,19 @@ func (m *Dao) Format() *DaoFormatted {
 		tagsMap[tag] = 1
 	}
 	return &DaoFormatted{
-		ID:                    m.ID.Hex(),
-		Address:               m.Address,
-		Name:                  m.Name,
-		Introduction:          m.Introduction,
-		Visibility:            m.Visibility,
-		Avatar:                m.Avatar,
-		Banner:                m.Banner,
-		HomePage:              m.HomePage,
-		FollowCount:           m.FollowCount,
-		Price:                 m.Price,
-		Tags:                  tagsMap,
-		Type:                  m.Type,
-		DefaultPostVisibility: m.DefaultPostVisibility,
-		LastPosts:             []*PostFormatted{},
+		ID:           m.ID.Hex(),
+		Address:      m.Address,
+		Name:         m.Name,
+		Introduction: m.Introduction,
+		Visibility:   m.Visibility,
+		Avatar:       m.Avatar,
+		Banner:       m.Banner,
+		HomePage:     m.HomePage,
+		FollowCount:  m.FollowCount,
+		Price:        m.Price,
+		Tags:         tagsMap,
+		Type:         m.Type,
+		LastPosts:    []*PostFormatted{},
 	}
 }
 
