@@ -403,18 +403,28 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 
 				// if re-post type is retweet, we'll find original post id
 				if len(contents) == 0 {
-					if !origPost.RefId.IsZero() {
-						post.RefId = origPost.RefId
-						post.OrigType = origPost.OrigType
+					// check post
+					origContentsLen, err := (&model.PostContent{}).Count(s.db, &model.ConditionsT{
+						"query": bson.M{"post_id": post.RefId},
+					})
+					if err != nil {
+						return err
 					}
-					if origPost.AuthorId != "" {
-						post.AuthorId = origPost.AuthorId
-					}
-					if !origPost.AuthorDaoId.IsZero() {
-						post.AuthorDaoId = origPost.AuthorDaoId
-					}
-					if origPost.OrigCreatedAt > 0 {
-						post.OrigCreatedAt = origPost.OrigCreatedAt
+
+					if origContentsLen == 0 {
+						if !origPost.RefId.IsZero() {
+							post.RefId = origPost.RefId
+							post.OrigType = origPost.OrigType
+						}
+						if origPost.AuthorId != "" {
+							post.AuthorId = origPost.AuthorId
+						}
+						if !origPost.AuthorDaoId.IsZero() {
+							post.AuthorDaoId = origPost.AuthorDaoId
+						}
+						if origPost.OrigCreatedAt > 0 {
+							post.OrigCreatedAt = origPost.OrigCreatedAt
+						}
 					}
 				}
 			case model.RefComment:
