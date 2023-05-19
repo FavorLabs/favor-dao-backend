@@ -241,7 +241,6 @@ func (p *Post) Count(db *mongo.Database, conditions *ConditionsT) (int64, error)
 }
 
 func (p *Post) Update(ctx context.Context, db *mongo.Database) error {
-	p.ModifiedOn = time.Now().Unix()
 	filter := bson.D{{"_id", p.ID}, {"is_del", 0}}
 	update := bson.M{"$set": p}
 	if _, err := db.Collection(p.Table()).UpdateMany(ctx, filter, update); err != nil {
