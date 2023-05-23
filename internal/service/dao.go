@@ -227,9 +227,13 @@ func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
 		return nil, err
 	}
 	out := res.Format()
-
-	out.IsJoined = CheckJoinedDAO(user, id)
-	out.IsSubscribed = CheckSubscribeDAO(user, id)
+	if out.Address == user {
+		out.IsJoined = true
+		out.IsSubscribed = true
+	} else {
+		out.IsJoined = CheckJoinedDAO(user, id)
+		out.IsSubscribed = CheckSubscribeDAO(user, id)
+	}
 
 	out.LastPosts = []*model.PostFormatted{}
 	// sms
