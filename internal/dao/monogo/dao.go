@@ -110,8 +110,16 @@ func (s *daoManageServant) GetDao(dao *model.Dao) (*model.Dao, error) {
 	return dao.Get(context.TODO(), s.db)
 }
 
-func (s *daoManageServant) GetMyDaoList(dao *model.Dao) ([]*model.DaoFormatted, error) {
-	return dao.GetListByAddress(context.TODO(), s.db)
+func (s *daoManageServant) GetMyDaoList(dao *model.Dao) (list []*model.DaoFormatted, err error) {
+	list, err = dao.GetListByAddress(context.TODO(), s.db)
+	if err != nil {
+		return
+	}
+	for k := range list {
+		list[k].IsJoined = true
+		list[k].IsSubscribed = true
+	}
+	return
 }
 
 func (s *daoManageServant) DaoBookmarkCount(address string) int64 {
@@ -146,6 +154,9 @@ func (s *daoManageServant) GetDaoBookmarkList(userAddress string, q *core.QueryR
 	}
 	book := &model.DaoBookmark{Address: userAddress}
 	list = book.GetList(context.TODO(), s.db, pipeline)
+	for k := range list {
+		list[k].IsJoined = true
+	}
 	return
 }
 

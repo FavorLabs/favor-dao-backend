@@ -101,10 +101,10 @@ func (s *tweetHelpServant) MergePosts(user string, posts []*model.Post) ([]*mode
 	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
 	for _, dao := range daoS {
 		daoMap[dao.ID.Hex()] = dao.Format()
-		if _, ok := joinedMap[dao.ID.Hex()]; ok {
+		if _, ok := joinedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsJoined = true
 		}
-		if _, ok := subscribedMap[dao.ID.Hex()]; ok {
+		if _, ok := subscribedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsSubscribed = true
 		}
 	}
@@ -210,10 +210,10 @@ func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted
 	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
 	for _, dao := range daoS {
 		daoMap[dao.ID.Hex()] = dao.Format()
-		if _, ok := joinedMap[dao.ID.Hex()]; ok {
+		if _, ok := joinedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsJoined = true
 		}
-		if _, ok := subscribedMap[dao.ID.Hex()]; ok {
+		if _, ok := subscribedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsSubscribed = true
 		}
 	}

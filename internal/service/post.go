@@ -439,8 +439,13 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	postFormatted.User = userMap[post.Address].Format()
 	postFormatted.Dao = daoMap[post.DaoId].Format()
-	postFormatted.Dao.IsJoined = CheckJoinedDAO(user, post.DaoId)
-	postFormatted.Dao.IsSubscribed = CheckSubscribeDAO(user, post.DaoId)
+	if postFormatted.Dao.Address == user {
+		postFormatted.Dao.IsJoined = true
+		postFormatted.Dao.IsSubscribed = true
+	} else {
+		postFormatted.Dao.IsJoined = CheckJoinedDAO(user, post.DaoId)
+		postFormatted.Dao.IsSubscribed = CheckSubscribeDAO(user, post.DaoId)
+	}
 
 	if postFormatted.AuthorId != "" {
 		postFormatted.Author = userMap[post.AuthorId].Format()
@@ -448,8 +453,13 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	if !postFormatted.AuthorDaoId.IsZero() {
 		postFormatted.AuthorDao = daoMap[post.AuthorDaoId].Format()
-		postFormatted.AuthorDao.IsJoined = CheckJoinedDAO(user, post.AuthorDaoId)
-		postFormatted.AuthorDao.IsSubscribed = CheckSubscribeDAO(user, post.AuthorDaoId)
+		if postFormatted.AuthorDao.Address == user {
+			postFormatted.AuthorDao.IsJoined = true
+			postFormatted.AuthorDao.IsSubscribed = true
+		} else {
+			postFormatted.AuthorDao.IsJoined = CheckJoinedDAO(user, post.AuthorDaoId)
+			postFormatted.AuthorDao.IsSubscribed = CheckSubscribeDAO(user, post.AuthorDaoId)
+		}
 	}
 
 	return postFormatted, nil
