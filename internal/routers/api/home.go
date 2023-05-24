@@ -32,7 +32,7 @@ func Version(c *gin.Context) {
 			"TagRegion":  service.RegionTag(),
 			"TagNetwork": service.NetworkTag(),
 			"Region":     conf.ExternalAppSetting.Region,
-			"Network":    conf.ExternalAppSetting.NetworkID,
+			"NetworkID":  conf.ExternalAppSetting.NetworkID,
 		},
 	})
 }
