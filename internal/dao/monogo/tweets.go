@@ -394,6 +394,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 				}
 
 				post.Tags = origPost.Tags
+				post.Visibility = origPost.Visibility
 				post.OrigCreatedAt = origPost.CreatedOn
 
 				// replace the newest post type
