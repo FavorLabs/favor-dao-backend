@@ -257,10 +257,6 @@ func CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar,
 		return nil, err
 	}
 
-	if post.Visibility == model.PostVisitPrivate {
-		return nil, errors.New("no permision")
-	}
-
 	star, err := ds.CreatePostStar(postID, address)
 	if err != nil {
 		return nil, err
@@ -282,10 +278,6 @@ func DeletePostStar(star *model.PostStar) error {
 	post, err := ds.GetPostByID(star.PostID)
 	if err != nil {
 		return err
-	}
-
-	if post.Visibility == model.PostVisitPrivate {
-		return errors.New("no permision")
 	}
 
 	post.UpvoteCount--
