@@ -31,6 +31,8 @@ func Version(c *gin.Context) {
 			"Bucket":     conf.ExternalAppSetting.UseBucket,
 			"TagRegion":  service.RegionTag(),
 			"TagNetwork": service.NetworkTag(),
+			"Region":     conf.ExternalAppSetting.Region,
+			"Network":    conf.ExternalAppSetting.NetworkID,
 		},
 	})
 }

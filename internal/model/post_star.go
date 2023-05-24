@@ -39,8 +39,6 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
 
-	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
-
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{
 			"from":         "post",
@@ -98,7 +96,6 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 	if len(*conditions) == 0 {
 		if query != nil {
 			query = findQuery([]bson.M{query})
@@ -157,7 +154,6 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 
 	for k, v := range *conditions {
 		if k != "ORDER" {
