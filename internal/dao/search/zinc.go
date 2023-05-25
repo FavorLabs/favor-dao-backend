@@ -278,7 +278,7 @@ func (s *zincTweetSearchServant) createIndex() {
 			Aggregatable:   true,
 			Highlightable:  true,
 			Analyzer:       "gse_search",
-			SearchAnalyzer: "gse_standard",
+			SearchAnalyzer: "gse_search",
 		},
 		"tags": &zinc.ZincIndexPropertyT{
 			Type:  "keyword",

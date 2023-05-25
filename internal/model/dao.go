@@ -213,7 +213,7 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 }
 
 func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted, error) {
-	filter := bson.M{"name": m.Name, "is_del": 0}
+	filter := bson.M{"name": m.Name}
 	res := db.Collection(m.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
