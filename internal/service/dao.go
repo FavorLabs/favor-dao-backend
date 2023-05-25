@@ -239,9 +239,8 @@ func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
 	// sms
 	conditions := model.ConditionsT{
 		"query": bson.M{
-			"dao_id":     dao.ID,
-			"visibility": model.PostVisitPublic,
-			"type":       model.SMS,
+			"dao_id": dao.ID,
+			"type":   model.SMS,
 		},
 		"ORDER": bson.M{"_id": -1},
 	}
@@ -254,9 +253,8 @@ func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
 	// video
 	conditions2 := model.ConditionsT{
 		"query": bson.M{
-			"dao_id":     dao.ID,
-			"visibility": model.PostVisitPublic,
-			"type":       model.VIDEO,
+			"dao_id": dao.ID,
+			"type":   model.VIDEO,
 		},
 		"ORDER": bson.M{"_id": -1},
 	}
