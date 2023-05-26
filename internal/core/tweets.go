@@ -24,7 +24,7 @@ type TweetService interface {
 
 type TweetManageService interface {
 	CreatePost(post *model.Post, contents []*model.PostContent) (*model.Post, error)
-	DeletePost(post *model.Post) ([]string, error)
+	DeletePost(post *model.Post) ([]string, []primitive.ObjectID, error)
 	StickPost(post *model.Post) error
 	VisiblePost(post *model.Post, visibility model.PostVisibleT) error
 	UpdatePost(post *model.Post) error
@@ -32,7 +32,7 @@ type TweetManageService interface {
 	DeletePostStar(p *model.PostStar) error
 	CreatePostCollection(postID primitive.ObjectID, address string) (*model.PostCollection, error)
 	DeletePostCollection(p *model.PostCollection) error
-	RealDeletePosts(address string, fn func(context.Context, *model.Post) (string, error)) error
+	RealDeletePosts(address string, fn func(context.Context, *model.Post, ...primitive.ObjectID) (string, error)) error
 }
 
 type TweetHelpService interface {

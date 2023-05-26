@@ -193,15 +193,17 @@ func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
 		return errcode.NoPermission
 	}
 
-	mediaContents, err := ds.DeletePost(post)
+	mediaContents, refPosts, err := ds.DeletePost(post)
 	if err != nil {
 		logrus.Errorf("service.DeletePost delete post failed: %s", err)
 		return errcode.DeletePostFailed
 	}
 
+	_ = mediaContents
+
 	deleteOssObjects(mediaContents)
 
-	DeleteSearchPost(post)
+	DeleteSearchPost(post, refPosts...)
 
 	return nil
 }
@@ -555,8 +557,14 @@ func PushPostToSearch(post *model.Post) {
 	ts.AddDocuments(data, post.ID.Hex())
 }
 
-func DeleteSearchPost(post *model.Post) error {
-	return ts.DeleteDocuments([]string{post.ID.Hex()})
+func DeleteSearchPost(post *model.Post, refPostIds ...primitive.ObjectID) error {
+	ids := []string{post.ID.Hex()}
+
+	for _, refPostId := range refPostIds {
+		ids = append(ids, refPostId.Hex())
+	}
+
+	return ts.DeleteDocuments(ids)
 }
 
 func PushPostsToSearch() {
