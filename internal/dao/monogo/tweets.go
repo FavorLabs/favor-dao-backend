@@ -522,19 +522,22 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, []primitive
 	return mediaContents, refPosts, nil
 }
 
-func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post) (string, error)) error {
+func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post, ...primitive.ObjectID) (string, error)) error {
 	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		cursor, err := s.db.Collection(new(model.Post).Table()).Find(ctx, bson.M{"address": address})
+		if err != nil {
+			return err
+		}
 		for cursor.Next(ctx) {
 			var t model.Post
 			if cursor.Decode(&t) != nil {
 				break
 			}
-			err = t.RealDelete(ctx, s.db)
+			refIds, err := t.RealDelete(ctx, s.db)
 			if err != nil {
 				return err
 			}
-			_, err = fn(ctx, &t)
+			_, err = fn(ctx, &t, refIds...)
 			if err != nil {
 				return err
 			}

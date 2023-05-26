@@ -271,8 +271,10 @@ func (p PostVisibleT) String() string {
 	}
 }
 
-func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) error {
-	return util.MongoTransaction(ctx, db, func(ctx context.Context) error {
+func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) ([]primitive.ObjectID, error) {
+	var refIds []primitive.ObjectID
+
+	err := util.MongoTransaction(ctx, db, func(ctx context.Context) error {
 		if !p.ID.IsZero() {
 			table := []string{
 				new(PostContent).Table(),
@@ -280,13 +282,14 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) error {
 				new(PostStar).Table(),
 				new(Comment).Table(),
 			}
+			var err error
 			for _, v := range table {
-				_, err := db.Collection(v).DeleteMany(ctx, bson.M{"post_id": p.ID})
+				_, err = db.Collection(v).DeleteMany(ctx, bson.M{"post_id": p.ID})
 				if err != nil {
 					return err
 				}
 			}
-			refIds, err := p.findAllRefPosts(ctx, db)
+			refIds, err = p.findAllRefPosts(ctx, db)
 			if err != nil {
 				return err
 			}
@@ -306,6 +309,11 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) error {
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return refIds, nil
 }
 
 func (p *Post) findAllRefPosts(ctx context.Context, db *mongo.Database) ([]primitive.ObjectID, error) {

@@ -12,6 +12,7 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -346,8 +347,8 @@ func Cancellation(address string) (err error) {
 		return err
 	}
 	// delete post
-	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post) (string, error) {
-		err = DeleteSearchPost(post)
+	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post, refPostIds ...primitive.ObjectID) (string, error) {
+		err = DeleteSearchPost(post, refPostIds...)
 		if err != nil {
 			logrus.Errorf("Cancellation delete postID %s from search err: %v", post.ID.Hex(), err)
 		}
