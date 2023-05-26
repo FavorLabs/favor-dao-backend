@@ -266,6 +266,10 @@ func SubDao(c *gin.Context) {
 		response.ToErrorResponse(errcode.AlreadySubscribedDAO)
 		return
 	}
+	if e := service.CheckDAOUser(daoID); e != nil {
+		response.ToErrorResponse(e)
+		return
+	}
 	_, status, err := service.SubDao(c.Request.Context(), daoID, param.WalletAddr)
 	if err != nil {
 		logrus.Errorf("service.SubDao err: %v\n", err)

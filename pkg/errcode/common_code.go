@@ -14,4 +14,5 @@ var (
 	InvalidWalletSignature    = NewError(10009, "Invalid wallet signature")
 	CreateAccountError        = NewError(10010, "Create Account Error")
 	WaitForDelete             = NewError(40000, "Wait for delete")
+	UserAlreadyWrittenOff     = NewError(10011, "Already written off")
 )

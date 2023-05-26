@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -294,4 +295,37 @@ func (m *Dao) RealDelete(ctx context.Context, db *mongo.Database, gid string) er
 		}
 	}
 	return nil
+}
+
+func (m *Dao) GetUser(ctx context.Context, db *mongo.Database) (*User, error) {
+	if m.ID.IsZero() {
+		return nil, errors.New("NO DAO ID")
+	}
+	user := &User{}
+	pipeline := mongo.Pipeline{
+		{{"$lookup", bson.M{
+			"from":         user.Table(),
+			"localField":   "address",
+			"foreignField": "address",
+			"as":           "user",
+		}}},
+		{{"$match", bson.M{ID: m.ID}}},
+		{{"$unwind", "$user"}},
+	}
+	cursor, err := db.Collection(m.Table()).Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	type tmp struct {
+		User *User `bson:"user"`
+	}
+
+	for cursor.Next(context.TODO()) {
+		var t tmp
+		if err = cursor.Decode(&t); err != nil {
+			return nil, err
+		}
+		return t.User, nil
+	}
+	return nil, mongo.ErrNoDocuments
 }
