@@ -10,7 +10,6 @@ import (
 
 type PostStar struct {
 	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Post    *Post              `json:"-" bson:"posts"`
 	PostID  primitive.ObjectID `json:"post_id" bson:"post_id"`
 	Address string             `json:"address" bson:"address"`
 	IsDel   int                `json:"is_del" bson:"is_del"`
@@ -39,8 +38,6 @@ func (p *PostStar) Get(db *mongo.Database) (*PostStar, error) {
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-
-	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{
@@ -99,7 +96,6 @@ func (p *PostStar) List(db *mongo.Database, conditions *ConditionsT, offset, lim
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 	if len(*conditions) == 0 {
 		if query != nil {
 			query = findQuery([]bson.M{query})
@@ -158,7 +154,6 @@ func (p *PostStar) Count(db *mongo.Database, conditions *ConditionsT) (int64, er
 	if p.Address != "" {
 		queries = append(queries, bson.M{"address": p.Address})
 	}
-	queries = append(queries, bson.M{"post.visibility": bson.M{"$ne": PostVisitPrivate}})
 
 	for k, v := range *conditions {
 		if k != "ORDER" {

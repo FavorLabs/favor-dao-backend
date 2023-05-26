@@ -125,13 +125,12 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 		})
 	}
 
-	switch param.Type {
-	case model.RetweetComment:
-		if len(contents) < 1 {
-			return nil, fmt.Errorf("empty post content in RetweetComment")
-		}
-		fallthrough
-	case model.Retweet:
+	// HACKING!
+	if param.Type > 1 {
+		param.Type = 0
+	}
+
+	if !param.RefId.IsZero() {
 		// create post ref
 		post, err = ds.CreatePost(&model.Post{
 			Address:    user.Address,
@@ -145,7 +144,7 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 		if err != nil {
 			return nil, err
 		}
-	default:
+	} else {
 		tags := tagsFrom(param.Tags)
 		post, err = ds.CreatePost(&model.Post{
 			Address:    user.Address,
@@ -258,10 +257,6 @@ func CreatePostStar(postID primitive.ObjectID, address string) (*model.PostStar,
 		return nil, err
 	}
 
-	if post.Visibility == model.PostVisitPrivate {
-		return nil, errors.New("no permision")
-	}
-
 	star, err := ds.CreatePostStar(postID, address)
 	if err != nil {
 		return nil, err
@@ -283,10 +278,6 @@ func DeletePostStar(star *model.PostStar) error {
 	post, err := ds.GetPostByID(star.PostID)
 	if err != nil {
 		return err
-	}
-
-	if post.Visibility == model.PostVisitPrivate {
-		return errors.New("no permision")
 	}
 
 	post.UpvoteCount--
@@ -376,23 +367,17 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	postFormatted := post.Format()
 
-	switch postFormatted.Type {
-	case model.Retweet:
-	case model.RetweetComment:
-		fallthrough
-	default:
-		postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
-		if err != nil {
-			return nil, err
-		}
-		for _, content := range postContents {
-			if content.PostID == post.ID {
-				postFormatted.Contents = append(postFormatted.Contents, content.Format())
-			}
+	postContents, err := ds.GetPostContentsByIDs([]primitive.ObjectID{post.ID})
+	if err != nil {
+		return nil, err
+	}
+	for _, content := range postContents {
+		if content.PostID == post.ID {
+			postFormatted.Contents = append(postFormatted.Contents, content.Format())
 		}
 	}
 
-	if postFormatted.Type == model.Retweet || postFormatted.Type == model.RetweetComment {
+	if !post.RefId.IsZero() {
 		switch postFormatted.RefType {
 		case model.RefPost:
 			refContents, err := ds.GetPostContentByID(post.RefId)
@@ -427,7 +412,7 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 	if err != nil {
 		return nil, err
 	}
-	daoList, err := ds.GetDaoList(&model.ConditionsT{
+	daoList, err := ds.GetDaoList(model.ConditionsT{
 		"query": bson.M{"_id": bson.M{"$in": []primitive.ObjectID{post.DaoId, post.AuthorDaoId}}},
 	}, 0, 0)
 	if err != nil {
@@ -446,8 +431,13 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	postFormatted.User = userMap[post.Address].Format()
 	postFormatted.Dao = daoMap[post.DaoId].Format()
-	postFormatted.Dao.IsJoined = CheckJoinedDAO(user, post.DaoId)
-	postFormatted.Dao.IsSubscribed = CheckSubscribeDAO(user, post.DaoId)
+	if postFormatted.Dao.Address == user {
+		postFormatted.Dao.IsJoined = true
+		postFormatted.Dao.IsSubscribed = true
+	} else {
+		postFormatted.Dao.IsJoined = CheckJoinedDAO(user, post.DaoId)
+		postFormatted.Dao.IsSubscribed = CheckSubscribeDAO(user, post.DaoId)
+	}
 
 	if postFormatted.AuthorId != "" {
 		postFormatted.Author = userMap[post.AuthorId].Format()
@@ -455,8 +445,13 @@ func GetPost(user string, id primitive.ObjectID) (*model.PostFormatted, error) {
 
 	if !postFormatted.AuthorDaoId.IsZero() {
 		postFormatted.AuthorDao = daoMap[post.AuthorDaoId].Format()
-		postFormatted.AuthorDao.IsJoined = CheckJoinedDAO(user, post.AuthorDaoId)
-		postFormatted.AuthorDao.IsSubscribed = CheckSubscribeDAO(user, post.AuthorDaoId)
+		if postFormatted.AuthorDao.Address == user {
+			postFormatted.AuthorDao.IsJoined = true
+			postFormatted.AuthorDao.IsSubscribed = true
+		} else {
+			postFormatted.AuthorDao.IsJoined = CheckJoinedDAO(user, post.AuthorDaoId)
+			postFormatted.AuthorDao.IsSubscribed = CheckSubscribeDAO(user, post.AuthorDaoId)
+		}
 	}
 
 	return postFormatted, nil
@@ -485,6 +480,13 @@ func GetPostCount(conditions *model.ConditionsT) (int64, error) {
 }
 
 func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int) ([]*model.PostFormatted, int64, error) {
+	if len(q.Type) == 1 && q.Type[0] == model.DAO {
+		if q.Query != "" {
+			q.Visibility = []core.PostVisibleT{core.PostVisitPublic, core.PostVisitPrivate}
+		} else {
+			q.Visibility = []core.PostVisibleT{core.PostVisitPublic}
+		}
+	}
 	resp, err := ts.Search(q, offset, limit)
 	if err != nil {
 		return nil, 0, err
@@ -540,6 +542,7 @@ func PushPostToSearch(post *model.Post) {
 		"tags":              tagMaps,
 		"type":              post.Type,
 		"orig_type":         post.OrigType,
+		"origCreatedAt":     post.OrigCreatedAt,
 		"author_id":         post.AuthorId,
 		"author_dao_id":     post.AuthorDaoId,
 		"ref_id":            post.RefId,
@@ -599,6 +602,7 @@ func PushPostsToSearch() {
 				"tags":              post.Tags,
 				"type":              post.Type,
 				"orig_type":         post.OrigType,
+				"origCreatedAt":     post.OrigCreatedAt,
 				"author_id":         post.AuthorId,
 				"author_dao_id":     post.AuthorDaoId,
 				"ref_id":            post.RefId,

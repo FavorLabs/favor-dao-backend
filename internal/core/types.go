@@ -25,7 +25,7 @@ const (
 )
 
 var (
-	AllQueryPostType = []model.PostType{model.SMS, model.VIDEO, model.Retweet, model.RetweetComment}
+	AllQueryPostType = []model.PostType{model.SMS, model.VIDEO}
 )
 
 type (

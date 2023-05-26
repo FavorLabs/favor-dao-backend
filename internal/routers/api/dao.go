@@ -56,9 +56,21 @@ func CreateDao(c *gin.Context) {
 
 	userAddress, _ := c.Get("address")
 
+	var outErr *errcode.Error
+
 	dao, err := service.CreateDao(c, userAddress.(string), param, func(ctx context.Context, dao *model.Dao) (string, error) {
-		return service.CreateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+		gid, err := service.CreateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+		if err != nil {
+			outErr = errcode.CreateChatGroupFailed
+			return "", err
+		}
+		return gid, nil
 	})
+	if outErr != nil {
+		logrus.Errorf("service.CreateDao err: %v\n", err)
+		response.ToErrorResponse(outErr)
+		return
+	}
 	if err != nil {
 		logrus.Errorf("service.CreateDao err: %v\n", err)
 		response.ToErrorResponse(errcode.CreateDaoFailed)
@@ -112,7 +124,7 @@ func GetDaoList(c *gin.Context) {
 	offset, limit := app.GetPageOffset(c)
 
 	list, err := service.GetDaoList(&service.DaoListReq{
-		Conditions: &model.ConditionsT{
+		Conditions: model.ConditionsT{
 			"query": bson.M{
 				"type": model.DaoWithURL,
 			},
@@ -252,6 +264,10 @@ func SubDao(c *gin.Context) {
 	}
 	if service.CheckSubscribeDAO(param.WalletAddr, daoID) {
 		response.ToErrorResponse(errcode.AlreadySubscribedDAO)
+		return
+	}
+	if e := service.CheckDAOUser(daoID); e != nil {
+		response.ToErrorResponse(e)
 		return
 	}
 	_, status, err := service.SubDao(c.Request.Context(), daoID, param.WalletAddr)

@@ -48,7 +48,7 @@ type DaoFollowReq struct {
 }
 
 type DaoListReq struct {
-	Conditions *model.ConditionsT
+	Conditions model.ConditionsT
 	Offset     int
 	Limit      int
 }
@@ -86,19 +86,17 @@ func CreateDao(_ *gin.Context, userAddress string, param DaoCreationReq, chatAct
 		return nil, err
 	}
 
-	if dao.Visibility == model.DaoVisitPublic {
-		for _, t := range tags {
-			tag := &model.Tag{
-				Address: userAddress,
-				Tag:     t,
-			}
-			ds.CreateTag(tag)
+	for _, t := range tags {
+		tag := &model.Tag{
+			Address: userAddress,
+			Tag:     t,
 		}
-		// push to search
-		_, err = PushDaoToSearch(dao)
-		if err != nil {
-			logrus.Warnf("%s when create, push dao to search err: %v", userAddress, err)
-		}
+		ds.CreateTag(tag)
+	}
+	// push to search
+	_, err = PushDaoToSearch(dao)
+	if err != nil {
+		logrus.Warnf("%s when create, push dao to search err: %v", userAddress, err)
 	}
 
 	return res.Format(), nil
@@ -190,24 +188,17 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	if err != nil {
 		return err
 	}
-	if dao.Visibility == model.DaoVisitPublic {
-		for _, t := range tags {
-			tag := &model.Tag{
-				Address: userAddress,
-				Tag:     t,
-			}
-			ds.CreateTag(tag)
+	for _, t := range tags {
+		tag := &model.Tag{
+			Address: userAddress,
+			Tag:     t,
 		}
-		// push to search
-		_, err = PushDaoToSearch(dao)
-		if err != nil {
-			logrus.Warnf("%s when update, push dao to search err: %v", userAddress, err)
-		}
-	} else {
-		err = DeleteSearchDao(dao)
-		if err != nil {
-			logrus.Warnf("%s when update, delete dao from search err: %v", userAddress, err)
-		}
+		ds.CreateTag(tag)
+	}
+	// push to search
+	_, err = PushDaoToSearch(dao)
+	if err != nil {
+		logrus.Warnf("%s when update, push dao to search err: %v", userAddress, err)
 	}
 	return err
 }
@@ -236,17 +227,20 @@ func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
 		return nil, err
 	}
 	out := res.Format()
-
-	out.IsJoined = CheckJoinedDAO(user, id)
-	out.IsSubscribed = CheckSubscribeDAO(user, id)
+	if out.Address == user {
+		out.IsJoined = true
+		out.IsSubscribed = true
+	} else {
+		out.IsJoined = CheckJoinedDAO(user, id)
+		out.IsSubscribed = CheckSubscribeDAO(user, id)
+	}
 
 	out.LastPosts = []*model.PostFormatted{}
 	// sms
 	conditions := model.ConditionsT{
 		"query": bson.M{
-			"dao_id":     dao.ID,
-			"visibility": model.PostVisitPublic,
-			"type":       model.SMS,
+			"dao_id": dao.ID,
+			"type":   model.SMS,
 		},
 		"ORDER": bson.M{"_id": -1},
 	}
@@ -259,9 +253,8 @@ func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
 	// video
 	conditions2 := model.ConditionsT{
 		"query": bson.M{
-			"dao_id":     dao.ID,
-			"visibility": model.PostVisitPublic,
-			"type":       model.VIDEO,
+			"dao_id": dao.ID,
+			"type":   model.VIDEO,
 		},
 		"ORDER": bson.M{"_id": -1},
 	}
@@ -302,6 +295,13 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		tagMaps[tag] = 1
 	}
 
+	var visibility core.PostVisibleT
+	if dao.Visibility == model.DaoVisitPrivate {
+		visibility = core.PostVisitPrivate
+	} else {
+		visibility = core.PostVisitPublic
+	}
+
 	data := core.DocItems{{
 		"id":                dao.ID,
 		"address":           dao.Address,
@@ -312,7 +312,7 @@ func PushDaoToSearch(dao *model.Dao) (bool, error) {
 		"upvote_count":      0,
 		"comment_count":     0,
 		"member":            0,
-		"visibility":        model.PostVisitPublic, // Only the public dao will enter the search engine
+		"visibility":        visibility, // Only the public dao will enter the search engine
 		"is_top":            0,
 		"is_essence":        0,
 		"content":           contentFormatted,
@@ -332,16 +332,14 @@ func DeleteSearchDao(post *model.Dao) error {
 
 func PushDAOsToSearch() {
 	splitNum := 1000
-	totalRows, _ := GetDaoCount(&model.ConditionsT{
-		"query": bson.M{"visibility": model.DaoVisitPublic},
-	})
+	totalRows, _ := GetDaoCount(nil)
 
 	pages := math.Ceil(float64(totalRows) / float64(splitNum))
 	nums := int(pages)
 
 	for i := 0; i < nums; i++ {
 		posts, _ := GetDaoList(&DaoListReq{
-			Conditions: &model.ConditionsT{},
+			Conditions: model.ConditionsT{},
 			Offset:     i * splitNum,
 			Limit:      splitNum,
 		})
@@ -357,7 +355,7 @@ func PushDAOsToSearch() {
 	}
 }
 
-func GetDaoCount(conditions *model.ConditionsT) (int64, error) {
+func GetDaoCount(conditions model.ConditionsT) (int64, error) {
 	return ds.GetDaoCount(conditions)
 }
 
@@ -383,6 +381,18 @@ func CheckSubscribeDAO(address string, daoID primitive.ObjectID) bool {
 
 func CheckJoinedDAO(address string, daoID primitive.ObjectID) bool {
 	return ds.IsJoinedDAO(address, daoID)
+}
+
+func CheckDAOUser(daoID primitive.ObjectID) *errcode.Error {
+	dao := &model.Dao{ID: daoID}
+	user, err := dao.GetUser(context.TODO(), conf.MustMongoDB())
+	if err != nil {
+		return errcode.ServerError.WithDetails(err.Error())
+	}
+	if user.DeletedOn > 0 {
+		return errcode.UserAlreadyWrittenOff
+	}
+	return nil
 }
 
 func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID string, status core.DaoSubscribeT, err error) {

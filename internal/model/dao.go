@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -125,13 +126,13 @@ func (m *Dao) Update(ctx context.Context, db *mongo.Database) error {
 	return nil
 }
 
-func (m *Dao) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) {
+func (m *Dao) Count(db *mongo.Database, conditions ConditionsT) (int64, error) {
 
 	var query bson.M
 	if m.Address != "" {
 		query = bson.M{"address": m.Address}
 	}
-	for k, v := range *conditions {
+	for k, v := range conditions {
 		if k != "ORDER" {
 			if query != nil {
 				query = findQuery([]bson.M{query, v})
@@ -148,7 +149,7 @@ func (m *Dao) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) 
 	return count, nil
 }
 
-func (m *Dao) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Dao, error) {
+func (m *Dao) List(db *mongo.Database, conditions ConditionsT, offset, limit int) ([]*Dao, error) {
 	var (
 		posts  []*Dao
 		err    error
@@ -161,14 +162,14 @@ func (m *Dao) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 	finds := make([]*options.FindOptions, 0, 3)
 	finds = append(finds, options.Find().SetSkip(int64(offset)))
 	finds = append(finds, options.Find().SetLimit(int64(limit)))
-	if len(*conditions) == 0 {
+	if len(conditions) == 0 {
 		if query != nil {
 			query = findQuery([]bson.M{query})
 		} else {
 			query = bson.M{"is_del": 0}
 		}
 	}
-	for k, v := range *conditions {
+	for k, v := range conditions {
 		if k != "ORDER" {
 			if query != nil {
 				query = findQuery([]bson.M{query, v})
@@ -213,7 +214,7 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 }
 
 func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted, error) {
-	filter := bson.M{"name": m.Name, "is_del": 0}
+	filter := bson.M{"name": m.Name}
 	res := db.Collection(m.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
@@ -294,4 +295,37 @@ func (m *Dao) RealDelete(ctx context.Context, db *mongo.Database, gid string) er
 		}
 	}
 	return nil
+}
+
+func (m *Dao) GetUser(ctx context.Context, db *mongo.Database) (*User, error) {
+	if m.ID.IsZero() {
+		return nil, errors.New("NO DAO ID")
+	}
+	user := &User{}
+	pipeline := mongo.Pipeline{
+		{{"$lookup", bson.M{
+			"from":         user.Table(),
+			"localField":   "address",
+			"foreignField": "address",
+			"as":           "user",
+		}}},
+		{{"$match", bson.M{ID: m.ID}}},
+		{{"$unwind", "$user"}},
+	}
+	cursor, err := db.Collection(m.Table()).Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	type tmp struct {
+		User *User `bson:"user"`
+	}
+
+	for cursor.Next(context.TODO()) {
+		var t tmp
+		if err = cursor.Decode(&t); err != nil {
+			return nil, err
+		}
+		return t.User, nil
+	}
+	return nil, mongo.ErrNoDocuments
 }

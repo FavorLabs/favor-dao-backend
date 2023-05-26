@@ -37,8 +37,6 @@ const (
 	DAO PostType = iota - 1
 	SMS
 	VIDEO
-	Retweet
-	RetweetComment
 )
 
 type PostRefType int
@@ -119,6 +117,25 @@ func (p *PostContent) Format() *PostContentFormatted {
 		Type:    p.Type,
 		Sort:    p.Sort,
 	}
+}
+
+func (p *PostContent) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) {
+	var query bson.M
+	if len(*conditions) == 0 {
+		if query != nil {
+			query = findQuery([]bson.M{query})
+		} else {
+			query = bson.M{"is_del": 0}
+		}
+	}
+	for _, v := range *conditions {
+		if query != nil {
+			query = findQuery([]bson.M{query, v})
+		} else {
+			query = findQuery([]bson.M{v})
+		}
+	}
+	return db.Collection(p.Table()).CountDocuments(context.TODO(), query)
 }
 
 func (p *PostContent) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*PostContent, error) {

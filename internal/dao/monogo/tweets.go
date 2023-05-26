@@ -59,7 +59,7 @@ func (s *tweetHelpServant) MergePosts(user string, posts []*model.Post) ([]*mode
 	addresses := make([]string, len(posts))
 	daoIds := make([]primitive.ObjectID, len(posts))
 	for i, post := range posts {
-		if post.Type == model.Retweet || post.Type == model.RetweetComment {
+		if !post.RefId.IsZero() {
 			refItems[post.RefId] = post.RefType
 		}
 		daoIds[i] = post.DaoId
@@ -101,10 +101,10 @@ func (s *tweetHelpServant) MergePosts(user string, posts []*model.Post) ([]*mode
 	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
 	for _, dao := range daoS {
 		daoMap[dao.ID.Hex()] = dao.Format()
-		if _, ok := joinedMap[dao.ID.Hex()]; ok {
+		if _, ok := joinedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsJoined = true
 		}
-		if _, ok := subscribedMap[dao.ID.Hex()]; ok {
+		if _, ok := subscribedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsSubscribed = true
 		}
 	}
@@ -125,7 +125,7 @@ func (s *tweetHelpServant) MergePosts(user string, posts []*model.Post) ([]*mode
 			postFormatted.Contents = content
 		}
 
-		if postFormatted.Type == model.Retweet || postFormatted.Type == model.RetweetComment {
+		if !postFormatted.RefId.IsZero() {
 			switch post.RefType {
 			case model.RefPost:
 				refContents, err := s.getPostContentsByID(post.RefId)
@@ -168,7 +168,7 @@ func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted
 	addresses := make([]string, 0, len(posts))
 	daoIds := make([]primitive.ObjectID, 0, len(posts))
 	for _, post := range posts {
-		if post.Type == model.Retweet || post.Type == model.RetweetComment {
+		if !post.RefId.IsZero() {
 			refItems[post.RefId] = post.RefType
 		}
 		if post.Type != model.DAO {
@@ -210,10 +210,10 @@ func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted
 	daoMap := make(map[string]*model.DaoFormatted, len(daoS))
 	for _, dao := range daoS {
 		daoMap[dao.ID.Hex()] = dao.Format()
-		if _, ok := joinedMap[dao.ID.Hex()]; ok {
+		if _, ok := joinedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsJoined = true
 		}
-		if _, ok := subscribedMap[dao.ID.Hex()]; ok {
+		if _, ok := subscribedMap[dao.ID.Hex()]; ok || dao.Address == user {
 			daoMap[dao.ID.Hex()].IsSubscribed = true
 		}
 	}
@@ -240,7 +240,7 @@ func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted
 			post.Contents = content
 		}
 
-		if post.Type == model.Retweet || post.Type == model.RetweetComment {
+		if !post.RefId.IsZero() {
 			switch post.RefType {
 			case model.RefPost:
 				refContents, err := s.getPostContentsByID(post.RefId)
@@ -336,7 +336,7 @@ func (s *tweetHelpServant) getUsersByAddress(addresses []string) ([]*model.User,
 
 func (s *tweetHelpServant) getDAOsByIds(ids []primitive.ObjectID) ([]*model.Dao, error) {
 	dao := &model.Dao{}
-	return dao.List(s.db, &model.ConditionsT{
+	return dao.List(s.db, model.ConditionsT{
 		"query": bson.M{"_id": bson.M{"$in": ids}},
 	}, 0, 0)
 }
@@ -393,19 +393,41 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 					return err
 				}
 
-				switch origPost.Type {
-				case model.Retweet:
-					// if re-post type is retweet, we'll find original post id
-					post.RefId = origPost.RefId
-					post.AuthorId = origPost.AuthorId
-					post.AuthorDaoId = origPost.AuthorDaoId
-				default:
-					post.AuthorId = origPost.Address
-					post.AuthorDaoId = origPost.DaoId
-				}
-
 				post.Tags = origPost.Tags
-				post.OrigType = origPost.OrigType
+				post.Visibility = origPost.Visibility
+				post.OrigCreatedAt = origPost.CreatedOn
+
+				// replace the newest post type
+				post.OrigType = origPost.Type
+				post.AuthorId = origPost.Address
+				post.AuthorDaoId = origPost.DaoId
+
+				// if re-post type is retweet, we'll find original post id
+				if len(contents) == 0 {
+					// check post
+					origContentsLen, err := (&model.PostContent{}).Count(s.db, &model.ConditionsT{
+						"query": bson.M{"post_id": post.RefId},
+					})
+					if err != nil {
+						return err
+					}
+
+					if origContentsLen == 0 {
+						if !origPost.RefId.IsZero() {
+							post.RefId = origPost.RefId
+							post.OrigType = origPost.OrigType
+						}
+						if origPost.AuthorId != "" {
+							post.AuthorId = origPost.AuthorId
+						}
+						if !origPost.AuthorDaoId.IsZero() {
+							post.AuthorDaoId = origPost.AuthorDaoId
+						}
+						if origPost.OrigCreatedAt > 0 {
+							post.OrigCreatedAt = origPost.OrigCreatedAt
+						}
+					}
+				}
 			case model.RefComment:
 				comment, err := (&model.Comment{ID: post.RefId}).Get(ctx, s.db)
 				if err != nil {
@@ -413,6 +435,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 				}
 
 				post.AuthorId = comment.Address
+				post.OrigCreatedAt = comment.CreatedOn
 			case model.RefCommentReply:
 				reply, err := (&model.CommentReply{ID: post.RefId}).Get(ctx, s.db)
 				if err != nil {
@@ -420,6 +443,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 				}
 
 				post.AuthorId = reply.Address
+				post.OrigCreatedAt = reply.CreatedOn
 			}
 		}
 

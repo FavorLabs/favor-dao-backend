@@ -32,9 +32,10 @@ var (
 	UpdateDaoFailed          = NewError(80003, "Update Dao Failed")
 	CreateDaoNameDuplication = NewError(80004, "DAO name duplication")
 	NoExistDao               = NewError(80005, "DAO not found")
-	SubscribeDAO             = NewError(80006, "subscribe DAO Failed")
+	SubscribeDAO             = NewError(80006, "Subscribe DAO Failed")
 	DAONothingChange         = NewError(80007, "DAO Nothing Change")
 	AlreadySubscribedDAO     = NewError(80008, "Already Subscribed DAO")
+	CreateChatGroupFailed    = NewError(80009, "Create Chat Group Failed")
 
 	PayNotifyError = NewError(90001, "Pay notify Failed")
 
