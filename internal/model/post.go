@@ -145,17 +145,23 @@ func (p *Post) Create(ctx context.Context, db *mongo.Database) (*Post, error) {
 	return p, err
 }
 
-func (p *Post) Delete(db *mongo.Database) error {
-	filter := bson.D{{"_id", p.ID}}
+func (p *Post) Delete(db *mongo.Database) ([]primitive.ObjectID, error) {
+	ctx := context.Background()
+	ids, err := p.findAllRefPosts(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	ids = append(ids, p.ID)
+	filter := bson.M{"_id": bson.M{"$in": ids}}
 	update := bson.D{{"$set", bson.D{
 		{"is_del", 1},
 		{"deleted_on", time.Now().Unix()},
 	}}}
-	res := db.Collection(p.Table()).FindOneAndUpdate(context.TODO(), filter, update)
-	if res.Err() != nil {
-		return res.Err()
+	_, err = db.Collection(p.Table()).UpdateMany(ctx, filter, update)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return ids, nil
 }
 
 func (p *Post) Get(ctx context.Context, db *mongo.Database) (*Post, error) {
@@ -280,11 +286,67 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) error {
 					return err
 				}
 			}
-			_, err := db.Collection(p.Table()).DeleteOne(ctx, bson.M{"_id": p.ID})
+			refIds, err := p.findAllRefPosts(ctx, db)
+			if err != nil {
+				return err
+			}
+			filter := bson.M{"_id": bson.M{"$in": refIds}}
+			update := bson.D{{"$set", bson.D{
+				{"is_del", 1},
+				{"deleted_on", time.Now().Unix()},
+			}}}
+			_, err = db.Collection(p.Table()).UpdateMany(ctx, filter, update)
+			if err != nil {
+				return err
+			}
+			_, err = db.Collection(p.Table()).DeleteOne(ctx, bson.M{"_id": p.ID})
 			if err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func (p *Post) findAllRefPosts(ctx context.Context, db *mongo.Database) ([]primitive.ObjectID, error) {
+	content := PostContent{}
+	pipeline := mongo.Pipeline{
+		{
+			{"$project", bson.M{
+				"ref_id": 1,
+				"isRef": bson.M{
+					"$eq": bson.A{"$ref_id", p.ID},
+				},
+			}},
+		},
+		{
+			{"$lookup", bson.M{
+				"from":         content.Table(),
+				"localField":   "_id",
+				"foreignField": "post_id",
+				"as":           "post_contents",
+			}},
+		},
+		{
+			{
+				"$match", bson.M{
+					"$and": bson.A{
+						bson.M{"isRef": bson.M{"$eq": true}},
+						bson.M{"post_contents": bson.M{"$size": 0}},
+					},
+				}},
+		},
+	}
+	cursor, err := db.Collection(p.Table()).Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	var ids []primitive.ObjectID
+	for cursor.Next(ctx) {
+		id := cursor.Current.Lookup("_id").ObjectID()
+		if !id.IsZero() {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
 }

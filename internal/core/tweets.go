@@ -24,7 +24,7 @@ type TweetService interface {
 
 type TweetManageService interface {
 	CreatePost(post *model.Post, contents []*model.PostContent) (*model.Post, error)
-	DeletePost(post *model.Post) ([]string, error)
+	DeletePost(post *model.Post) ([]string, []primitive.ObjectID, error)
 	StickPost(post *model.Post) error
 	VisiblePost(post *model.Post, visibility model.PostVisibleT) error
 	UpdatePost(post *model.Post) error
