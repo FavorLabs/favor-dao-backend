@@ -383,6 +383,18 @@ func CheckJoinedDAO(address string, daoID primitive.ObjectID) bool {
 	return ds.IsJoinedDAO(address, daoID)
 }
 
+func CheckDAOUser(daoID primitive.ObjectID) *errcode.Error {
+	dao := &model.Dao{ID: daoID}
+	user, err := dao.GetUser(context.TODO(), conf.MustMongoDB())
+	if err != nil {
+		return errcode.ServerError.WithDetails(err.Error())
+	}
+	if user.DeletedOn > 0 {
+		return errcode.UserAlreadyWrittenOff
+	}
+	return nil
+}
+
 func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID string, status core.DaoSubscribeT, err error) {
 	var (
 		oid    string
