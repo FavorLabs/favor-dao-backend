@@ -62,9 +62,21 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		// if not exists
 		created = true
 	}
-
+	user.Token = param.Token
 	if !created && user.DeletedOn > 0 {
 		return nil, errcode.WaitForDelete
+	}
+
+	userByToken, err := ds.GetUserByToken(param.Token)
+	if err != nil {
+		return nil, err
+	}
+	if userByToken != nil && userByToken.ID != user.ID {
+		userByToken.Token = ""
+		err = UpdateUserInfo(userByToken)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if created || !user.ID.IsZero() {
@@ -84,6 +96,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 				user, err = ds.CreateUser(&model.User{
 					Nickname: param.WalletAddr[:10],
 					Address:  param.WalletAddr,
+					Token:    param.Token,
 					Avatar:   GetRandomAvatar(),
 					LoginAt:  time.Now().Unix(),
 				}, func(ctx context.Context, user *model.User) error {

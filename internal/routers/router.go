@@ -100,6 +100,15 @@ func NewRouter() *gin.Engine {
 
 		privApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
 
+		// notify
+		privApi.GET("/notify/group", api.NotifyGroupList)
+		privApi.GET("/notify/:fromId", api.NotifyByFrom)
+		privApi.GET("notify/sys/:organId", api.NotifySys)
+		privApi.GET("notify/unread/:fromId", api.NotifyUnread)
+		privApi.DELETE("/notify/:id", api.DeletedNotifyById)
+		privApi.DELETE("/notify/group/:fromId", api.DeletedNotifyByFromId)
+		privApi.PUT("/notify/group/:fromId", api.PutNotifyRead)
+
 		// red packet
 		privApi.POST("/redpacket", api.CreateRedpacket)
 		privApi.POST("/redpacket/:redpacket_id", api.ClaimRedpacket)

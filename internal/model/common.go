@@ -18,6 +18,15 @@ func findQuery(query []bson.M) bson.M {
 	return bson.M{}
 }
 
+func findQuery1(query []bson.M) bson.M {
+	if query != nil {
+		if len(query) > 0 {
+			return bson.M{"$and": query}
+		}
+	}
+	return bson.M{}
+}
+
 type PayStatus uint8
 
 const (

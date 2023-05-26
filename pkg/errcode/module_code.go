@@ -37,4 +37,23 @@ var (
 	AlreadySubscribedDAO     = NewError(80008, "Already Subscribed DAO")
 
 	PayNotifyError = NewError(90001, "Pay notify Failed")
+
+	MsgListFailed           = NewError(100001, "Failed to get the message list")
+	MsgCountFailed          = NewError(100002, "Failed to get the messages count")
+	GetMsgFailed            = NewError(100003, "Get  message failed")
+	DeleteMsgFailed         = NewError(100004, "Failed to delete message")
+	MsgSendLastFailed       = NewError(100005, "Failed to get the last message send")
+	MsgSendListFailed       = NewError(100006, "Failed to get the list of messages sent")
+	MsgSendCountFailed      = NewError(100007, "Failed to get the messages sent count")
+	GetMsgSendFailed        = NewError(100008, "Get send message failed")
+	DeleteMsgSendFailed     = NewError(100009, "Delete send message failed")
+	GetMsgReadFailed        = NewError(100010, "Get message read failure")
+	GetMsgUnReadCountFailed = NewError(100011, "Failed to get message unread")
+	CreateMsgReadFailed     = NewError(100012, "Create message read failure")
+	UpdateMsgReadFailed     = NewError(100013, "Update message read failure")
+	DeleteMsgReadFailed     = NewError(100014, "Delete message read failure")
+	MsgSysListFailed        = NewError(100015, "System message fetch failure")
+	MsgSysCountFailed       = NewError(100016, "Failed to get system message count")
+
+	GetOrganFailed = NewError(110001, "Get organizational failure")
 )

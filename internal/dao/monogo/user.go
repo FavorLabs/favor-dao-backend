@@ -10,6 +10,7 @@ import (
 	"favor-dao-backend/pkg/util"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -27,6 +28,13 @@ func newUserManageService(db *mongo.Database) core.UserManageService {
 	}
 }
 
+func (s *userManageServant) GetUserById(id primitive.ObjectID) (*model.User, error) {
+	user := &model.User{
+		ID: id,
+	}
+	return user.Get(context.TODO(), s.db)
+}
+
 func (s *userManageServant) GetUserByAddress(address string) (*model.User, error) {
 	user := &model.User{
 		Address: address,
@@ -40,7 +48,12 @@ func (s *userManageServant) GetUsersByAddresses(addresses []string) ([]*model.Us
 		"query": bson.M{"address": bson.M{"$in": addresses}},
 	}, 0, 0)
 }
-
+func (s *userManageServant) GetUserByToken(token string) (*model.User, error) {
+	user := &model.User{}
+	return user.GetOne(s.db, &model.ConditionsT{
+		"query": bson.M{"token": token},
+	})
+}
 func (s *userManageServant) GetUsersByKeyword(keyword string) ([]*model.User, error) {
 	user := &model.User{}
 	keyword = strings.Trim(keyword, " ")

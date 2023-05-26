@@ -20,6 +20,7 @@ type User struct {
 	Address    string             `json:"address"          bson:"address"`
 	Avatar     string             `json:"avatar"           bson:"avatar"`
 	Role       string             `json:"role"             bson:"role"`
+	Token      string             `json:"token"   			bson:"token"`
 	LoginAt    int64              `json:"login_at"         bson:"login_at"`
 }
 
@@ -57,6 +58,24 @@ func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
 		filter := bson.D{{"address", m.Address}, {"is_del", 0}}
 		res = db.Collection(m.Table()).FindOne(ctx, filter)
 	}
+	err := res.Err()
+	if err != nil {
+		return &user, err
+	}
+	err = res.Decode(&user)
+	if err != nil {
+		return &user, err
+	}
+	return &user, nil
+}
+
+func (m *User) GetOne(db *mongo.Database, conditions *ConditionsT) (*User, error) {
+	var (
+		user User
+		res  *mongo.SingleResult
+	)
+
+	res = db.Collection(m.Table()).FindOne(context.TODO(), conditions)
 	err := res.Err()
 	if err != nil {
 		return &user, err

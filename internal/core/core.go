@@ -14,4 +14,11 @@ type DataService interface {
 	UserManageService
 
 	DaoManageService
+
+	MsgMangerService
+	MsgReadMangerService
+	MsgSendMangerService
+	MsgSysMangerService
+
+	OrganMangerService
 }
