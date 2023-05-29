@@ -137,16 +137,17 @@ func GetDaoBookmarkIDsByAddress(address string) []string {
 	return daoIds
 }
 
-func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
+func UpdateDao(userAddress string, param DaoUpdateReq) (e *errcode.Error) {
 	dao, err := ds.GetDao(&model.Dao{ID: param.Id})
 	if err != nil {
-		return err
+		return errcode.NoExistDao
 	}
 	if dao.Address != userAddress {
 		return errcode.NoPermission
 	}
 	tags := tagsFrom(param.Tags)
 	change := false
+	changeChat := false
 	if len(tags) != 0 {
 		dao.Tags = strings.Join(tags, ",")
 		change = true
@@ -154,14 +155,17 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	if param.Name != "" {
 		dao.Name = param.Name
 		change = true
+		changeChat = true
 	}
 	if param.Avatar != "" {
 		dao.Avatar = param.Avatar
 		change = true
+		changeChat = true
 	}
 	if param.Introduction != "" {
 		dao.Introduction = param.Introduction
 		change = true
+		changeChat = true
 	}
 	if param.Banner != "" {
 		dao.Banner = param.Banner
@@ -170,7 +174,7 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	if param.Price != "" {
 		_, err = convert.StrTo(param.Price).BigInt()
 		if err != nil {
-			return err
+			return errcode.ServerError.WithDetails(err.Error())
 		}
 		dao.Price = param.Price
 		change = true
@@ -183,10 +187,24 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 		return errcode.DAONothingChange
 	}
 	err = ds.UpdateDao(dao, func(ctx context.Context, dao *model.Dao) error {
-		return UpdateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+		if changeChat {
+			err = UpdateChatGroup(ctx, dao.Address, dao.ID.Hex(), dao.Name, dao.Avatar, dao.Introduction)
+			if err != nil {
+				logrus.Warnf("%s UpdateChatGroup err: %v", userAddress, err)
+				e = errcode.UpdateChatGroupFailed
+			}
+			return err
+		}
+		return nil
 	})
 	if err != nil {
-		return err
+		if errors.Is(err, model.ErrDuplicateDAOName) {
+			return errcode.DaoNameDuplication
+		}
+		if e != nil {
+			return e
+		}
+		return errcode.ServerError.WithDetails(err.Error())
 	}
 	for _, t := range tags {
 		tag := &model.Tag{
@@ -199,8 +217,9 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (err error) {
 	_, err = PushDaoToSearch(dao)
 	if err != nil {
 		logrus.Warnf("%s when update, push dao to search err: %v", userAddress, err)
+		return errcode.ServerError.WithDetails(err.Error())
 	}
-	return err
+	return nil
 }
 
 func GetDao(daoId string) (*core.Dao, error) {

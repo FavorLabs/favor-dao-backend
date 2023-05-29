@@ -421,6 +421,14 @@ func VisiblePost(c *gin.Context) {
 	})
 }
 
+func BlockPost(c *gin.Context) {
+
+}
+
+func ReportPost(c *gin.Context) {
+
+}
+
 func GetPostTags(c *gin.Context) {
 	param := service.PostTagsReq{}
 	response := app.NewResponse(c)
