@@ -231,6 +231,15 @@ func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted,
 	return dao.Format(), nil
 }
 
+func (m *Dao) CheckNameDuplication(ctx context.Context, db *mongo.Database) bool {
+	filter := bson.M{"name": m.Name, ID: bson.M{"$ne": m.ID}}
+	res := db.Collection(m.Table()).FindOne(ctx, filter)
+	if res.Err() == nil {
+		return true
+	}
+	return false
+}
+
 func (m *Dao) GetListByAddress(ctx context.Context, db *mongo.Database) (list []*DaoFormatted, err error) {
 	filter := bson.M{"address": m.Address, "is_del": 0}
 	cursor, err := db.Collection(m.Table()).Find(ctx, filter)
