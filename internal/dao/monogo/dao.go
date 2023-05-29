@@ -38,8 +38,7 @@ func (s *daoManageServant) GetDaoByKeyword(keyword string) ([]*model.Dao, error)
 func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) (string, error)) (*model.Dao, error) {
 	err := util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		// check name duplicate
-		_, err := dao.GetByName(ctx, s.db)
-		if err == nil {
+		if dao.CheckNameDuplication(ctx, s.db) {
 			return model.ErrDuplicateDAOName
 		}
 
@@ -89,12 +88,11 @@ func (s *daoManageServant) CreateDao(dao *model.Dao, chatAction func(context.Con
 func (s *daoManageServant) UpdateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) error) error {
 	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		// check name duplicate
-		_, err := dao.GetByName(ctx, s.db)
-		if err == nil {
+		if dao.CheckNameDuplication(ctx, s.db) {
 			return model.ErrDuplicateDAOName
 		}
 
-		err = dao.Update(ctx, s.db)
+		err := dao.Update(ctx, s.db)
 		if err != nil {
 			return err
 		}
