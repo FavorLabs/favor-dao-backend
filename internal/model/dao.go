@@ -29,6 +29,10 @@ const (
 	DaoWithURL
 )
 
+var (
+	ErrDuplicateDAOName = errors.New("DAO name duplicate")
+)
+
 type Dao struct {
 	ID           primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
 	CreatedOn    int64              `json:"created_on"       bson:"created_on"`

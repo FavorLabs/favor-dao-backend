@@ -31,83 +31,71 @@ func NewRouter() *gin.Engine {
 
 	noAuthApi := r.Group("/").Use(middleware.Session())
 	{
-		noAuthApi.GET("/post", api.GetPost)
-		noAuthApi.GET("/dao", api.GetDao)
-		noAuthApi.GET("/dao/recommend", api.GetDaoList)
-
 		noAuthApi.GET("/tags", api.GetPostTags)
 
 		noAuthApi.GET("/user/profile", api.GetUserProfile)
 
+		// post
+		noAuthApi.GET("/user/posts", api.GetUserPosts)
+		noAuthApi.GET("/dao/posts", api.GetDaoPosts)
 		noAuthApi.GET("/posts", api.GetPostList)
+
+		noAuthApi.GET("/post", api.GetPost)
+		noAuthApi.GET("/post/comments", api.GetPostComments)
 
 		noAuthApi.POST("/post/view", api.PostView)
 		noAuthApi.GET("/post/view", api.GetPostView)
 
-		noAuthApi.GET("/post/comments", api.GetPostComments)
-
-		noAuthApi.GET("/user/posts", api.GetUserPosts)
-
-		noAuthApi.GET("/dao/posts", api.GetDaoPosts)
-
+		// DAO
+		noAuthApi.GET("/dao", api.GetDao)
+		noAuthApi.GET("/dao/recommend", api.GetDaoList)
 	}
 
 	authApi := r.Group("/").Use(middleware.Login())
-	privApi := r.Group("/").Use(middleware.Login())
 	{
+		// user
 		authApi.DELETE("/account", api.DeleteAccount)
-
 		authApi.GET("/user/info", api.GetUserInfo)
+		authApi.POST("/user/nickname", api.ChangeNickname)
+		authApi.POST("/user/avatar", api.ChangeAvatar)
 		authApi.GET("/user/accounts", api.GetAccounts)
-
 		authApi.GET("/user/statistic", api.GetUserStatistic)
-
 		authApi.GET("/user/collections", api.GetUserCollections)
 
-		authApi.GET("/user/stars", api.GetUserStars)
-
-		authApi.POST("/user/nickname", api.ChangeNickname)
-
-		authApi.POST("/user/avatar", api.ChangeAvatar)
-
+		// suggest for search
 		authApi.GET("/suggest/users", api.GetSuggestUsers)
-
 		authApi.GET("/suggest/tags", api.GetSuggestTags)
 
+		// post
+		authApi.GET("/user/stars", api.GetUserStars)
 		authApi.GET("/posts/focus", api.GetFocusPostList)
 
-		privApi.POST("/post", api.CreatePost)
-
-		privApi.DELETE("/post", api.DeletePost)
+		authApi.POST("/post", api.CreatePost)
+		authApi.DELETE("/post", api.DeletePost)
 
 		authApi.GET("/post/star", api.GetPostStar)
-
-		privApi.POST("/post/star", api.PostStar)
-
+		authApi.POST("/post/star", api.PostStar)
 		authApi.GET("/post/collection", api.GetPostCollection)
+		authApi.POST("/post/collection", api.PostCollection)
 
-		privApi.POST("/post/collection", api.PostCollection)
+		authApi.POST("/post/stick", api.StickPost)
+		authApi.POST("/post/visibility", api.VisiblePost)
+		authApi.POST("/post/block/:post_id", api.BlockPost)
+		authApi.POST("/post/report/:post_id", api.ReportPost)
 
-		privApi.POST("/post/stick", api.StickPost)
-
-		privApi.POST("/post/visibility", api.VisiblePost)
-
-		privApi.POST("/post/comment", api.CreatePostComment)
-
-		privApi.DELETE("/post/comment", api.DeletePostComment)
-
-		privApi.POST("/post/comment/reply", api.CreatePostCommentReply)
-
-		privApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
+		authApi.POST("/post/comment", api.CreatePostComment)
+		authApi.DELETE("/post/comment", api.DeletePostComment)
+		authApi.POST("/post/comment/reply", api.CreatePostCommentReply)
+		authApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
 
 		// red packet
-		privApi.POST("/redpacket", api.CreateRedpacket)
-		privApi.POST("/redpacket/:redpacket_id", api.ClaimRedpacket)
-		privApi.GET("/redpacket/:redpacket_id", api.RedpacketInfo)
-		privApi.GET("/redpacket/stats/claims", api.RedpacketStatsClaims)
-		privApi.GET("/redpacket/stats/sends", api.RedpacketStatsSends)
-		privApi.GET("/redpacket/claims", api.RedpacketClaimList)
-		privApi.GET("/redpacket/sends", api.RedpacketSendList)
+		authApi.POST("/redpacket", api.CreateRedpacket)
+		authApi.POST("/redpacket/:redpacket_id", api.ClaimRedpacket)
+		authApi.GET("/redpacket/:redpacket_id", api.RedpacketInfo)
+		authApi.GET("/redpacket/stats/claims", api.RedpacketStatsClaims)
+		authApi.GET("/redpacket/stats/sends", api.RedpacketStatsSends)
+		authApi.GET("/redpacket/claims", api.RedpacketClaimList)
+		authApi.GET("/redpacket/sends", api.RedpacketSendList)
 
 		// dao
 		authApi.GET("/daos", api.GetDaos)
@@ -117,6 +105,7 @@ func NewRouter() *gin.Engine {
 		authApi.GET("/dao/bookmark", api.GetDaoBookmark)
 		authApi.POST("/dao/bookmark", api.ActionDaoBookmark)
 		authApi.POST("/dao/sub/:dao_id", api.SubDao)
+		authApi.POST("/dao/block/:dao_id", api.BlockDAO)
 
 		// chat
 		authApi.GET("/chat/groups", api.GetChatGroups)

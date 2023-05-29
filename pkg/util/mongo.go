@@ -19,7 +19,7 @@ func MongoTransaction(ctx context.Context, db *mongo.Database, fn func(ctx conte
 			if errs != nil {
 				return fmt.Errorf("abort transaction %v \n", errs)
 			}
-			return fmt.Errorf("execute transaction %v \n", err)
+			return err
 		}
 		err = sessionContext.CommitTransaction(sessionContext)
 		if err != nil {

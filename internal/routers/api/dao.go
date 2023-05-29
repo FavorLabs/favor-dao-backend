@@ -18,7 +18,6 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func GetDaos(c *gin.Context) {
@@ -48,12 +47,6 @@ func CreateDao(c *gin.Context) {
 		return
 	}
 
-	_, err := service.GetDaoByName(param.Name)
-	if !errors.Is(err, mongo.ErrNoDocuments) {
-		response.ToErrorResponse(errcode.CreateDaoNameDuplication)
-		return
-	}
-
 	userAddress, _ := c.Get("address")
 
 	var outErr *errcode.Error
@@ -72,6 +65,10 @@ func CreateDao(c *gin.Context) {
 		return
 	}
 	if err != nil {
+		if errors.Is(err, model.ErrDuplicateDAOName) {
+			response.ToErrorResponse(errcode.DaoNameDuplication)
+			return
+		}
 		logrus.Errorf("service.CreateDao err: %v\n", err)
 		response.ToErrorResponse(errcode.CreateDaoFailed)
 		return
@@ -94,8 +91,7 @@ func UpdateDao(c *gin.Context) {
 	err := service.UpdateDao(userAddress.(string), param)
 
 	if err != nil {
-		logrus.Errorf("service.UpdateDao err: %v\n", err)
-		response.ToErrorResponse(errcode.UpdateDaoFailed.WithDetails(err.Error()))
+		response.ToErrorResponse(err)
 		return
 	}
 
@@ -288,4 +284,8 @@ func SubDao(c *gin.Context) {
 	response.ToResponse(gin.H{
 		"status": status,
 	})
+}
+
+func BlockDAO(c *gin.Context) {
+
 }
