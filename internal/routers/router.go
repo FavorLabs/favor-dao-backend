@@ -59,6 +59,7 @@ func NewRouter() *gin.Engine {
 		authApi.POST("/user/nickname", api.ChangeNickname)
 		authApi.POST("/user/avatar", api.ChangeAvatar)
 		authApi.GET("/user/accounts", api.GetAccounts)
+		authApi.GET("/user/trans", api.Trans)
 		authApi.GET("/user/statistic", api.GetUserStatistic)
 		authApi.GET("/user/collections", api.GetUserCollections)
 
@@ -81,7 +82,7 @@ func NewRouter() *gin.Engine {
 		authApi.POST("/post/stick", api.StickPost)
 		authApi.POST("/post/visibility", api.VisiblePost)
 		authApi.POST("/post/block/:post_id", api.BlockPost)
-		authApi.POST("/post/report/:post_id", api.ReportPost)
+		authApi.POST("/post/complaint", api.ComplaintPost)
 
 		authApi.POST("/post/comment", api.CreatePostComment)
 		authApi.DELETE("/post/comment", api.DeletePostComment)

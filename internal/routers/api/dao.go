@@ -7,9 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
@@ -18,6 +15,8 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func GetDaos(c *gin.Context) {
@@ -241,8 +240,8 @@ func SubDao(c *gin.Context) {
 	daoId := c.Param("dao_id")
 	daoID, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
-		logrus.Errorf("service.GetPostCollection err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostFailed)
+		logrus.Errorf("dao_id parase err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
 		return
 	}
 	param := service.AuthByWalletRequest{}
@@ -287,5 +286,23 @@ func SubDao(c *gin.Context) {
 }
 
 func BlockDAO(c *gin.Context) {
-
+	response := app.NewResponse(c)
+	id := c.Param("dao_id")
+	ID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		logrus.Errorf("dao_id parase err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
+		return
+	}
+	user, _ := userFrom(c)
+	err = service.BlockDAO(user, ID)
+	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.ToErrorResponse(e)
+			return
+		}
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
+		return
+	}
+	response.ToResponse(nil)
 }

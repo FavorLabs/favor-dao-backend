@@ -2,12 +2,17 @@ package model
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+var (
+	ErrDuplicateNickname = errors.New("user nickname duplicate")
 )
 
 type User struct {
@@ -66,6 +71,15 @@ func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
 		return &user, err
 	}
 	return &user, nil
+}
+
+func (m *User) CheckNicknameDuplication(ctx context.Context, db *mongo.Database) bool {
+	filter := bson.M{"nickname": m.Nickname, ID: bson.M{"$ne": m.ID}}
+	res := db.Collection(m.Table()).FindOne(ctx, filter)
+	if res.Err() == nil {
+		return true
+	}
+	return false
 }
 
 func (m *User) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*User, error) {

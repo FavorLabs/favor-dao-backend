@@ -55,6 +55,9 @@ func (s *userManageServant) GetTagsByKeyword(keyword string) ([]*model.Tag, erro
 
 func (s *userManageServant) CreateUser(user *model.User, chatAction func(context.Context, *model.User) error) (*model.User, error) {
 	err := util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		if user.CheckNicknameDuplication(ctx, s.db) {
+			return model.ErrDuplicateNickname
+		}
 		newUser, err := user.Create(ctx, s.db)
 		if err != nil {
 			return err
@@ -76,6 +79,10 @@ func (s *userManageServant) CreateUser(user *model.User, chatAction func(context
 
 func (s *userManageServant) UpdateUser(user *model.User, chatAction func(context.Context, *model.User) error) error {
 	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
+		if user.CheckNicknameDuplication(ctx, s.db) {
+			return model.ErrDuplicateNickname
+		}
+
 		err := user.Update(ctx, s.db)
 		if err != nil {
 			return err

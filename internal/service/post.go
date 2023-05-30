@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -659,18 +660,18 @@ func GetPostTags(param *PostTagsReq) ([]*model.TagFormatted, error) {
 
 	users, _ := ds.GetUsersByAddresses(userIds)
 
-	var tagsFormated []*model.TagFormatted
+	var tagsFormatted []*model.TagFormatted
 	for _, tag := range tags {
-		tagFormated := tag.Format()
+		tagFormatted := tag.Format()
 		for _, user := range users {
-			if user.Address == tagFormated.Address {
-				tagFormated.User = user.Format()
+			if user.Address == tagFormatted.Address {
+				tagFormatted.User = user.Format()
 			}
 		}
-		tagsFormated = append(tagsFormated, tagFormated)
+		tagsFormatted = append(tagsFormatted, tagFormatted)
 	}
 
-	return tagsFormated, nil
+	return tagsFormatted, nil
 }
 
 func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.PostFormatted {
@@ -696,4 +697,39 @@ func FilterMemberContent(user *model.User, post *model.PostFormatted) *model.Pos
 		}
 	}
 	return post
+}
+
+type PostComplaintReq struct {
+	PostID string `json:"post_id"  binding:"required"`
+	Reason string `json:"reason"   binding:"required"`
+}
+
+func ComplaintPost(user *model.User, req PostComplaintReq) error {
+	id, err := primitive.ObjectIDFromHex(req.PostID)
+	if err != nil {
+		return err
+	}
+	_, err = ds.GetPostByID(id)
+	if err != nil {
+		return err
+	}
+	md := model.PostComplaint{
+		Address: user.Address,
+		PostID:  id,
+		Reason:  req.Reason,
+	}
+	return md.Create(context.Background(), conf.MustMongoDB())
+}
+
+func BlockPost(user *model.User, id primitive.ObjectID) error {
+	_, err := ds.GetPostByID(id)
+	if err != nil {
+		return err
+	}
+	md := model.PostBlock{
+		Address: user.Address,
+		BlockId: id,
+		Model:   model.BlockModelPost,
+	}
+	return md.Create(context.Background(), conf.MustMongoDB())
 }

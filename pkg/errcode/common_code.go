@@ -4,7 +4,7 @@ var (
 	Success                   = NewError(0, "Success")
 	ServerError               = NewError(10000, "Server Error")
 	InvalidParams             = NewError(10001, "Invalid Params")
-	NotFound                  = NewError(10002, "Not Found")
+	NotFound                  = NewError(10002, "Post Not Found")
 	UnauthorizedAuthNotExist  = NewError(10003, "Unauthorized Auth Not Exist")
 	UnauthorizedAuthFailed    = NewError(10004, "Unauthorized Auth Failed")
 	UnauthorizedTokenError    = NewError(10005, "Unauthorized Token Error")

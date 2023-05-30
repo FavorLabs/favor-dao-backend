@@ -204,7 +204,8 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (e *errcode.Error) {
 		if e != nil {
 			return e
 		}
-		return errcode.ServerError.WithDetails(err.Error())
+		logrus.Warnf("%s UpdateDao err: %v", userAddress, err)
+		return errcode.UpdateDaoFailed
 	}
 	for _, t := range tags {
 		tag := &model.Tag{
@@ -483,4 +484,21 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 
 func UpdateSubscribeDAO(orderID, txID string, status model.DaoSubscribeT) error {
 	return ds.UpdateSubscribeDAO(orderID, txID, status)
+}
+
+func BlockDAO(user *model.User, id primitive.ObjectID) error {
+	_, err := ds.GetDao(&model.Dao{ID: id})
+	if err != nil {
+		return errcode.NoExistDao
+	}
+	md := model.PostBlock{
+		Address: user.Address,
+		BlockId: id,
+		Model:   model.BlockModelDAO,
+	}
+	err = md.Create(context.Background(), conf.MustMongoDB())
+	if mongo.IsDuplicateKeyError(err) {
+		return nil
+	}
+	return err
 }
