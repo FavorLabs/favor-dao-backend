@@ -30,7 +30,7 @@ paths:
     post:
       tags:
         - Redpacket
-      summary: create a redpacket
+      summary: Create a redpacket
       requestBody:
         content:
           application/json:
@@ -67,7 +67,7 @@ paths:
     post:
       tags:
         - Redpacket
-      summary: claim a redpacket
+      summary: Claim a redpacket
       parameters:
         - name: redpacket_id
           in: path
@@ -82,7 +82,7 @@ paths:
     get:
       tags:
         - Redpacket
-      summary: get a redpacket info
+      summary: Get a redpacket info
       parameters:
         - name: redpacket_id
           in: path
@@ -99,7 +99,7 @@ paths:
     get:
       tags:
         - Redpacket
-      summary: stats for user claims
+      summary: Stats for user claims
       parameters:
         - name: year
           in: query
@@ -117,7 +117,7 @@ paths:
     get:
       tags:
         - Redpacket
-      summary: stats for user sends
+      summary: Stats for user sends
       parameters:
         - name: year
           in: query
@@ -135,7 +135,7 @@ paths:
     get:
       tags:
         - Redpacket
-      summary: send packets list for my
+      summary: Send packets list for my
       parameters:
         - name: page
           in: query
@@ -161,7 +161,7 @@ paths:
     get:
       tags:
         - Redpacket
-      summary: claim packets list for my
+      summary: Claim packets list for my
       parameters:
         - name: page
           in: query
@@ -300,6 +300,55 @@ paths:
       security:
         - api_key: []
 
+  /post/block/{post_id}:
+    post:
+      tags:
+        - POST
+      summary: Block a post
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: success
+        404:
+          description: Post not found
+        405:
+          description: Invalid input
+      security:
+        - api_key: [ ]
+
+  /post/complaint:
+    post:
+      tags:
+        - POST
+      summary: Complaint a post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - post_id
+                - reason
+              properties:
+                post_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        200:
+          description: success
+        404:
+          description: Post not found
+        405:
+          description: Invalid input
+      security:
+        - api_key: [ ]
+
   /dao/posts:
     get:
       tags:
@@ -431,6 +480,27 @@ paths:
                   type: string
       responses:
         '405':
+          description: Invalid input
+      security:
+        - api_key: [ ]
+
+  /dao/block/{dao_id}:
+    post:
+      tags:
+        - DAO
+      summary: Block a DAO
+      parameters:
+        - name: dao_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: success
+        404:
+          description: DAO not found
+        405:
           description: Invalid input
       security:
         - api_key: [ ]
