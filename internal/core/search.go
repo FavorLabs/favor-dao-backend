@@ -6,13 +6,15 @@ type (
 	SearchType string
 
 	QueryReq struct {
-		Query      string
-		Visibility []PostVisibleT
-		Type       []PostType
-		DaoIDs     []string
-		Addresses  []string
-		Tag        string
-		Sort       types.AnySlice
+		Query        string
+		Visibility   []PostVisibleT
+		Type         []PostType
+		DaoIDs       []string
+		Addresses    []string
+		Tag          string
+		Sort         types.AnySlice
+		BlockPostIDs []string
+		BlockDaoIDs  []string
 	}
 
 	QueryResp struct {
