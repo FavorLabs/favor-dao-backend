@@ -6,6 +6,7 @@ import (
 
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/pkg/pointSystem"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,4 +67,8 @@ func eventSubDAO(notify PayCallbackParam) error {
 
 func FindAccounts(ctx context.Context, address string) (accounts []pointSystem.Account, err error) {
 	return point.FindAccounts(ctx, address)
+}
+
+func Trans(c *gin.Context) {
+	point.PayList(c)
 }

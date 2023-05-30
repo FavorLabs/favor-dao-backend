@@ -122,6 +122,10 @@ func GetAccounts(c *gin.Context) {
 	response.ToResponse(ac)
 }
 
+func Trans(c *gin.Context) {
+	service.Trans(c)
+}
+
 func GetUserStatistic(c *gin.Context) {
 	param := service.AuthRequest{}
 	response := app.NewResponse(c)
