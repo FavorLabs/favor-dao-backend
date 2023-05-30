@@ -82,7 +82,7 @@ func NewRouter() *gin.Engine {
 		authApi.POST("/post/stick", api.StickPost)
 		authApi.POST("/post/visibility", api.VisiblePost)
 		authApi.POST("/post/block/:post_id", api.BlockPost)
-		authApi.POST("/post/report/:post_id", api.ReportPost)
+		authApi.POST("/post/complaint", api.ComplaintPost)
 
 		authApi.POST("/post/comment", api.CreatePostComment)
 		authApi.DELETE("/post/comment", api.DeletePostComment)
