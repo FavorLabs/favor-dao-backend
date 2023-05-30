@@ -6,6 +6,7 @@ var (
 	TooManyLoginError    = NewError(20014, "Too Many Login Error，Please try again later")
 	NicknameLengthLimit  = NewError(20020, "Nickname length 2~12")
 	NoExistUserAddress   = NewError(20021, "No Exist User Address")
+	NicknameDuplication  = NewError(20022, "Nickname duplication")
 
 	CreatePostFailed  = NewError(30002, "Create Post Failed")
 	GetPostFailed     = NewError(30003, "Get Post Failed")
@@ -27,9 +28,9 @@ var (
 
 	GetCollectionsFailed = NewError(60001, "Get Collections Failed")
 
-	CreateDaoFailed       = NewError(80001, "Create Dao Failed")
+	CreateDaoFailed       = NewError(80001, "Create DAO Failed")
 	GetDaoFailed          = NewError(80002, "Get Dao Failed")
-	UpdateDaoFailed       = NewError(80003, "Update Dao Failed")
+	UpdateDaoFailed       = NewError(80003, "Update DAO Failed")
 	DaoNameDuplication    = NewError(80004, "DAO name duplication")
 	NoExistDao            = NewError(80005, "DAO not found")
 	SubscribeDAO          = NewError(80006, "Subscribe DAO Failed")

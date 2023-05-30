@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"unicode/utf8"
 
@@ -28,8 +29,16 @@ func Login(c *gin.Context) {
 
 	user, err := service.DoLoginWallet(c, &param)
 	if err != nil {
-		logrus.Errorf("service.DoLogin err: %v", err)
-		response.ToErrorResponse(err.(*errcode.Error))
+		if e, ok := err.(*errcode.Error); ok {
+			logrus.Errorf("service.DoLogin err: %v", err)
+			response.ToErrorResponse(e)
+			return
+		}
+		if errors.Is(err, model.ErrDuplicateNickname) {
+			response.ToErrorResponse(errcode.NicknameDuplication)
+			return
+		}
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
 	}
 

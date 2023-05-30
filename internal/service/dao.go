@@ -204,7 +204,8 @@ func UpdateDao(userAddress string, param DaoUpdateReq) (e *errcode.Error) {
 		if e != nil {
 			return e
 		}
-		return errcode.ServerError.WithDetails(err.Error())
+		logrus.Warnf("%s UpdateDao err: %v", userAddress, err)
+		return errcode.UpdateDaoFailed
 	}
 	for _, t := range tags {
 		tag := &model.Tag{
