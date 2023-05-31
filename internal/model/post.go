@@ -281,6 +281,7 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) ([]primitive.
 				new(PostCollection).Table(),
 				new(PostStar).Table(),
 				new(Comment).Table(),
+				new(PostComplaint).Table(),
 			}
 			var err error
 			for _, v := range table {
@@ -289,6 +290,11 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) ([]primitive.
 					return err
 				}
 			}
+			_, err = db.Collection(new(PostBlock).Table()).DeleteMany(ctx, bson.M{"block_id": p.ID, "model": BlockModelPost})
+			if err != nil {
+				return err
+			}
+
 			refIds, err = p.findAllRefPosts(ctx, db)
 			if err != nil {
 				return err
@@ -349,7 +355,7 @@ func (p *Post) findAllRefPosts(ctx context.Context, db *mongo.Database) ([]primi
 	if err != nil {
 		return nil, err
 	}
-	var ids []primitive.ObjectID
+	ids := make([]primitive.ObjectID, 0)
 	for cursor.Next(ctx) {
 		id := cursor.Current.Lookup("_id").ObjectID()
 		if !id.IsZero() {
