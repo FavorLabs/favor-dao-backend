@@ -53,7 +53,7 @@ func (e *Error) StatusCode() int {
 	switch e.Code() {
 	case Success.Code():
 		return http.StatusOK
-	case NotFound.code:
+	case NotFound.code, NoExistDao.code:
 		return http.StatusNotFound
 	case ServerError.Code():
 		return http.StatusInternalServerError

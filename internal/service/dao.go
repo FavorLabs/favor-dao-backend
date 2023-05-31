@@ -20,6 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type DaoCreationReq struct {
@@ -501,4 +502,15 @@ func BlockDAO(user *model.User, id primitive.ObjectID) error {
 		return nil
 	}
 	return err
+}
+
+func GetBlockDaoIDs(user *model.User) []string {
+	md := model.PostBlock{}
+	ops := &options.FindOptions{}
+	ops.SetLimit(300)
+	ops.SetSort(bson.M{"created_on": -1})
+	return md.FindIDs(context.TODO(), conf.MustMongoDB(), bson.M{
+		"address": user.Address,
+		"model":   model.BlockModelDAO,
+	}, ops)
 }

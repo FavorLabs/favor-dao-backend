@@ -74,6 +74,14 @@ func GetPostList(c *gin.Context) {
 	q := parseQueryReq(c)
 	user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
+
+	if user != nil {
+		q.BlockDaoIDs = service.GetBlockDaoIDs(user)
+		if !(len(q.Type) == 1 && q.Type[0] == model.DAO) {
+			q.BlockPostIDs = service.GetBlockPostIDs(user)
+		}
+	}
+
 	// only public
 	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
 	if err != nil {
@@ -98,6 +106,8 @@ func GetFocusPostList(c *gin.Context) {
 		return
 	}
 	q.DaoIDs = daoIds
+
+	q.BlockPostIDs = service.GetBlockPostIDs(user)
 
 	// only public
 	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)

@@ -9,9 +9,11 @@
       ]
     ],
     "UniqueIndexes": [
-      {
-        "name": "text"
-      }
+      [
+        {
+          "name": "text"
+        }
+      ]
     ]
   },
   {
@@ -93,6 +95,35 @@
     ]
   },
   {
+    "TableName": "post_block",
+    "UniqueIndexes": [
+      [
+        {
+          "address": 1
+        },
+        {
+          "block_id": 1
+        },
+        {
+          "model": 1
+        }
+      ]
+    ]
+  },
+  {
+    "TableName": "post_complaint",
+    "UniqueIndexes": [
+      [
+        {
+          "address": 1
+        },
+        {
+          "post_id": 1
+        }
+      ]
+    ]
+  },
+  {
     "TableName": "tag",
     "Indexes": [
       [
@@ -102,20 +133,26 @@
       ]
     ],
     "UniqueIndexes": [
-      {
-        "tag": "text"
-      }
+      [
+        {
+          "tag": "text"
+        }
+      ]
     ]
   },
   {
     "TableName": "d_user",
     "UniqueIndexes": [
-      {
-        "address": 1
-      },
-      {
-        "nickname": "text"
-      }
+      [
+        {
+          "address": 1
+        }
+      ],
+      [
+        {
+          "nickname": "text"
+        }
+      ]
     ]
   },
   {

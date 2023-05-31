@@ -291,6 +291,10 @@ func (m *Dao) RealDelete(ctx context.Context, db *mongo.Database, gid string) er
 				return err
 			}
 		}
+		_, err := db.Collection(new(PostBlock).Table()).DeleteMany(ctx, bson.M{"block_id": m.ID, "model": BlockModelDAO})
+		if err != nil {
+			return err
+		}
 		group := &chatModel.Group{
 			ID: chatModel.GroupID{
 				DaoID:   m.ID,
@@ -298,7 +302,7 @@ func (m *Dao) RealDelete(ctx context.Context, db *mongo.Database, gid string) er
 				OwnerID: m.Address,
 			},
 		}
-		err := group.Delete(ctx, db)
+		err = group.Delete(ctx, db)
 		if err != nil {
 			return err
 		}

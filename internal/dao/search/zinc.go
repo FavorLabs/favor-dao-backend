@@ -128,6 +128,7 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 			},
 		})
 	}
+
 	should := types.AnySlice{}
 	if q.Query != "" {
 		should = types.AnySlice{
@@ -153,6 +154,23 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 			},
 		}
 	}
+
+	mustNot := types.AnySlice{}
+	if len(q.BlockDaoIDs) > 0 {
+		mustNot = append(mustNot, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"dao_id": q.BlockDaoIDs,
+			},
+		})
+	}
+	if len(q.BlockPostIDs) > 0 {
+		mustNot = append(mustNot, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"id": q.BlockPostIDs,
+			},
+		})
+	}
+
 	query := make(map[string]map[string]types.Any)
 	query["bool"] = make(map[string]types.Any)
 	if len(should) > 0 {
@@ -161,6 +179,9 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 	}
 	if len(must) > 0 {
 		query["bool"]["must"] = must
+	}
+	if len(mustNot) > 0 {
+		query["bool"]["must_not"] = mustNot
 	}
 	if len(query["bool"]) == 0 {
 		delete(query, "bool")
