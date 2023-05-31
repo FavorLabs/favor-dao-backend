@@ -421,6 +421,59 @@ func VisiblePost(c *gin.Context) {
 	})
 }
 
+func BlockPost(c *gin.Context) {
+	response := app.NewResponse(c)
+	postId := c.Param("post_id")
+	postID, err := primitive.ObjectIDFromHex(postId)
+	if err != nil {
+		logrus.Errorf("post_id parase err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
+		return
+	}
+	user, _ := userFrom(c)
+	err = service.BlockPost(user, postID)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			response.ToErrorResponse(errcode.NotFound)
+			return
+		}
+		if mongo.IsDuplicateKeyError(err) {
+			response.ToResponse(nil)
+			return
+		}
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
+		return
+	}
+	response.ToResponse(nil)
+}
+
+func ComplaintPost(c *gin.Context) {
+	param := service.PostComplaintReq{}
+	response := app.NewResponse(c)
+	valid, errs := app.BindAndValid(c, &param)
+	if !valid {
+		logrus.Errorf("app.BindAndValid errs: %v", errs)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
+		return
+	}
+
+	user, _ := userFrom(c)
+	err := service.ComplaintPost(user, param)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			response.ToErrorResponse(errcode.NotFound)
+			return
+		}
+		if mongo.IsDuplicateKeyError(err) {
+			response.ToResponse(nil)
+			return
+		}
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
+		return
+	}
+	response.ToResponse(nil)
+}
+
 func GetPostTags(c *gin.Context) {
 	param := service.PostTagsReq{}
 	response := app.NewResponse(c)

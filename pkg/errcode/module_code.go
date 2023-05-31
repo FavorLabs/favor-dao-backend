@@ -6,6 +6,7 @@ var (
 	TooManyLoginError    = NewError(20014, "Too Many Login Error，Please try again later")
 	NicknameLengthLimit  = NewError(20020, "Nickname length 2~12")
 	NoExistUserAddress   = NewError(20021, "No Exist User Address")
+	NicknameDuplication  = NewError(20022, "Nickname duplication")
 
 	CreatePostFailed  = NewError(30002, "Create Post Failed")
 	GetPostFailed     = NewError(30003, "Get Post Failed")
@@ -27,15 +28,16 @@ var (
 
 	GetCollectionsFailed = NewError(60001, "Get Collections Failed")
 
-	CreateDaoFailed          = NewError(80001, "Create Dao Failed")
-	GetDaoFailed             = NewError(80002, "Get Dao Failed")
-	UpdateDaoFailed          = NewError(80003, "Update Dao Failed")
-	CreateDaoNameDuplication = NewError(80004, "DAO name duplication")
-	NoExistDao               = NewError(80005, "DAO not found")
-	SubscribeDAO             = NewError(80006, "Subscribe DAO Failed")
-	DAONothingChange         = NewError(80007, "DAO Nothing Change")
-	AlreadySubscribedDAO     = NewError(80008, "Already Subscribed DAO")
-	CreateChatGroupFailed    = NewError(80009, "Create Chat Group Failed")
+	CreateDaoFailed       = NewError(80001, "Create DAO Failed")
+	GetDaoFailed          = NewError(80002, "Get Dao Failed")
+	UpdateDaoFailed       = NewError(80003, "Update DAO Failed")
+	DaoNameDuplication    = NewError(80004, "DAO name duplication")
+	NoExistDao            = NewError(80005, "DAO not found")
+	SubscribeDAO          = NewError(80006, "Subscribe DAO Failed")
+	DAONothingChange      = NewError(80007, "DAO Nothing Change")
+	AlreadySubscribedDAO  = NewError(80008, "Already Subscribed DAO")
+	CreateChatGroupFailed = NewError(80009, "Create Chat Group Failed")
+	UpdateChatGroupFailed = NewError(80010, "Update Chat Group Failed")
 
 	PayNotifyError = NewError(90001, "Pay notify Failed")
 

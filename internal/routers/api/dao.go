@@ -7,9 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
@@ -18,7 +15,8 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func GetDaos(c *gin.Context) {
@@ -48,12 +46,6 @@ func CreateDao(c *gin.Context) {
 		return
 	}
 
-	_, err := service.GetDaoByName(param.Name)
-	if !errors.Is(err, mongo.ErrNoDocuments) {
-		response.ToErrorResponse(errcode.CreateDaoNameDuplication)
-		return
-	}
-
 	userAddress, _ := c.Get("address")
 
 	var outErr *errcode.Error
@@ -72,6 +64,10 @@ func CreateDao(c *gin.Context) {
 		return
 	}
 	if err != nil {
+		if errors.Is(err, model.ErrDuplicateDAOName) {
+			response.ToErrorResponse(errcode.DaoNameDuplication)
+			return
+		}
 		logrus.Errorf("service.CreateDao err: %v\n", err)
 		response.ToErrorResponse(errcode.CreateDaoFailed)
 		return
@@ -94,8 +90,7 @@ func UpdateDao(c *gin.Context) {
 	err := service.UpdateDao(userAddress.(string), param)
 
 	if err != nil {
-		logrus.Errorf("service.UpdateDao err: %v\n", err)
-		response.ToErrorResponse(errcode.UpdateDaoFailed.WithDetails(err.Error()))
+		response.ToErrorResponse(err)
 		return
 	}
 
@@ -245,8 +240,8 @@ func SubDao(c *gin.Context) {
 	daoId := c.Param("dao_id")
 	daoID, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
-		logrus.Errorf("service.GetPostCollection err: %v\n", err)
-		response.ToErrorResponse(errcode.GetPostFailed)
+		logrus.Errorf("dao_id parase err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
 		return
 	}
 	param := service.AuthByWalletRequest{}
@@ -288,4 +283,26 @@ func SubDao(c *gin.Context) {
 	response.ToResponse(gin.H{
 		"status": status,
 	})
+}
+
+func BlockDAO(c *gin.Context) {
+	response := app.NewResponse(c)
+	id := c.Param("dao_id")
+	ID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		logrus.Errorf("dao_id parase err: %v\n", err)
+		response.ToErrorResponse(errcode.InvalidParams.WithDetails(err.Error()))
+		return
+	}
+	user, _ := userFrom(c)
+	err = service.BlockDAO(user, ID)
+	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.ToErrorResponse(e)
+			return
+		}
+		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
+		return
+	}
+	response.ToResponse(nil)
 }

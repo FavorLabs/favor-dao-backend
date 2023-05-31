@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"favor-dao-backend/internal/conf"
@@ -12,6 +13,7 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -49,6 +51,12 @@ type ChangeUserStatusReq struct {
 
 const LOGIN_ERR_KEY = "DaoUserLoginErr"
 const MAX_LOGIN_ERR_TIMES = 10
+
+func generateNickname(address string) string {
+	enc := make([]byte, 0, 8)
+	a := string(strconv.AppendInt(enc, time.Now().Unix(), 16))
+	return address[:4] + a
+}
 
 // DoLoginWallet Wallet login, register if user does not exist
 func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, error) {
@@ -94,7 +102,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		if ok {
 			if created {
 				user, err = ds.CreateUser(&model.User{
-					Nickname: param.WalletAddr[:10],
+					Nickname: generateNickname(param.WalletAddr),
 					Address:  param.WalletAddr,
 					Token:    param.Token,
 					Avatar:   GetRandomAvatar(),
@@ -195,7 +203,10 @@ func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
 		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
 	}); err != nil {
-		return errcode.ServerError
+		if errors.Is(err, model.ErrDuplicateNickname) {
+			return errcode.NicknameDuplication
+		}
+		return errcode.ServerError.WithDetails(err.Error())
 	}
 	return nil
 }
@@ -359,8 +370,8 @@ func Cancellation(address string) (err error) {
 		return err
 	}
 	// delete post
-	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post) (string, error) {
-		err = DeleteSearchPost(post)
+	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post, refPostIds ...primitive.ObjectID) (string, error) {
+		err = DeleteSearchPost(post, refPostIds...)
 		if err != nil {
 			logrus.Errorf("Cancellation delete postID %s from search err: %v", post.ID.Hex(), err)
 		}

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"favor-dao-backend/pkg/json"
+	"github.com/gin-gonic/gin"
 )
 
 type Gateway struct {
@@ -117,6 +118,33 @@ func (s *Gateway) FindAccounts(ctx context.Context, address string) (list []Acco
 		})
 	}
 	return
+}
+
+func (s *Gateway) PayList(c *gin.Context) {
+	address, _ := c.Get("address")
+	query := c.Request.URL.Query()
+	query.Set("ref_id", address.(string))
+
+	u := s.baseUrl + "/v1/pay/list?" + query.Encode()
+
+	// Read the HTTP request from the buffer
+	req, err := http.NewRequest(http.MethodGet, u, c.Request.Body)
+	if err != nil {
+		return
+	}
+
+	resp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return
+	}
+	// Copy any headers
+	for k, v := range resp.Header {
+		for _, h := range v {
+			c.Writer.Header().Add(k, h)
+		}
+	}
+	c.Status(resp.StatusCode)
+	io.Copy(c.Writer, resp.Body)
 }
 
 func (s *Gateway) Transaction() (txID string, err error) {

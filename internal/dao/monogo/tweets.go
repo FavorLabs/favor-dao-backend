@@ -471,14 +471,17 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 	return newPost, nil
 }
 
-func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
-	var mediaContents []string
+func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, []primitive.ObjectID, error) {
+	var (
+		refPosts      []primitive.ObjectID
+		mediaContents []string
+	)
 
 	postId := post.ID
 	postContent := &model.PostContent{}
 	session, err := s.db.Client().StartSession()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	wc := writeconcern.New(writeconcern.WMajority())
 	txnOptions := options.Transaction().SetWriteConcern(wc)
@@ -492,7 +495,7 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 			}
 
 			// delete post
-			if err := post.Delete(s.db); err != nil {
+			if refPosts, err = post.Delete(s.db); err != nil {
 				return nil, err
 			}
 
@@ -512,26 +515,29 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, error) {
 		}, txnOptions)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	s.cacheIndex.SendAction(core.IdxActDeletePost, post)
-	return mediaContents, nil
+	// s.cacheIndex.SendAction(core.IdxActDeletePost, post)
+	return mediaContents, refPosts, nil
 }
 
-func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post) (string, error)) error {
+func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post, ...primitive.ObjectID) (string, error)) error {
 	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
 		cursor, err := s.db.Collection(new(model.Post).Table()).Find(ctx, bson.M{"address": address})
+		if err != nil {
+			return err
+		}
 		for cursor.Next(ctx) {
 			var t model.Post
 			if cursor.Decode(&t) != nil {
 				break
 			}
-			err = t.RealDelete(ctx, s.db)
+			refIds, err := t.RealDelete(ctx, s.db)
 			if err != nil {
 				return err
 			}
-			_, err = fn(ctx, &t)
+			_, err = fn(ctx, &t, refIds...)
 			if err != nil {
 				return err
 			}

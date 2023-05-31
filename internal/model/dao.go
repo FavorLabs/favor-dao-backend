@@ -29,6 +29,10 @@ const (
 	DaoWithURL
 )
 
+var (
+	ErrDuplicateDAOName = errors.New("DAO name duplicate")
+)
+
 type Dao struct {
 	ID           primitive.ObjectID `json:"id"               bson:"_id,omitempty"`
 	CreatedOn    int64              `json:"created_on"       bson:"created_on"`
@@ -225,6 +229,15 @@ func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted,
 		return nil, err
 	}
 	return dao.Format(), nil
+}
+
+func (m *Dao) CheckNameDuplication(ctx context.Context, db *mongo.Database) bool {
+	filter := bson.M{"name": m.Name, ID: bson.M{"$ne": m.ID}}
+	res := db.Collection(m.Table()).FindOne(ctx, filter)
+	if res.Err() == nil {
+		return true
+	}
+	return false
 }
 
 func (m *Dao) GetListByAddress(ctx context.Context, db *mongo.Database) (list []*DaoFormatted, err error) {
