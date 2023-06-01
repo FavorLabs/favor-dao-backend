@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"favor-dao-backend/internal/core"
+	"favor-dao-backend/internal/dao/monogo"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
@@ -167,6 +168,10 @@ func CreatePost(c *gin.Context) {
 	post, err := service.CreatePost(user, param)
 
 	if err != nil {
+		if errors.Is(err, monogo.ErrRetweetAgain) {
+			response.ToErrorResponse(errcode.UserHasRetweeted)
+			return
+		}
 		logrus.Errorf("service.CreatePost err: %v\n", err)
 		response.ToErrorResponse(errcode.CreatePostFailed)
 		return

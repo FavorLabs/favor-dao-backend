@@ -182,6 +182,24 @@ func (p *Post) Get(ctx context.Context, db *mongo.Database) (*Post, error) {
 	return &post, nil
 }
 
+func (p *Post) GetRef(ctx context.Context, db *mongo.Database) (*Post, error) {
+	if p.RefId.IsZero() || p.Address == "" {
+		return nil, mongo.ErrNoDocuments
+	}
+	filter := bson.D{{"ref_id", p.RefId}, {"address", p.Address}, {"is_del", 0}}
+	res := db.Collection(p.Table()).FindOne(ctx, filter)
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+
+	var post Post
+	err := res.Decode(&post)
+	if err != nil {
+		return nil, err
+	}
+	return &post, nil
+}
+
 func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Post, error) {
 	var (
 		posts  []*Post
