@@ -487,6 +487,7 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	if len(q.Type) == 1 && q.Type[0] == model.DAO {
 		if q.Query != "" {
 			q.Visibility = []core.PostVisibleT{core.PostVisitPublic, core.PostVisitPrivate}
+			q.BlockDaoIDs = []string{}
 		} else {
 			q.Visibility = []core.PostVisibleT{core.PostVisitPublic}
 		}
