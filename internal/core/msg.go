@@ -23,9 +23,9 @@ type MsgSendMangerService interface {
 	GetMsgSendByMsgId(msgId primitive.ObjectID) (*model.MsgSend, error)
 	GetMsgSend(from, to primitive.ObjectID) (*model.MsgSend, error)
 	GetLastMsg(from, to primitive.ObjectID) (*model.MsgSend, error)
-	ListMsgSend(to primitive.ObjectID, pageSize, pageNum int) (*[]model.MsgSendGroup, error)
+	ListMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID, pageSize, pageNum int) (*[]model.MsgSendGroup, error)
 	DeleteMsgSendByMsgId(msgId primitive.ObjectID) (bool, error)
-	CountMsgSend(to primitive.ObjectID) (int64, error)
+	CountMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID) (int64, error)
 	CountUnreadMsg(from, to primitive.ObjectID, date int64) (int64, error)
 }
 

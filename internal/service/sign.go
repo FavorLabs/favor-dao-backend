@@ -35,7 +35,7 @@ type AuthByWalletRequest struct {
 	WalletAddr string     `json:"wallet_addr"   binding:"required"`
 	Signature  string     `json:"signature"     binding:"required"`
 	Type       WalletType `json:"type"          binding:"required"`
-	Token      string     `json:"token" 		binding:"required"`
+	Token      string     `json:"token"         binding:"required"`
 }
 
 func VerifySignMessage(ctx context.Context, auth *AuthByWalletRequest, guessMessage string) (bool, error) {

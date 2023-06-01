@@ -10,6 +10,7 @@ type PushNotifyRequest struct {
 	Title     string             `json:"title"`
 	Content   string             `json:"content"`
 	Links     string             `json:"links"`
+	Region    string             `json:"region"`
 	NetWorkId int                `json:"netWorkId"`
 }
 
@@ -19,6 +20,7 @@ type PushNotifySysRequest struct {
 	Title     string `json:"title"`
 	Content   string `json:"content"`
 	Links     string `json:"links"`
+	Region    string `json:"region"`
 	NetWorkId int    `json:"netWorkId"`
 }
 

@@ -82,6 +82,19 @@ func (g *Gateway) Notify(ctx context.Context, notify PushNotifyRequest) error {
 	return nil
 }
 
+func (g *Gateway) NotifyDao(ctx context.Context, notify PushNotifyRequest) error {
+	u := g.baseUrl + "/v1/push/notify/dao"
+	var resp BaseResponse
+	err := g.request(ctx, http.MethodPost, u, notify, &resp)
+	if err != nil {
+		return err
+	}
+	if resp.Code != 0 {
+		return errors.New(resp.Msg)
+	}
+	return nil
+}
+
 func (g *Gateway) NotifySys(ctx context.Context, notify PushNotifySysRequest) error {
 	u := g.baseUrl + "/v1/push/notify/sys"
 	var resp BaseResponse

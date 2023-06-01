@@ -7,4 +7,7 @@ import (
 
 type OrganMangerService interface {
 	GetOrganById(id primitive.ObjectID) (*model.Organ, error)
+	GetOrganByKey(key string) (*model.Organ, error)
+	GetOrganNotShow() (*[]primitive.ObjectID, error)
+	ListOrgan() (*[]model.Organ, error)
 }

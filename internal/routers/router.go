@@ -49,6 +49,8 @@ func NewRouter() *gin.Engine {
 		// DAO
 		noAuthApi.GET("/dao", api.GetDao)
 		noAuthApi.GET("/dao/recommend", api.GetDaoList)
+
+		noAuthApi.GET("/notify/organ", api.NotifyOrgan)
 	}
 
 	authApi := r.Group("/").Use(middleware.Login())
@@ -90,13 +92,13 @@ func NewRouter() *gin.Engine {
 		authApi.DELETE("/post/comment/reply", api.DeletePostCommentReply)
 
 		// notify
-		privApi.GET("/notify/group", api.NotifyGroupList)
-		privApi.GET("/notify/:fromId", api.NotifyByFrom)
-		privApi.GET("notify/sys/:organId", api.NotifySys)
-		privApi.GET("notify/unread/:fromId", api.NotifyUnread)
-		privApi.DELETE("/notify/:id", api.DeletedNotifyById)
-		privApi.DELETE("/notify/group/:fromId", api.DeletedNotifyByFromId)
-		privApi.PUT("/notify/group/:fromId", api.PutNotifyRead)
+		authApi.GET("/notify/group", api.NotifyGroupList)
+		authApi.GET("/notify/:fromId", api.NotifyByFrom)
+		authApi.GET("/notify/sys/:organId", api.NotifySys)
+		authApi.GET("/notify/unread/:fromId", api.NotifyUnread)
+		authApi.DELETE("/notify/:id", api.DeletedNotifyById)
+		authApi.DELETE("/notify/group/:fromId", api.DeletedNotifyByFromId)
+		authApi.PUT("/notify/group/:fromId", api.PutNotifyRead)
 
 		// red packet
 		authApi.POST("/redpacket", api.CreateRedpacket)

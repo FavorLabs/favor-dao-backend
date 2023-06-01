@@ -77,7 +77,9 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 
 	userByToken, err := ds.GetUserByToken(param.Token)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errcode.ServerError
+		}
 	}
 	if userByToken != nil && userByToken.ID != user.ID {
 		userByToken.Token = ""
@@ -201,7 +203,7 @@ func GetUserByAddress(address string) (*model.User, error) {
 
 func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
-		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
+		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar, user.Token)
 	}); err != nil {
 		if errors.Is(err, model.ErrDuplicateNickname) {
 			return errcode.NicknameDuplication

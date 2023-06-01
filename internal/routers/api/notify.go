@@ -24,6 +24,22 @@ func NotifyGroupList(c *gin.Context) {
 	response.ToResponseList(list, count)
 }
 
+func NotifyOrgan(c *gin.Context) {
+	response := app.NewResponse(c)
+	user, _ := userFrom(c)
+	to := primitive.NilObjectID
+	if user != nil {
+		to = user.ID
+	}
+	list, err1 := service.NotifyOrganList(to)
+	if err1 != nil {
+		logrus.Errorf("service.NotifyOrganList err: %v\n", err1)
+		response.ToResponseList([]model.Msg{}, 0)
+		return
+	}
+	response.ToResponseList(list, int64(len(*list)))
+}
+
 func NotifyByFrom(c *gin.Context) {
 	response := app.NewResponse(c)
 	from := c.Param("fromId")

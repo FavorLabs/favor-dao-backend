@@ -25,7 +25,7 @@ type User struct {
 	Address    string             `json:"address"          bson:"address"`
 	Avatar     string             `json:"avatar"           bson:"avatar"`
 	Role       string             `json:"role"             bson:"role"`
-	Token      string             `json:"token"   			bson:"token"`
+	Token      string             `json:"token"            bson:"token"`
 	LoginAt    int64              `json:"login_at"         bson:"login_at"`
 }
 

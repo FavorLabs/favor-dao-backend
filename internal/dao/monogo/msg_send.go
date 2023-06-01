@@ -57,9 +57,10 @@ func (m msgSendManageService) GetLastMsg(from, to primitive.ObjectID) (*model.Ms
 	return ms.GetLast(m.db, conditions)
 }
 
-func (m msgSendManageService) ListMsgSend(to primitive.ObjectID, pageSize, pageNum int) (*[]model.MsgSendGroup, error) {
+func (m msgSendManageService) ListMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID,
+	pageSize, pageNum int) (*[]model.MsgSendGroup, error) {
 	ms := &model.MsgSend{}
-	return ms.List(m.db, to, pageNum, pageSize)
+	return ms.List(m.db, to, froms, pageNum, pageSize)
 }
 
 func (m msgSendManageService) DeleteMsgSendByMsgId(msgId primitive.ObjectID) (bool, error) {
@@ -72,9 +73,9 @@ func (m msgSendManageService) DeleteMsgSendByMsgId(msgId primitive.ObjectID) (bo
 	return true, ms.Delete(m.db, conditions)
 }
 
-func (m msgSendManageService) CountMsgSend(to primitive.ObjectID) (int64, error) {
+func (m msgSendManageService) CountMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID) (int64, error) {
 	ms := &model.MsgSend{}
-	return ms.CountGroup(m.db, to)
+	return ms.CountGroup(m.db, to, froms)
 }
 
 func (m msgSendManageService) CountUnreadMsg(from, to primitive.ObjectID, date int64) (int64, error) {

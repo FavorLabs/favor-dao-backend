@@ -3,12 +3,13 @@ package service
 import (
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/errcode"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type NotifyGroup struct {
 	FromInfo    FromInfo           `json:"fromInfo"`
-	UnReadCount int64              `json:"unReadCount"`
+	UnreadCount int64              `json:"unreadCount"`
 	Context     string             `json:"context"`
 	FromType    model.FromTypeEnum `json:"fromType"`
 	CreatedAt   int64              `json:"createdAt"`
@@ -20,9 +21,18 @@ type FromInfo struct {
 	Name   string             `json:"name"`
 }
 
+type NotifyOrgan struct {
+	ID          primitive.ObjectID `json:"id"`
+	Name        string             `json:"name"`
+	Key         string             `json:"key"`
+	Avatar      string             `json:"avatar"`
+	UnreadCount int64              `json:"unreadCount"`
+}
+
 func NotifyGroupList(to primitive.ObjectID, pageSize, pageNum int) (*[]NotifyGroup, int64, *errcode.Error) {
 	var readAt int64
-	msl, err := ds.ListMsgSend(to, pageSize, pageNum)
+	oids, err := ds.GetOrganNotShow()
+	msl, err := ds.ListMsgSend(to, oids, pageSize, pageNum)
 	if err != nil {
 		return nil, 0, errcode.MsgSendListFailed
 	}
@@ -30,7 +40,7 @@ func NotifyGroupList(to primitive.ObjectID, pageSize, pageNum int) (*[]NotifyGro
 		return nil, 0, nil
 	}
 	list := make([]NotifyGroup, 0, pageSize)
-	count, err := ds.CountMsgSend(to)
+	count, err := ds.CountMsgSend(to, oids)
 	if err != nil {
 		return nil, 0, errcode.MsgSendCountFailed
 	}
@@ -71,7 +81,7 @@ func NotifyGroupList(to primitive.ObjectID, pageSize, pageNum int) (*[]NotifyGro
 				return nil, 0, errcode.NewError(000000, "User does not exist")
 			}
 			fi.ID = user.ID
-			fi.Name = user.Address
+			fi.Name = user.Nickname
 			fi.Avatar = user.Avatar
 		case model.ORANGE:
 			o, err := ds.GetOrganById(ms.From)
@@ -84,7 +94,7 @@ func NotifyGroupList(to primitive.ObjectID, pageSize, pageNum int) (*[]NotifyGro
 		}
 		ng := NotifyGroup{
 			FromInfo:    fi,
-			UnReadCount: unReadCount,
+			UnreadCount: unReadCount,
 			FromType:    ms.FromType,
 			Context: func() string {
 				if msg.Title != "" {
@@ -97,6 +107,45 @@ func NotifyGroupList(to primitive.ObjectID, pageSize, pageNum int) (*[]NotifyGro
 		list = append(list, ng)
 	}
 	return &list, count, nil
+}
+
+func NotifyOrganList(to primitive.ObjectID) (*[]NotifyOrgan, *errcode.Error) {
+	var (
+		readAt int64
+		c      int64
+	)
+	organs, err := ds.ListOrgan()
+	if err != nil {
+	}
+	os := *organs
+	nos := make([]NotifyOrgan, 0, len(os))
+	for _, o := range os {
+		if !to.IsZero() {
+			mr, err := ds.GetMsgRead(o.ID, to)
+			if err != nil {
+				logrus.Errorf("get msg_read err: %v\n", err)
+			}
+			if mr == nil {
+				readAt = 0
+			} else {
+				readAt = mr.ReadAt
+			}
+			c, err = ds.CountUnreadMsg(o.ID, to, readAt)
+			if err != nil {
+				logrus.Errorf("get unread_msg err: %v\n", err)
+			}
+		}
+
+		no := NotifyOrgan{
+			ID:          o.ID,
+			Key:         o.Key,
+			Name:        o.Name,
+			Avatar:      o.Avatar,
+			UnreadCount: c,
+		}
+		nos = append(nos, no)
+	}
+	return &nos, nil
 }
 
 func NotifyByFrom(from, to primitive.ObjectID, pageSize, pageNum int) (*[]model.Msg, int64, *errcode.Error) {

@@ -89,7 +89,9 @@ func (m *MsgSend) Delete(db *mongo.Database, conditions *ConditionsT) error {
 	return err
 }
 
-func (m *MsgSend) List(db *mongo.Database, to primitive.ObjectID, offset, limit int) (*[]MsgSendGroup, error) {
+func (m *MsgSend) List(db *mongo.Database, to primitive.ObjectID,
+	froms *[]primitive.ObjectID, offset, limit int) (*[]MsgSendGroup, error) {
+	var matchStage bson.D
 	groupStage := bson.D{
 		{"$group", bson.D{
 			{"_id", bson.D{
@@ -97,12 +99,19 @@ func (m *MsgSend) List(db *mongo.Database, to primitive.ObjectID, offset, limit 
 				{"from", "$from"},
 				{"fromType", "$fromType"},
 			}}}}}
-	matchStage := bson.D{{"$match", bson.D{{"to", to}}}}
+
+	if froms != nil && len(*froms) > 0 {
+		matchStage = bson.D{{"$match", bson.D{{"to", to},
+			{"from", bson.M{"$exists": *froms}}}}}
+	} else {
+		matchStage = bson.D{{"$match", bson.D{{"to", to}}}}
+	}
 	sortStage := bson.D{{"$sort", bson.D{{"to", -1}}}}
 	limitStage := bson.D{{"$limit", limit}}
 	skipStage := bson.D{{"$skip", offset}}
 
-	cursor, err := db.Collection(m.Table()).Aggregate(context.TODO(), mongo.Pipeline{matchStage, groupStage, sortStage, limitStage, skipStage})
+	cursor, err := db.Collection(m.Table()).Aggregate(context.TODO(),
+		mongo.Pipeline{matchStage, groupStage, sortStage, limitStage, skipStage})
 	if err != nil {
 		return nil, err
 	}
@@ -112,23 +121,29 @@ func (m *MsgSend) List(db *mongo.Database, to primitive.ObjectID, offset, limit 
 		if cursor.Decode(&ms) != nil {
 			return nil, err
 		}
-
 		msgSends = append(msgSends, ms["_id"])
 	}
 	return &msgSends, nil
 }
 
-func (m *MsgSend) CountGroup(db *mongo.Database, to primitive.ObjectID) (int64, error) {
+func (m *MsgSend) CountGroup(db *mongo.Database, to primitive.ObjectID, froms *[]primitive.ObjectID) (int64, error) {
+	var matchStage bson.D
 	groupStage := bson.D{
 		{"$group", bson.D{
 			{"_id", bson.D{
 				{"to", "$to"},
 				{"from", "$from"},
 			}}}}}
-	matchStage := bson.D{{"$match", bson.D{{"to", to}}}}
+	if froms != nil && len(*froms) > 0 {
+		matchStage = bson.D{{"$match", bson.D{{"to", to},
+			{"from", bson.M{"$exists": *froms}}}}}
+	} else {
+		matchStage = bson.D{{"$match", bson.D{{"to", to}}}}
+	}
 	countStage := bson.D{{"$count", "countGroup"}}
 
-	cursor, err := db.Collection(m.Table()).Aggregate(context.TODO(), mongo.Pipeline{matchStage, groupStage, countStage})
+	cursor, err := db.Collection(m.Table()).Aggregate(context.TODO(),
+		mongo.Pipeline{matchStage, groupStage, countStage})
 	if err != nil {
 		return 0, err
 	}
