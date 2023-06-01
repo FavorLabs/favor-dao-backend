@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type TagType string
@@ -497,6 +498,7 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	if len(q.Type) == 1 && q.Type[0] == model.DAO {
 		if q.Query != "" {
 			q.Visibility = []core.PostVisibleT{core.PostVisitPublic, core.PostVisitPrivate}
+			q.BlockDaoIDs = []string{}
 		} else {
 			q.Visibility = []core.PostVisibleT{core.PostVisitPublic}
 		}
@@ -743,4 +745,15 @@ func BlockPost(user *model.User, id primitive.ObjectID) error {
 		Model:   model.BlockModelPost,
 	}
 	return md.Create(context.Background(), conf.MustMongoDB())
+}
+
+func GetBlockPostIDs(user *model.User) []string {
+	md := model.PostBlock{}
+	ops := &options.FindOptions{}
+	ops.SetLimit(300)
+	ops.SetSort(bson.M{"created_on": -1})
+	return md.FindIDs(context.TODO(), conf.MustMongoDB(), bson.M{
+		"address": user.Address,
+		"model":   model.BlockModelPost,
+	}, ops)
 }

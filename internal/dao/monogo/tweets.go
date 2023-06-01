@@ -2,6 +2,7 @@ package monogo
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -174,8 +175,14 @@ func (s *tweetHelpServant) RevampPosts(user string, posts []*model.PostFormatted
 		if post.Type != model.DAO {
 			postIds = append(postIds, post.ID)
 		}
-		addresses = append(addresses, post.Address, post.AuthorId)
-		daoIds = append(daoIds, post.DaoId, post.AuthorDaoId)
+		addresses = append(addresses, post.Address)
+		if post.AuthorId != "" {
+			addresses = append(addresses, post.AuthorId)
+		}
+		daoIds = append(daoIds, post.DaoId)
+		if !post.AuthorDaoId.IsZero() {
+			daoIds = append(daoIds, post.AuthorDaoId)
+		}
 	}
 
 	postContents, err := s.getPostContentsByIDs(postIds)
@@ -372,6 +379,8 @@ func (s *tweetManageServant) DeletePostCollection(p *model.PostCollection) error
 	return p.Delete(s.db)
 }
 
+var ErrRetweetAgain = errors.New("user has retweeted post")
+
 func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.PostContent) (*model.Post, error) {
 	var newPost *model.Post
 
@@ -426,6 +435,16 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 						if origPost.OrigCreatedAt > 0 {
 							post.OrigCreatedAt = origPost.OrigCreatedAt
 						}
+					}
+
+					// check user has retweeted this post
+					_, err = (&model.Post{RefId: post.RefId, Address: post.Address}).GetRef(ctx, s.db)
+					if err != nil {
+						if !errors.Is(err, mongo.ErrNoDocuments) {
+							return err
+						}
+					} else {
+						return ErrRetweetAgain
 					}
 				}
 			case model.RefComment:
@@ -522,28 +541,27 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, []primitive
 	return mediaContents, refPosts, nil
 }
 
-func (s *tweetManageServant) RealDeletePosts(address string, fn func(context.Context, *model.Post, ...primitive.ObjectID) (string, error)) error {
-	return util.MongoTransaction(context.TODO(), s.db, func(ctx context.Context) error {
-		cursor, err := s.db.Collection(new(model.Post).Table()).Find(ctx, bson.M{"address": address})
+func (s *tweetManageServant) RealDeletePosts(address string, delSearch func(context.Context, *model.Post, ...primitive.ObjectID) (string, error)) error {
+	ctx := context.TODO()
+	cursor, err := s.db.Collection(new(model.Post).Table()).Find(ctx, bson.M{"address": address})
+	if err != nil {
+		return err
+	}
+	for cursor.Next(ctx) {
+		var t model.Post
+		if cursor.Decode(&t) != nil {
+			break
+		}
+		refIds, err := t.RealDelete(ctx, s.db)
 		if err != nil {
 			return err
 		}
-		for cursor.Next(ctx) {
-			var t model.Post
-			if cursor.Decode(&t) != nil {
-				break
-			}
-			refIds, err := t.RealDelete(ctx, s.db)
-			if err != nil {
-				return err
-			}
-			_, err = fn(ctx, &t, refIds...)
-			if err != nil {
-				return err
-			}
+		_, err = delSearch(ctx, &t, refIds...)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 func (s *tweetManageServant) StickPost(post *model.Post) error {

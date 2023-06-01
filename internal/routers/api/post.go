@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"favor-dao-backend/internal/core"
+	"favor-dao-backend/internal/dao/monogo"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/service"
 	"favor-dao-backend/pkg/app"
@@ -74,6 +75,14 @@ func GetPostList(c *gin.Context) {
 	q := parseQueryReq(c)
 	user, _ := userFrom(c)
 	offset, limit := app.GetPageOffset(c)
+
+	if user != nil {
+		q.BlockDaoIDs = service.GetBlockDaoIDs(user)
+		if !(len(q.Type) == 1 && q.Type[0] == model.DAO) {
+			q.BlockPostIDs = service.GetBlockPostIDs(user)
+		}
+	}
+
 	// only public
 	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
 	if err != nil {
@@ -98,6 +107,8 @@ func GetFocusPostList(c *gin.Context) {
 		return
 	}
 	q.DaoIDs = daoIds
+
+	q.BlockPostIDs = service.GetBlockPostIDs(user)
 
 	// only public
 	posts, totalRows, err := service.GetPostListFromSearch(user, q, offset, limit)
@@ -157,6 +168,10 @@ func CreatePost(c *gin.Context) {
 	post, err := service.CreatePost(user, param)
 
 	if err != nil {
+		if errors.Is(err, monogo.ErrRetweetAgain) {
+			response.ToErrorResponse(errcode.UserHasRetweeted)
+			return
+		}
 		logrus.Errorf("service.CreatePost err: %v\n", err)
 		response.ToErrorResponse(errcode.CreatePostFailed)
 		return

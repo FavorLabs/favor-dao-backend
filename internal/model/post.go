@@ -182,6 +182,24 @@ func (p *Post) Get(ctx context.Context, db *mongo.Database) (*Post, error) {
 	return &post, nil
 }
 
+func (p *Post) GetRef(ctx context.Context, db *mongo.Database) (*Post, error) {
+	if p.RefId.IsZero() || p.Address == "" {
+		return nil, mongo.ErrNoDocuments
+	}
+	filter := bson.D{{"ref_id", p.RefId}, {"address", p.Address}, {"is_del", 0}}
+	res := db.Collection(p.Table()).FindOne(ctx, filter)
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+
+	var post Post
+	err := res.Decode(&post)
+	if err != nil {
+		return nil, err
+	}
+	return &post, nil
+}
+
 func (p *Post) List(db *mongo.Database, conditions *ConditionsT, offset, limit int) ([]*Post, error) {
 	var (
 		posts  []*Post
@@ -281,6 +299,7 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) ([]primitive.
 				new(PostCollection).Table(),
 				new(PostStar).Table(),
 				new(Comment).Table(),
+				new(PostComplaint).Table(),
 			}
 			var err error
 			for _, v := range table {
@@ -289,6 +308,11 @@ func (p *Post) RealDelete(ctx context.Context, db *mongo.Database) ([]primitive.
 					return err
 				}
 			}
+			_, err = db.Collection(new(PostBlock).Table()).DeleteMany(ctx, bson.M{"block_id": p.ID, "model": BlockModelPost})
+			if err != nil {
+				return err
+			}
+
 			refIds, err = p.findAllRefPosts(ctx, db)
 			if err != nil {
 				return err
@@ -349,7 +373,7 @@ func (p *Post) findAllRefPosts(ctx context.Context, db *mongo.Database) ([]primi
 	if err != nil {
 		return nil, err
 	}
-	var ids []primitive.ObjectID
+	ids := make([]primitive.ObjectID, 0)
 	for cursor.Next(ctx) {
 		id := cursor.Current.Lookup("_id").ObjectID()
 		if !id.IsZero() {

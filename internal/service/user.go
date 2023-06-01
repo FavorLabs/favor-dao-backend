@@ -352,7 +352,17 @@ func Cancellation(address string) (err error) {
 			return err
 		}
 	}
-
+	// delete post
+	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post, refPostIds ...primitive.ObjectID) (string, error) {
+		err = DeleteSearchPost(post, refPostIds...)
+		if err != nil {
+			logrus.Errorf("Cancellation delete postID %s from search err: %v", post.ID.Hex(), err)
+		}
+		return "", err
+	})
+	if err != nil {
+		return err
+	}
 	// delete DAO
 	err = ds.RealDeleteDAO(address, func(ctx context.Context, dao *model.Dao) (string, error) {
 		daoId := dao.ID.Hex()
@@ -367,17 +377,6 @@ func Cancellation(address string) (err error) {
 			logrus.Errorf("Cancellation delete daoID %s from search err: %v", daoId, err)
 		}
 		return gid, err
-	})
-	if err != nil {
-		return err
-	}
-	// delete post
-	err = ds.RealDeletePosts(address, func(ctx context.Context, post *model.Post, refPostIds ...primitive.ObjectID) (string, error) {
-		err = DeleteSearchPost(post, refPostIds...)
-		if err != nil {
-			logrus.Errorf("Cancellation delete postID %s from search err: %v", post.ID.Hex(), err)
-		}
-		return "", err
 	})
 	if err != nil {
 		return err

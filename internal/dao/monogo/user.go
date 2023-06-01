@@ -161,12 +161,15 @@ func (s *userManageServant) Cancellation(ctx context.Context, address string) (e
 	tables := []string{
 		new(model.User).Table(),
 		new(model.DaoBookmark).Table(),
+		new(model.DaoSubscribe).Table(),
 		new(model.PostContent).Table(),
 		new(model.PostCollection).Table(),
 		new(model.PostStar).Table(),
 		new(model.Comment).Table(),
 		new(model.CommentContent).Table(),
 		new(model.CommentReply).Table(),
+		new(model.Redpacket).Table(),
+		new(model.RedpacketClaim).Table(),
 	}
 
 	return util.MongoTransaction(ctx, s.db, func(ctx context.Context) error {

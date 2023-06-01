@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type BlockModel int
@@ -42,4 +43,21 @@ func (m *PostBlock) Get(ctx context.Context, db *mongo.Database) error {
 
 func (m *PostBlock) FindOne(ctx context.Context, db *mongo.Database, filter interface{}) error {
 	return findOne(ctx, db, m, filter)
+}
+
+func (m *PostBlock) FindIDs(ctx context.Context, db *mongo.Database, filter interface{}, options ...*options.FindOptions) (list []string) {
+	cursor, err := db.Collection(m.Table()).Find(ctx, filter, options...)
+	if err != nil {
+		return
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(context.TODO()) {
+		var tmp PostBlock
+		if cursor.Decode(&tmp) != nil {
+			return
+		}
+		list = append(list, tmp.BlockId.Hex())
+	}
+	return
 }
