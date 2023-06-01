@@ -2,6 +2,7 @@ package monogo
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"favor-dao-backend/internal/core"
@@ -378,6 +379,8 @@ func (s *tweetManageServant) DeletePostCollection(p *model.PostCollection) error
 	return p.Delete(s.db)
 }
 
+var ErrRetweetAgain = errors.New("user has retweeted post")
+
 func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.PostContent) (*model.Post, error) {
 	var newPost *model.Post
 
@@ -432,6 +435,16 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 						if origPost.OrigCreatedAt > 0 {
 							post.OrigCreatedAt = origPost.OrigCreatedAt
 						}
+					}
+
+					// check user has retweeted this post
+					_, err = (&model.Post{RefId: post.RefId, Address: post.Address}).GetRef(ctx, s.db)
+					if err != nil {
+						if !errors.Is(err, mongo.ErrNoDocuments) {
+							return err
+						}
+					} else {
+						return ErrRetweetAgain
 					}
 				}
 			case model.RefComment:

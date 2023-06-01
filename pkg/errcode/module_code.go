@@ -14,6 +14,7 @@ var (
 	LockPostFailed    = NewError(30005, "Lock Post Failed")
 	GetPostTagsFailed = NewError(30006, "Get Post Tags Failed")
 	VisiblePostFailed = NewError(30012, "Visible Post Failed")
+	UserHasRetweeted  = NewError(30015, "User has retweeted")
 
 	GetCommentsFailed   = NewError(40001, "Get Comments Failed")
 	CreateCommentFailed = NewError(40002, "Create Comment Failed")
