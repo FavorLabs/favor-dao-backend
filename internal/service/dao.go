@@ -486,17 +486,36 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		err = ctx.Err()
 	case val := <-notify.Ch:
 		status = val.(core.DaoSubscribeT)
-		toUser, err := ds.GetUserByAddress(address)
-		c := fmt.Sprintf("Payment of %s Favor", price)
+		dao := &model.Dao{
+			ID: daoID,
+		}
+		d, err := ds.GetDao(dao)
+		user, err := ds.GetUserByAddress(address)
+		content := fmt.Sprintf("Subscribe to %s dao successfully, pay %s Favor", d.Name, price)
 		notifyRequest := notify1.PushNotifyRequest{
 			IsSave:    true,
 			NetWorkId: conf.ExternalAppSetting.NetworkID,
 			Region:    conf.ExternalAppSetting.Region,
-			Title:     "Pay",
-			Content:   c,
-			From:      "pay",
+			Title:     "Transaction",
+			Content:   content,
+			From:      "transaction",
 			FromType:  model.ORANGE,
-			To:        toUser.ID.Hex(),
+			To:        user.ID.Hex(),
+		}
+		err = notifyGateway.Notify(ctx, notifyRequest)
+		if err != nil {
+			logrus.Errorf("subscription err:%s", err)
+		}
+		content = fmt.Sprintf("%s(%s) subscribed to your dao received %s Favor", user.Nickname, user.Address, price)
+		notifyRequest = notify1.PushNotifyRequest{
+			IsSave:    true,
+			NetWorkId: conf.ExternalAppSetting.NetworkID,
+			Region:    conf.ExternalAppSetting.Region,
+			Title:     "Transaction",
+			Content:   content,
+			From:      "transaction",
+			FromType:  model.ORANGE,
+			To:        d.Address,
 		}
 		err = notifyGateway.Notify(ctx, notifyRequest)
 		if err != nil {
@@ -511,13 +530,13 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			return txID, status, err
 		}
 		fromUser, err := ds.GetUserByAddress(address)
-		c := fmt.Sprintf("User %s subscribed to your dao", fromUser.Nickname)
+		content := fmt.Sprintf("User %s (%s) subscribed to your dao", fromUser.Nickname, fromUser.Address)
 		notifyRequest := notify1.PushNotifyRequest{
 			IsSave:    false,
 			NetWorkId: conf.ExternalAppSetting.NetworkID,
 			Region:    conf.ExternalAppSetting.Region,
 			Title:     "Subscription",
-			Content:   c,
+			Content:   content,
 			From:      fromUser.ID.Hex(),
 			FromType:  model.USER,
 			To:        toUser.ID.Hex(),
