@@ -83,8 +83,8 @@ func NotifySys(c *gin.Context) {
 		return
 	}
 	offset, limit := app.GetPageOffset(c)
-	list, count, err := service.NotifySys(organId, limit, offset)
-	if err != nil {
+	list, count, err1 := service.NotifySys(organId, limit, offset)
+	if err1 != nil {
 		logrus.Errorf("service.NotifySys err: %v\n", err)
 		response.ToResponseList([]service.NotifyGroup{}, 0)
 		return

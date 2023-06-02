@@ -33,4 +33,5 @@ type MsgSysMangerService interface {
 	GetMsgSysByMsgId(msgId primitive.ObjectID) (*model.MsgSys, error)
 	ListMsgSys(from primitive.ObjectID, pageSize, pageNum int) (*[]model.MsgSys, error)
 	CountMsgSys(from primitive.ObjectID) (int64, error)
+	CountUnreadSysMsg(date int64) (int64, error)
 }

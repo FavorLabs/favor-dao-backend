@@ -10,7 +10,7 @@ import (
 type NotifyGroup struct {
 	FromInfo    FromInfo           `json:"fromInfo"`
 	UnreadCount int64              `json:"unreadCount"`
-	Context     string             `json:"context"`
+	Content     string             `json:"content"`
 	FromType    model.FromTypeEnum `json:"fromType"`
 	CreatedAt   int64              `json:"createdAt"`
 }
@@ -96,7 +96,7 @@ func NotifyGroupList(to primitive.ObjectID, pageSize, pageNum int) (*[]NotifyGro
 			FromInfo:    fi,
 			UnreadCount: unReadCount,
 			FromType:    ms.FromType,
-			Context: func() string {
+			Content: func() string {
 				if msg.Title != "" {
 					return msg.Title
 				}
@@ -130,9 +130,16 @@ func NotifyOrganList(to primitive.ObjectID) (*[]NotifyOrgan, *errcode.Error) {
 			} else {
 				readAt = mr.ReadAt
 			}
-			c, err = ds.CountUnreadMsg(o.ID, to, readAt)
-			if err != nil {
-				logrus.Errorf("get unread_msg err: %v\n", err)
+			if o.Key == "sys" {
+				c, err = ds.CountUnreadSysMsg(readAt)
+				if err != nil {
+					logrus.Errorf("get unread_msg err: %v\n", err)
+				}
+			} else {
+				c, err = ds.CountUnreadMsg(o.ID, to, readAt)
+				if err != nil {
+					logrus.Errorf("get unread_msg err: %v\n", err)
+				}
 			}
 		}
 

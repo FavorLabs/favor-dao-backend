@@ -10,7 +10,7 @@ import (
 )
 
 type Msg struct {
-	ID        primitive.ObjectID `json:"_id"   bson:"_id,omitempty"`
+	ID        primitive.ObjectID `json:"id"   bson:"_id,omitempty"`
 	Title     string             `json:"title"   bson:"title"`
 	Content   string             `json:"content" bson:"content"`
 	Links     string             `json:"links" bson:"links"`
@@ -91,8 +91,8 @@ func (m *Msg) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{
 			"from":         "msg_send",
-			"localField":   "id",
-			"foreignField": "msgId",
+			"localField":   "_id",
+			"foreignField": "msg_id",
 			"as":           "send",
 		}}},
 		{{"$match", query}},
@@ -131,8 +131,8 @@ func (m *Msg) Count(db *mongo.Database, conditions *ConditionsT) (int64, error) 
 	pipeline := mongo.Pipeline{
 		{{"$lookup", bson.M{
 			"from":         "msg_send",
-			"localField":   "id",
-			"foreignField": "msgId",
+			"localField":   "_id",
+			"foreignField": "msg_id",
 			"as":           "send",
 		}}},
 		{{"$match", query}},
