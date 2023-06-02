@@ -76,11 +76,28 @@ func (m *User) Get(ctx context.Context, db *mongo.Database) (*User, error) {
 
 func (m *User) GetOne(db *mongo.Database, conditions *ConditionsT) (*User, error) {
 	var (
-		user User
-		res  *mongo.SingleResult
+		user  User
+		res   *mongo.SingleResult
+		query bson.M
 	)
+	if len(*conditions) == 0 {
+		if query != nil {
+			query = findQuery([]bson.M{query})
+		} else {
+			query = bson.M{"is_del": 0}
+		}
+	}
+	for k, v := range *conditions {
+		if k != "ORDER" {
+			if query != nil {
+				query = findQuery([]bson.M{query, v})
+			} else {
+				query = findQuery([]bson.M{v})
+			}
+		}
 
-	res = db.Collection(m.Table()).FindOne(context.TODO(), conditions)
+	}
+	res = db.Collection(m.Table()).FindOne(context.TODO(), query)
 	err := res.Err()
 	if err != nil {
 		return &user, err

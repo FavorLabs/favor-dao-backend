@@ -75,20 +75,21 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		return nil, errcode.WaitForDelete
 	}
 
-	userByToken, err := ds.GetUserByToken(param.Token)
-	if err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errcode.ServerError
-		}
-	}
-	if userByToken != nil && userByToken.ID != user.ID {
-		userByToken.Token = ""
-		err = UpdateUserInfo(userByToken)
+	if param.Token != "" {
+		userByToken, err := ds.GetUserByToken(param.Token)
 		if err != nil {
-			return nil, err
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, errcode.ServerError
+			}
+		}
+		if userByToken != nil && userByToken.ID != primitive.NilObjectID && userByToken.ID != user.ID {
+			userByToken.Token = ""
+			err1 := UpdateUserInfo(userByToken)
+			if err1 != nil {
+				return nil, err1
+			}
 		}
 	}
-
 	if created || !user.ID.IsZero() {
 		if errTimes, err := conf.Redis.Get(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result(); err == nil {
 			if convert.StrTo(errTimes).MustInt() >= MAX_LOGIN_ERR_TIMES {
@@ -203,7 +204,7 @@ func GetUserByAddress(address string) (*model.User, error) {
 
 func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
-		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar, user.Token)
+		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
 	}); err != nil {
 		if errors.Is(err, model.ErrDuplicateNickname) {
 			return errcode.NicknameDuplication
