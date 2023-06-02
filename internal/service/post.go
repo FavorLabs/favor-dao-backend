@@ -179,6 +179,17 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 	if err != nil {
 		return nil, err
 	}
+	//nr := notify.PushNotifyRequest{
+	//	IsSave:    true,
+	//	NetWorkId: conf.ExternalAppSetting.NetworkID,
+	//	Region:    conf.ExternalAppSetting.Region,
+	//	Title:     "",
+	//	Content:   "",
+	//	From:      param.DaoId.Hex(),
+	//	FromType:  model.DAO_TYPE,
+	//	To:        toUser.ID.Hex(),
+	//}
+	//err = notifyGateway.NotifyDao(context.TODO(), nr)
 	return formattedPosts[0], nil
 }
 

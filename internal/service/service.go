@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"favor-dao-backend/pkg/notify"
 	"fmt"
 	"strings"
 
@@ -10,7 +11,6 @@ import (
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/comet"
-	"favor-dao-backend/pkg/firebase"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -21,15 +21,15 @@ import (
 )
 
 var (
-	ds             core.DataService
-	ts             core.TweetSearchService
-	eth            *ethclient.Client
-	chat           *comet.ChatGateway
-	point          *pointSystem.Gateway
-	pubsub         *psub.Service
-	queue          *asynq.Client
-	limiter        *redis_rate.Limiter
-	notifyFirebase *firebase.Client
+	ds            core.DataService
+	ts            core.TweetSearchService
+	eth           *ethclient.Client
+	chat          *comet.ChatGateway
+	point         *pointSystem.Gateway
+	pubsub        *psub.Service
+	queue         *asynq.Client
+	limiter       *redis_rate.Limiter
+	notifyGateway *notify.Gateway
 )
 
 func Initialize() {
@@ -51,7 +51,7 @@ func Initialize() {
 		panic(fmt.Sprintf("dial eth: %s", err))
 	}
 	eth = client
-	notifyFirebase, err = firebase.New(conf.FirebaseSetting.Config)
+	notifyGateway = notify.New(conf.NotifySetting.Gateway)
 	if err != nil {
 		panic(err)
 	}

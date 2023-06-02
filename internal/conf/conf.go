@@ -30,7 +30,7 @@ var (
 	EthSetting              *EthSettingS
 	ChatSetting             *ChatSettingS
 	PointSetting            *PointSettingS
-	FirebaseSetting         *FirebaseSettingS
+	NotifySetting           *NotifySettingS
 )
 
 func setupSetting(suite []string, noDefault bool, configPath ...string) error {
@@ -66,7 +66,7 @@ func setupSetting(suite []string, noDefault bool, configPath ...string) error {
 		"Eth":              &EthSetting,
 		"Chat":             &ChatSetting,
 		"Point":            &PointSetting,
-		"Firebase":         &FirebaseSetting,
+		"Notify":           &NotifySetting,
 	}
 	if err = setting.Unmarshal(objects); err != nil {
 		return err
@@ -89,6 +89,7 @@ func Initialize(suite []string, noDefault bool, configPath ...string) {
 	}
 
 	CheckSetting(PointSetting, "gateway", "callback")
+	CheckSetting(NotifySetting, "gateway")
 	CheckSetting(ChatSetting, "appid", "region", "apikey")
 	CheckSetting(EthSetting, "endpoint")
 

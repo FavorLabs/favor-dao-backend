@@ -70,9 +70,23 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		// if not exists
 		created = true
 	}
-
+	user.Token = param.Token
 	if !created && user.DeletedOn > 0 {
 		return nil, errcode.WaitForDelete
+	}
+
+	userByToken, err := ds.GetUserByToken(param.Token)
+	if err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errcode.ServerError
+		}
+	}
+	if userByToken != nil && userByToken.ID != user.ID {
+		userByToken.Token = ""
+		err = UpdateUserInfo(userByToken)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if created || !user.ID.IsZero() {
@@ -92,6 +106,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 				user, err = ds.CreateUser(&model.User{
 					Nickname: generateNickname(param.WalletAddr),
 					Address:  param.WalletAddr,
+					Token:    param.Token,
 					Avatar:   GetRandomAvatar(),
 					LoginAt:  time.Now().Unix(),
 				}, func(ctx context.Context, user *model.User) error {
@@ -188,7 +203,7 @@ func GetUserByAddress(address string) (*model.User, error) {
 
 func UpdateUserInfo(user *model.User) *errcode.Error {
 	if err := ds.UpdateUser(user, func(ctx context.Context, user *model.User) error {
-		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar)
+		return UpdateChatUser(ctx, user.Address, user.Nickname, user.Avatar, user.Token)
 	}); err != nil {
 		if errors.Is(err, model.ErrDuplicateNickname) {
 			return errcode.NicknameDuplication

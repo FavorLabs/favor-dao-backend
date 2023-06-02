@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/convert"
 	"favor-dao-backend/pkg/errcode"
+	notify1 "favor-dao-backend/pkg/notify"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
 	"github.com/gin-gonic/gin"
@@ -427,6 +429,9 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		}
 	}()
 
+	var toAddress string
+	var price string
+
 	// check old subscribe
 	sub := model.DaoSubscribe{}
 	err = sub.FindOne(ctx, conf.MustMongoDB(), bson.M{"address": address, "dao_id": daoID})
@@ -443,11 +448,13 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			if err != nil {
 				return err
 			}
+			toAddress = dao.Address
+			price = dao.Price
 			// pay
 			txID, err = point.Pay(ctx, pointSystem.PayRequest{
 				FromObject: address,
-				ToSubject:  dao.Address,
-				Amount:     dao.Price,
+				ToSubject:  toAddress,
+				Amount:     price,
 				Comment:    "",
 				Channel:    "sub_dao",
 				ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
@@ -479,6 +486,46 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		err = ctx.Err()
 	case val := <-notify.Ch:
 		status = val.(core.DaoSubscribeT)
+		toUser, err := ds.GetUserByAddress(address)
+		c := fmt.Sprintf("Payment of %s Favor", price)
+		notifyRequest := notify1.PushNotifyRequest{
+			IsSave:    true,
+			NetWorkId: conf.ExternalAppSetting.NetworkID,
+			Region:    conf.ExternalAppSetting.Region,
+			Title:     "Pay",
+			Content:   c,
+			From:      "pay",
+			FromType:  model.ORANGE,
+			To:        toUser.ID.Hex(),
+		}
+		err = notifyGateway.Notify(ctx, notifyRequest)
+		if err != nil {
+			logrus.Errorf("subscription err:%s", err)
+		}
+	}
+
+	if err == nil {
+		toUser, err := ds.GetUserByAddress(toAddress)
+		if err != nil {
+			logrus.Errorf("get user err:%s", err)
+			return txID, status, err
+		}
+		fromUser, err := ds.GetUserByAddress(address)
+		c := fmt.Sprintf("User %s subscribed to your dao", fromUser.Nickname)
+		notifyRequest := notify1.PushNotifyRequest{
+			IsSave:    false,
+			NetWorkId: conf.ExternalAppSetting.NetworkID,
+			Region:    conf.ExternalAppSetting.Region,
+			Title:     "Subscription",
+			Content:   c,
+			From:      fromUser.ID.Hex(),
+			FromType:  model.USER,
+			To:        toUser.ID.Hex(),
+		}
+		err = notifyGateway.Notify(ctx, notifyRequest)
+		if err != nil {
+			logrus.Errorf("subscription err:%s", err)
+		}
 	}
 	return
 }

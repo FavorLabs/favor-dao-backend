@@ -116,8 +116,8 @@ type PointSettingS struct {
 	Callback  string
 }
 
-type FirebaseSettingS struct {
-	Config string
+type NotifySettingS struct {
+	Gateway string
 }
 
 type TweetSearchS struct {

@@ -27,6 +27,11 @@ type dataServant struct {
 	core.CommentManageService
 	core.UserManageService
 	core.DaoManageService
+	core.MsgMangerService
+	core.MsgSendMangerService
+	core.MsgReadMangerService
+	core.MsgSysMangerService
+	core.OrganMangerService
 }
 
 func NewDataService() (core.DataService, core.VersionInfo) {
@@ -58,6 +63,11 @@ func NewDataService() (core.DataService, core.VersionInfo) {
 		CommentManageService: newCommentManageService(db),
 		UserManageService:    newUserManageService(db),
 		DaoManageService:     newDaoManageService(db),
+		MsgMangerService:     newMsgManageService(db),
+		MsgReadMangerService: newMsgReadMangerService(db),
+		MsgSendMangerService: newMsgSendMangerService(db),
+		MsgSysMangerService:  newMsgSysMangerService(db),
+		OrganMangerService:   newOrganMangerService(db),
 	}
 	return ds, ds
 }
