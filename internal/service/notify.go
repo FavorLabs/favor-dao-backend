@@ -179,7 +179,7 @@ func PutNotifyRead(from, to primitive.ObjectID) (bool, *errcode.Error) {
 		}
 		return true, nil
 	}
-	result, err := ds.UpdateReadAt(from, to)
+	result, err := ds.UpdateReadAt(mr)
 	if err != nil {
 		return false, errcode.UpdateMsgReadFailed
 	}
@@ -200,11 +200,9 @@ func DeleteNotifyById(id primitive.ObjectID) (bool, *errcode.Error) {
 	if err != nil {
 		return false, errcode.GetMsgSendFailed
 	}
-	if ms.FromType == model.USER {
-		_, err = ds.DeleteMsg(ms.MsgID)
-		if err != nil {
-			return false, errcode.DeleteMsgFailed
-		}
+	_, err = ds.DeleteMsg(ms.MsgID)
+	if err != nil {
+		return false, errcode.DeleteMsgFailed
 	}
 	b, err := ds.DeleteMsgSendByMsgId(id)
 	if err != nil {
@@ -214,25 +212,25 @@ func DeleteNotifyById(id primitive.ObjectID) (bool, *errcode.Error) {
 }
 
 func DeleteNotifyByFrom(from, to primitive.ObjectID) (bool, *errcode.Error) {
-	ms, err := ds.GetMsgSend(from, to)
+	mss, err := ds.GetMsgSend(from, to)
 	if err != nil {
 		return false, errcode.GetMsgSendFailed
 	}
-	if ms.FromType == model.USER {
+	for _, ms := range *mss {
 		b, err := ds.DeleteMsg(ms.MsgID)
 		if err != nil || !b {
 			return false, errcode.DeleteMsgFailed
 		}
+		_, err = ds.DeleteMsgSendByMsgId(ms.ID)
+		if err != nil {
+			return false, errcode.DeleteMsgSendFailed
+		}
+		_, err = ds.DeleteMsgRead(from, to)
+		if err != nil {
+			return false, errcode.DeleteMsgReadFailed
+		}
 	}
-	b, err := ds.DeleteMsgSendByMsgId(ms.ID)
-	if err != nil {
-		return false, errcode.DeleteMsgSendFailed
-	}
-	b, err = ds.DeleteMsgRead(ms.From, ms.To)
-	if err != nil {
-		return false, errcode.DeleteMsgReadFailed
-	}
-	return b, nil
+	return true, nil
 }
 
 func NotifySys(from primitive.ObjectID, pageSize, pageNum int) (*[]model.MsgSys, int64, *errcode.Error) {

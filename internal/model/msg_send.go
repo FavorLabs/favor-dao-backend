@@ -89,7 +89,39 @@ func (m *MsgSend) Delete(db *mongo.Database, conditions *ConditionsT) error {
 	return err
 }
 
-func (m *MsgSend) List(db *mongo.Database, to primitive.ObjectID,
+func (m *MsgSend) List(db *mongo.Database, conditions *ConditionsT) (*[]MsgSend, error) {
+	var (
+		mss    []MsgSend
+		err    error
+		cursor *mongo.Cursor
+		query  bson.M
+	)
+
+	for _, v := range *conditions {
+		if query != nil {
+			query = findQuery1([]bson.M{query, v})
+		} else {
+			query = findQuery1([]bson.M{v})
+		}
+	}
+	if cursor, err = db.Collection(m.Table()).Find(context.TODO(), query); err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	mss = make([]MsgSend, 0)
+	for cursor.Next(context.TODO()) {
+		var ms MsgSend
+		if cursor.Decode(&ms) != nil {
+			return nil, err
+		}
+		mss = append(mss, ms)
+	}
+	return &mss, nil
+}
+
+func (m *MsgSend) ListGroup(db *mongo.Database, to primitive.ObjectID,
 	froms *[]primitive.ObjectID, offset, limit int) (*[]MsgSendGroup, error) {
 	var matchStage bson.D
 	groupStage := bson.D{

@@ -13,7 +13,7 @@ type MsgMangerService interface {
 }
 
 type MsgReadMangerService interface {
-	UpdateReadAt(from, to primitive.ObjectID) (bool, error)
+	UpdateReadAt(mr *model.MsgRead) (bool, error)
 	DeleteMsgRead(from, to primitive.ObjectID) (bool, error)
 	GetMsgRead(from, to primitive.ObjectID) (*model.MsgRead, error)
 	CreateMsgRead(from, to primitive.ObjectID) (*model.MsgRead, error)
@@ -21,9 +21,10 @@ type MsgReadMangerService interface {
 
 type MsgSendMangerService interface {
 	GetMsgSendByMsgId(msgId primitive.ObjectID) (*model.MsgSend, error)
-	GetMsgSend(from, to primitive.ObjectID) (*model.MsgSend, error)
+	GetMsgSend(from, to primitive.ObjectID) (*[]model.MsgSend, error)
 	GetLastMsg(from, to primitive.ObjectID) (*model.MsgSend, error)
 	ListMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID, pageSize, pageNum int) (*[]model.MsgSendGroup, error)
+	DeleteMsgSend(from, to primitive.ObjectID) (bool, error)
 	DeleteMsgSendByMsgId(msgId primitive.ObjectID) (bool, error)
 	CountMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID) (int64, error)
 	CountUnreadMsg(from, to primitive.ObjectID, date int64) (int64, error)

@@ -29,12 +29,11 @@ func (m msgReadManageService) CreateMsgRead(from, to primitive.ObjectID) (*model
 	return mr.Create(context.TODO(), m.db)
 }
 
-func (m msgReadManageService) UpdateReadAt(from, to primitive.ObjectID) (bool, error) {
-	mr := model.MsgRead{}
+func (m msgReadManageService) UpdateReadAt(mr *model.MsgRead) (bool, error) {
 	conditions := &model.ConditionsT{
 		"query": bson.M{
-			"from": from,
-			"to":   to,
+			"from": mr.From,
+			"to":   mr.To,
 		},
 	}
 
