@@ -32,7 +32,7 @@ func (m msgSendManageService) GetMsgSendByMsgId(msgId primitive.ObjectID) (*mode
 	return ms.Get(m.db, conditions)
 }
 
-func (m msgSendManageService) GetMsgSend(from, to primitive.ObjectID) (*model.MsgSend, error) {
+func (m msgSendManageService) GetMsgSend(from, to primitive.ObjectID) (*[]model.MsgSend, error) {
 	ms := &model.MsgSend{}
 	conditions := &model.ConditionsT{
 		"query": bson.M{
@@ -41,7 +41,7 @@ func (m msgSendManageService) GetMsgSend(from, to primitive.ObjectID) (*model.Ms
 		},
 	}
 
-	return ms.Get(m.db, conditions)
+	return ms.List(m.db, conditions)
 
 }
 
@@ -60,7 +60,18 @@ func (m msgSendManageService) GetLastMsg(from, to primitive.ObjectID) (*model.Ms
 func (m msgSendManageService) ListMsgSend(to primitive.ObjectID, froms *[]primitive.ObjectID,
 	pageSize, pageNum int) (*[]model.MsgSendGroup, error) {
 	ms := &model.MsgSend{}
-	return ms.List(m.db, to, froms, pageNum, pageSize)
+	return ms.ListGroup(m.db, to, froms, pageNum, pageSize)
+}
+
+func (m msgSendManageService) DeleteMsgSend(from, to primitive.ObjectID) (bool, error) {
+	ms := &model.MsgSend{}
+	conditions := &model.ConditionsT{
+		"query": bson.M{
+			"from": from,
+			"to":   to,
+		},
+	}
+	return true, ms.Delete(m.db, conditions)
 }
 
 func (m msgSendManageService) DeleteMsgSendByMsgId(msgId primitive.ObjectID) (bool, error) {
