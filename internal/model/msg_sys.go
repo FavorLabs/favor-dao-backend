@@ -39,9 +39,9 @@ func (m *MsgSys) Get(db *mongo.Database, conditions *ConditionsT) (*MsgSys, erro
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
-				query = findQuery([]bson.M{query, v})
+				query = findQuery1([]bson.M{query, v})
 			} else {
-				query = findQuery([]bson.M{v})
+				query = findQuery1([]bson.M{v})
 			}
 		}
 	}
@@ -73,9 +73,9 @@ func (m *MsgSys) List(db *mongo.Database, conditions *ConditionsT, offset, limit
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
-				query = findQuery([]bson.M{query, v})
+				query = findQuery1([]bson.M{query, v})
 			} else {
-				query = findQuery([]bson.M{v})
+				query = findQuery1([]bson.M{v})
 			}
 		} else {
 			finds = append(finds, options.Find().SetSort(v))
@@ -99,9 +99,9 @@ func (m *MsgSys) Count(db *mongo.Database, conditions *ConditionsT) (int64, erro
 	for k, v := range *conditions {
 		if k != "ORDER" {
 			if query != nil {
-				query = findQuery([]bson.M{query, v})
+				query = findQuery1([]bson.M{query, v})
 			} else {
-				query = findQuery([]bson.M{v})
+				query = findQuery1([]bson.M{v})
 			}
 		}
 	}
