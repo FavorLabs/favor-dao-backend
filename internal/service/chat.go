@@ -78,14 +78,13 @@ func CreateChatUser(ctx context.Context, address, name, avatar string) error {
 	return nil
 }
 
-func UpdateChatUser(ctx context.Context, address, name, avatar, token string) error {
+func UpdateChatUser(ctx context.Context, address, name, avatar string) error {
 	uid := userId(address)
 
 	_, err := chat.Scoped().Context(ctx).Users().Update(uid, comet.UserUpdateOption{
 		Tags:   []string{RegionTag(), NetworkTag()},
 		Name:   name,
 		Avatar: formatValidUrl(avatar),
-		Token:  token,
 	})
 	if err != nil {
 		return err
