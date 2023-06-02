@@ -75,7 +75,11 @@ func DeleteAccount(c *gin.Context) {
 		response.ToErrorResponse(errcode.InvalidParams.WithDetails(errs.Errors()...))
 		return
 	}
-
+	user, _ := userFrom(c)
+	if user.Address != param.WalletAddr {
+		response.ToErrorResponse(errcode.NoPermission)
+		return
+	}
 	err := service.DeleteUser(c, &param)
 	if err != nil {
 		logrus.Errorf("service.DeleteUser err: %v", err)
