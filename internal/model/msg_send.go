@@ -134,7 +134,7 @@ func (m *MsgSend) ListGroup(db *mongo.Database, to primitive.ObjectID,
 
 	if froms != nil && len(*froms) > 0 {
 		matchStage = bson.D{{"$match", bson.D{{"to", to},
-			{"from", bson.M{"$exists": *froms}}}}}
+			{"from", bson.M{"$nin": *froms}}}}}
 	} else {
 		matchStage = bson.D{{"$match", bson.D{{"to", to}}}}
 	}
@@ -168,7 +168,7 @@ func (m *MsgSend) CountGroup(db *mongo.Database, to primitive.ObjectID, froms *[
 			}}}}}
 	if froms != nil && len(*froms) > 0 {
 		matchStage = bson.D{{"$match", bson.D{{"to", to},
-			{"from", bson.M{"$exists": *froms}}}}}
+			{"from", bson.M{"$nin": *froms}}}}}
 	} else {
 		matchStage = bson.D{{"$match", bson.D{{"to", to}}}}
 	}
