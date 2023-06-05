@@ -216,18 +216,18 @@ func DeleteNotifyByFrom(from, to primitive.ObjectID) (bool, *errcode.Error) {
 	if err != nil {
 		return false, errcode.GetMsgSendFailed
 	}
+	_, err = ds.DeleteMsgSend(from, to)
+	if err != nil {
+		return false, errcode.DeleteMsgSendFailed
+	}
+	_, err = ds.DeleteMsgRead(from, to)
+	if err != nil {
+		return false, errcode.DeleteMsgReadFailed
+	}
 	for _, ms := range *mss {
 		b, err := ds.DeleteMsg(ms.MsgID)
 		if err != nil || !b {
 			return false, errcode.DeleteMsgFailed
-		}
-		_, err = ds.DeleteMsgSendByMsgId(ms.ID)
-		if err != nil {
-			return false, errcode.DeleteMsgSendFailed
-		}
-		_, err = ds.DeleteMsgRead(from, to)
-		if err != nil {
-			return false, errcode.DeleteMsgReadFailed
 		}
 	}
 	return true, nil

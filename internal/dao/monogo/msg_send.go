@@ -78,7 +78,7 @@ func (m msgSendManageService) DeleteMsgSendByMsgId(msgId primitive.ObjectID) (bo
 	ms := &model.MsgSend{}
 	conditions := &model.ConditionsT{
 		"query": bson.M{
-			"msgID": msgId,
+			"msg_id": msgId,
 		},
 	}
 	return true, ms.Delete(m.db, conditions)
