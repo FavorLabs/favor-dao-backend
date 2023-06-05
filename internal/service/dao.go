@@ -490,6 +490,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			ID: daoID,
 		}
 		d, err := ds.GetDao(dao)
+		a, err := ds.GetUserByAddress(d.Address)
 		user, err := ds.GetUserByAddress(address)
 		content := fmt.Sprintf("Subscribe to %s dao successfully, pay %s Favor", d.Name, price)
 		notifyRequest := notify1.PushNotifyRequest{
@@ -515,7 +516,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 			Content:   content,
 			From:      "transaction",
 			FromType:  model.ORANGE,
-			To:        d.Address,
+			To:        a.ID.Hex(),
 		}
 		err = notifyGateway.Notify(ctx, notifyRequest)
 		if err != nil {
