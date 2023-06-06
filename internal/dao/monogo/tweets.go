@@ -518,11 +518,9 @@ func (s *tweetManageServant) DeletePost(post *model.Post) ([]string, []primitive
 				return nil, err
 			}
 
-			if mediaContents != nil {
-				// delete post content
-				if err := postContent.DeleteByPostId(s.db, postId); err != nil {
-					return nil, err
-				}
+			// delete post content
+			if err := postContent.DeleteByPostId(s.db, postId); err != nil {
+				return nil, err
 			}
 
 			if tags := strings.Split(post.Tags, ","); len(tags) > 0 {
