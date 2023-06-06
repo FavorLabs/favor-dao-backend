@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"favor-dao-backend/pkg/notify"
 	"fmt"
 	"log"
 	"math"
@@ -179,6 +181,30 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 	if err != nil {
 		return nil, err
 	}
+	linkMap := make(map[string]any)
+	if post.Type == model.SMS {
+		linkMap["route"] = "PostDetail"
+	} else {
+		linkMap["route"] = "VideoPlay"
+	}
+	dao := &model.Dao{ID: param.DaoId}
+	d, _ := ds.GetDao(dao)
+
+	content := fmt.Sprintf("The %s Dao you subscribe to has posted new content", d.Name)
+	linkMap["id"] = post.ID
+	links, _ := json.Marshal(&linkMap)
+	nr := notify.PushNotifyRequest{
+		IsSave:    true,
+		NetWorkId: conf.ExternalAppSetting.NetworkID,
+		Region:    conf.ExternalAppSetting.Region,
+		Title:     "",
+		Content:   content,
+		Links:     string(links),
+		From:      param.DaoId.Hex(),
+		FromType:  model.DAO_TYPE,
+		To:        param.DaoId.Hex(),
+	}
+	err = notifyGateway.NotifyDao(context.TODO(), nr)
 	return formattedPosts[0], nil
 }
 
@@ -485,6 +511,7 @@ func GetPostListFromSearch(user *model.User, q *core.QueryReq, offset, limit int
 	if len(q.Type) == 1 && q.Type[0] == model.DAO {
 		if q.Query != "" {
 			q.Visibility = []core.PostVisibleT{core.PostVisitPublic, core.PostVisitPrivate}
+			q.BlockDaoIDs = []string{}
 		} else {
 			q.Visibility = []core.PostVisibleT{core.PostVisitPublic}
 		}

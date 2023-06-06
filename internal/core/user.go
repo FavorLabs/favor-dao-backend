@@ -2,12 +2,14 @@ package core
 
 import (
 	"context"
-
 	"favor-dao-backend/internal/model"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserManageService interface {
 	GetUserByAddress(address string) (*model.User, error)
+	GetUserById(id primitive.ObjectID) (*model.User, error)
+	GetUserByToken(token string) (*model.User, error)
 	GetUsersByAddresses(addresses []string) ([]*model.User, error)
 	GetUsersByKeyword(keyword string) ([]*model.User, error)
 	CreateUser(user *model.User, chatAction func(context.Context, *model.User) error) (*model.User, error)

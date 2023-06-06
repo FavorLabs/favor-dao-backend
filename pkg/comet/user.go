@@ -99,6 +99,7 @@ func (u *UserScoped) Create(uid, name string, opt *UserCreateOption) (*User, err
 type UserUpdateOption struct {
 	Name     string
 	Avatar   string
+	Token    string
 	Link     string
 	Role     string
 	Metadata *UserMetadata

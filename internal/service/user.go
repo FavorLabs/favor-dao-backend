@@ -70,11 +70,26 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 		// if not exists
 		created = true
 	}
-
+	user.Token = param.Token
 	if !created && user.DeletedOn > 0 {
 		return nil, errcode.WaitForDelete
 	}
 
+	if param.Token != "" {
+		userByToken, err := ds.GetUserByToken(param.Token)
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				return nil, errcode.ServerError
+			}
+		}
+		if userByToken != nil && userByToken.ID != primitive.NilObjectID && userByToken.ID != user.ID {
+			userByToken.Token = ""
+			err1 := UpdateUserInfo(userByToken)
+			if err1 != nil {
+				return nil, err1
+			}
+		}
+	}
 	if created || !user.ID.IsZero() {
 		if errTimes, err := conf.Redis.Get(ctx, fmt.Sprintf("%s:%s", LOGIN_ERR_KEY, param.WalletAddr)).Result(); err == nil {
 			if convert.StrTo(errTimes).MustInt() >= MAX_LOGIN_ERR_TIMES {
@@ -92,6 +107,7 @@ func DoLoginWallet(ctx *gin.Context, param *AuthByWalletRequest) (*model.User, e
 				user, err = ds.CreateUser(&model.User{
 					Nickname: generateNickname(param.WalletAddr),
 					Address:  param.WalletAddr,
+					Token:    param.Token,
 					Avatar:   GetRandomAvatar(),
 					LoginAt:  time.Now().Unix(),
 				}, func(ctx context.Context, user *model.User) error {

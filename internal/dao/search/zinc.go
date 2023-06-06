@@ -162,11 +162,21 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 				"dao_id": q.BlockDaoIDs,
 			},
 		})
+		mustNot = append(mustNot, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"author_dao_id": q.BlockDaoIDs,
+			},
+		})
 	}
 	if len(q.BlockPostIDs) > 0 {
 		mustNot = append(mustNot, map[string]types.Any{
 			"terms": map[string]types.Any{
 				"id": q.BlockPostIDs,
+			},
+		})
+		mustNot = append(mustNot, map[string]types.Any{
+			"terms": map[string]types.Any{
+				"ref_id": q.BlockPostIDs,
 			},
 		})
 	}
@@ -308,6 +318,16 @@ func (s *zincTweetSearchServant) createIndex() {
 		},
 		"type": &zinc.ZincIndexPropertyT{
 			Type:  "numeric",
+			Index: true,
+			Store: true,
+		},
+		"ref_id": &zinc.ZincIndexPropertyT{
+			Type:  "text",
+			Index: true,
+			Store: true,
+		},
+		"author_dao_id": &zinc.ZincIndexPropertyT{
+			Type:  "text",
 			Index: true,
 			Store: true,
 		},
