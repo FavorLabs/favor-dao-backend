@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -74,8 +75,10 @@ func (p *PostContent) DeleteByPostId(db *mongo.Database, postId primitive.Object
 	filter := bson.D{{"post_id", postId}}
 	update := bson.D{{"$set", bson.D{{"is_del", 1}}}}
 	res := db.Collection(p.Table()).FindOneAndUpdate(context.TODO(), filter, update)
-	if res.Err() != nil {
-		return res.Err()
+	if err := res.Err(); err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			return err
+		}
 	}
 	return nil
 }

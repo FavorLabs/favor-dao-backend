@@ -227,8 +227,6 @@ func DeletePost(user *model.User, id primitive.ObjectID) *errcode.Error {
 		return errcode.DeletePostFailed
 	}
 
-	_ = mediaContents
-
 	deleteOssObjects(mediaContents)
 
 	DeleteSearchPost(post, refPosts...)
