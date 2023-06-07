@@ -138,12 +138,12 @@ func (m *MsgSend) ListGroup(db *mongo.Database, to primitive.ObjectID,
 	} else {
 		matchStage = bson.D{{"$match", bson.D{{"to", to}}}}
 	}
-	sortStage := bson.D{{"$sort", bson.D{{"to", -1}}}}
+	sortStage := bson.D{{"$sort", bson.D{{"_id.from", -1}}}}
 	limitStage := bson.D{{"$limit", limit}}
 	skipStage := bson.D{{"$skip", offset}}
 
 	cursor, err := db.Collection(m.Table()).Aggregate(context.TODO(),
-		mongo.Pipeline{matchStage, groupStage, sortStage, limitStage, skipStage})
+		mongo.Pipeline{matchStage, groupStage, sortStage, skipStage, limitStage})
 	if err != nil {
 		return nil, err
 	}
