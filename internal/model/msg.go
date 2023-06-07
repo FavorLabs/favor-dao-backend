@@ -97,8 +97,8 @@ func (m *Msg) List(db *mongo.Database, conditions *ConditionsT, offset, limit in
 		}}},
 		{{"$match", query}},
 		sortStage,
-		limitStage,
 		skipStage,
+		limitStage,
 	}
 	ctx := context.TODO()
 	cursor, err = db.Collection(m.Table()).Aggregate(ctx, pipeline)
