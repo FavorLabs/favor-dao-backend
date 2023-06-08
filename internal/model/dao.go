@@ -217,7 +217,7 @@ func (m *Dao) Get(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	return &dao, nil
 }
 
-func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted, error) {
+func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*Dao, error) {
 	filter := bson.M{"name": m.Name}
 	res := db.Collection(m.Table()).FindOne(ctx, filter)
 	if res.Err() != nil {
@@ -228,7 +228,7 @@ func (m *Dao) GetByName(ctx context.Context, db *mongo.Database) (*DaoFormatted,
 	if err != nil {
 		return nil, err
 	}
-	return dao.Format(), nil
+	return dao, nil
 }
 
 func (m *Dao) CheckNameDuplication(ctx context.Context, db *mongo.Database) bool {
