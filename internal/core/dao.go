@@ -10,7 +10,7 @@ import (
 type DaoManageService interface {
 	GetDaoByKeyword(keyword string) ([]*model.Dao, error)
 	GetDao(dao *model.Dao) (*model.Dao, error)
-	GetDaoByName(dao *model.Dao) (*model.DaoFormatted, error)
+	GetDaoByName(dao *model.Dao) (*model.Dao, error)
 	GetMyDaoList(dao *model.Dao) ([]*model.DaoFormatted, error)
 	CreateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) (string, error)) (*model.Dao, error)
 	UpdateDao(dao *model.Dao, chatAction func(context.Context, *model.Dao) error) error
