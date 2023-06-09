@@ -152,7 +152,7 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 				task := NewPostUnpinTask(post.ID)
 				_, taskErr := queue.Enqueue(task, asynq.ProcessIn(time.Hour*24), asynq.Queue(PostQueue))
 				if taskErr != nil {
-					err = taskErr
+					logrus.Errorf("unpin post %s enqueue failed: %v", post.ID, taskErr)
 				}
 			}
 		}()

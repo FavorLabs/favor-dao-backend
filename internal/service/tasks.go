@@ -231,7 +231,9 @@ func HandlePostUnpinTask(ctx context.Context, t *asynq.Task) (err error) {
 		return err
 	}
 
-	DeleteSearchPost(post)
+	if err := DeleteSearchPost(post); err != nil {
+		logrus.Warnf("post cannot remove from search engine: %v", err)
+	}
 	PushPostToSearch(post)
 
 	return nil
