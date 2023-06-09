@@ -199,8 +199,16 @@ func (s *zincTweetSearchServant) queryAny(q *core.QueryReq, offset, limit int) (
 	}
 	if q.Sort == nil {
 		q.Sort = append(q.Sort, map[string]types.Any{
+			"is_top": "desc",
+		}, map[string]types.Any{
 			"created_on": "desc",
 		})
+	} else {
+		q.Sort = append(types.AnySlice{
+			map[string]types.Any{
+				"is_top": "desc",
+			},
+		}, q.Sort...)
 	}
 	queryMap := map[string]types.Any{
 		"query": query,

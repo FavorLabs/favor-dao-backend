@@ -190,3 +190,49 @@ func eventRefundRedpacket(notify PayCallbackParam) error {
 	}
 	return upFun()
 }
+
+type PostUnpinPayload struct {
+	Id primitive.ObjectID
+}
+
+const PostUnpin = "post:unpin"
+
+func NewPostUnpinTask(postId primitive.ObjectID) *asynq.Task {
+	payload, _ := json.Marshal(PostUnpinPayload{Id: postId})
+
+	return asynq.NewTask(PostUnpin, payload)
+}
+
+func HandlePostUnpinTask(ctx context.Context, t *asynq.Task) (err error) {
+	var p PostUnpinPayload
+	if err := json.Unmarshal(t.Payload(), &p); err != nil {
+		return fmt.Errorf("json.Unmarshal failed: %v", err)
+	}
+	logrus.Debugf("Unpin post: id=%s\n", p.Id)
+
+	defer func() {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			logrus.Warnf("post %s not found to unpin", p.Id)
+			err = nil
+		}
+	}()
+
+	post, err := ds.GetPostByID(p.Id)
+	if err != nil {
+		return err
+	}
+
+	if post.IsTop == 0 {
+		return nil
+	}
+
+	err = ds.StickPost(post)
+	if err != nil {
+		return err
+	}
+
+	DeleteSearchPost(post)
+	PushPostToSearch(post)
+
+	return nil
+}

@@ -4,17 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"favor-dao-backend/pkg/notify"
 	"fmt"
 	"log"
 	"math"
 	"strings"
+	"time"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/internal/model/rest"
 	"favor-dao-backend/pkg/errcode"
+	"favor-dao-backend/pkg/notify"
+
+	"github.com/hibiken/asynq"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -134,6 +137,27 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 		param.Type = 0
 	}
 
+	// check address has alwaysTop feature
+	alwaysTop := 0
+	for _, addr := range conf.ExternalAppSetting.AlwaysTopAddresses {
+		if user.Address == addr {
+			alwaysTop = 1
+		}
+	}
+
+	// put unpin job
+	if alwaysTop == 1 {
+		defer func() {
+			if err == nil {
+				task := NewPostUnpinTask(post.ID)
+				_, taskErr := queue.Enqueue(task, asynq.ProcessIn(time.Hour*24), asynq.Queue(PostQueue))
+				if taskErr != nil {
+					err = taskErr
+				}
+			}
+		}()
+	}
+
 	if !param.RefId.IsZero() {
 		// create post ref
 		post, err = ds.CreatePost(&model.Post{
@@ -144,6 +168,7 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 			RefId:      param.RefId,
 			RefType:    param.RefType,
 			Member:     param.Member,
+			IsTop:      alwaysTop,
 		}, contents)
 		if err != nil {
 			return nil, err
@@ -158,6 +183,7 @@ func CreatePost(user *model.User, param PostCreationReq) (_ *model.PostFormatted
 			Type:       param.Type,
 			OrigType:   param.Type,
 			Member:     param.Member,
+			IsTop:      alwaysTop,
 		}, contents)
 		if err != nil {
 			return nil, err
