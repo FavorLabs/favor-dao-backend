@@ -430,7 +430,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 	}()
 
 	var toAddress string
-	var price string
+	var price float64
 
 	// check old subscribe
 	sub := model.DaoSubscribe{}
@@ -449,12 +449,12 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 				return err
 			}
 			toAddress = dao.Address
-			price = dao.Price
+			price = convert.StrTo(dao.Price).MustFloat64() / 1000
 			// pay
 			txID, err = point.Pay(ctx, pointSystem.PayRequest{
 				FromObject: address,
 				ToSubject:  toAddress,
-				Amount:     price,
+				Amount:     dao.Price,
 				Comment:    "",
 				Channel:    "sub_dao",
 				ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=sub_dao&order_id=" + orderID,
@@ -492,7 +492,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		d, err := ds.GetDao(dao)
 		a, err := ds.GetUserByAddress(d.Address)
 		user, err := ds.GetUserByAddress(address)
-		content := fmt.Sprintf("Subscribe to %s dao successfully, pay %s Favor", d.Name, price)
+		content := fmt.Sprintf("Subscribe to %s dao successfully, pay %f FavT", d.Name, price)
 		notifyRequest := notify1.PushNotifyRequest{
 			IsSave:    true,
 			NetWorkId: conf.ExternalAppSetting.NetworkID,
@@ -507,7 +507,7 @@ func SubDao(ctx context.Context, daoID primitive.ObjectID, address string) (txID
 		if err != nil {
 			logrus.Errorf("subscription err:%s", err)
 		}
-		content = fmt.Sprintf("%s(%s) subscribed to your dao received %s Favor", user.Nickname, user.Address, price)
+		content = fmt.Sprintf("%s(%s) subscribed to your dao received %f FavT", user.Nickname, user.Address, price)
 		notifyRequest = notify1.PushNotifyRequest{
 			IsSave:    true,
 			NetWorkId: conf.ExternalAppSetting.NetworkID,
