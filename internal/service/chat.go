@@ -141,7 +141,7 @@ func CreateChatGroup(ctx context.Context, address, id, name, icon, desc string) 
 		Tags: []string{
 			RegionTag(),
 			NetworkTag(),
-			fmt.Sprintf("DAO%s", name),
+			fmt.Sprintf("DAO%s", id),
 		},
 	})
 	if err != nil {
@@ -162,7 +162,7 @@ func UpdateChatGroup(ctx context.Context, address, id, name, icon, desc string) 
 		Tags: []string{
 			RegionTag(),
 			NetworkTag(),
-			fmt.Sprintf("DAO%s", name),
+			fmt.Sprintf("DAO%s", id),
 		},
 	})
 	if err != nil {

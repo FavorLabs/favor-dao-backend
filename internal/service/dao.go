@@ -56,7 +56,7 @@ type DaoListReq struct {
 	Limit      int
 }
 
-func GetDaoByName(name string) (_ *model.DaoFormatted, err error) {
+func GetDaoByName(name string) (_ *model.Dao, err error) {
 	dao := &model.Dao{
 		Name: name,
 	}
@@ -238,14 +238,29 @@ func GetDao(daoId string) (*core.Dao, error) {
 }
 
 func GetDaoFormatted(user, daoId string) (*model.DaoFormatted, error) {
+	var (
+		dao *model.Dao
+		res *model.Dao
+	)
 	id, err := primitive.ObjectIDFromHex(daoId)
 	if err != nil {
-		return nil, err
+		var getErr error
+		dao = &model.Dao{Name: daoId}
+		res, getErr = ds.GetDaoByName(dao)
+		if getErr != nil {
+			if errors.Is(getErr, mongo.ErrNoDocuments) {
+				return nil, err
+			}
+			err = getErr
+		}
+		err = nil
+		id = res.ID
+	} else {
+		dao = &model.Dao{
+			ID: id,
+		}
+		res, err = ds.GetDao(dao)
 	}
-	dao := &model.Dao{
-		ID: id,
-	}
-	res, err := ds.GetDao(dao)
 	if err != nil {
 		return nil, err
 	}

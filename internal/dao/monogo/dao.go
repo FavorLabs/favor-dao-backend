@@ -112,7 +112,7 @@ func (s *daoManageServant) GetDaoList(conditions model.ConditionsT, offset, limi
 	return (&model.Dao{}).List(s.db, conditions, offset, limit)
 }
 
-func (s *daoManageServant) GetDaoByName(dao *model.Dao) (*model.DaoFormatted, error) {
+func (s *daoManageServant) GetDaoByName(dao *model.Dao) (*model.Dao, error) {
 	return dao.GetByName(context.TODO(), s.db)
 }
 

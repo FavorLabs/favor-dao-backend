@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
-	"favor-dao-backend/pkg/notify"
 	"fmt"
 	"strings"
+
+	"favor-dao-backend/pkg/notify"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
@@ -76,6 +77,8 @@ func persistMediaContents(contents []*PostContentItem) (items []string, err erro
 	return
 }
 
+const PostQueue = "post"
+
 func setupJobServer() {
 	resiConfig := asynq.RedisClientOpt{
 		DB:       conf.RedisSetting.DB,
@@ -92,11 +95,13 @@ func setupJobServer() {
 			Concurrency:    1,
 			StrictPriority: true,
 			Queues: map[string]int{
+				PostQueue:      10,
 				QueueRedpacket: 10,
 			},
 		},
 	)
 	mux := asynq.NewServeMux()
+	mux.HandleFunc(PostUnpin, HandlePostUnpinTask)
 	mux.HandleFunc(TypeRedpacketDone, HandleRedpacketDoneTask)
 	mux.HandleFunc(TypeRedpacketClaim, HandleRedpacketClaimTask)
 
