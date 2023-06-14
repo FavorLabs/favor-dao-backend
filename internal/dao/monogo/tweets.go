@@ -408,6 +408,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 
 				// replace the newest post type
 				post.OrigType = origPost.Type
+				post.OrigMember = origPost.Member
 				post.AuthorId = origPost.Address
 				post.AuthorDaoId = origPost.DaoId
 
@@ -424,6 +425,7 @@ func (s *tweetManageServant) CreatePost(post *model.Post, contents []*model.Post
 					if origContentsLen == 0 {
 						if !origPost.RefId.IsZero() {
 							post.RefId = origPost.RefId
+							post.OrigMember = origPost.OrigMember
 							post.OrigType = origPost.OrigType
 						}
 						if origPost.AuthorId != "" {
