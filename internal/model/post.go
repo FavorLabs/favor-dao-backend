@@ -54,6 +54,7 @@ type Post struct {
 	Tags            string             `json:"tags"              bson:"tags"`
 	Type            PostType           `json:"type"              bson:"type"`
 	OrigType        PostType           `json:"orig_type"         bson:"orig_type"`
+	OrigMember      PostMemberT        `json:"orig_member"       bson:"origMember"`
 	OrigCreatedAt   int64              `json:"origCreatedAt"     bson:"origCreatedAt"`
 	AuthorId        string             `json:"author_id"         bson:"author_id"`
 	AuthorDaoId     primitive.ObjectID `json:"author_dao_id"     bson:"author_dao_id"`
@@ -84,6 +85,7 @@ type PostFormatted struct {
 	Tags            map[string]int8         `json:"tags"`
 	Type            PostType                `json:"type"`
 	OrigType        PostType                `json:"orig_type"`
+	OrigMember      PostMemberT             `json:"orig_member"`
 	OrigCreatedAt   int64                   `json:"origCreatedAt"`
 	AuthorId        string                  `json:"author_id"`
 	AuthorDaoId     primitive.ObjectID      `json:"author_dao_id"`

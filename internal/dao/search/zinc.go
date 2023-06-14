@@ -344,6 +344,11 @@ func (s *zincTweetSearchServant) createIndex() {
 			Index: true,
 			Store: true,
 		},
+		"orig_member": &zinc.ZincIndexPropertyT{
+			Type:  "numeric",
+			Index: true,
+			Store: true,
+		},
 		"origCreatedAt": &zinc.ZincIndexPropertyT{
 			Type:  "numeric",
 			Index: true,
