@@ -39,9 +39,10 @@ type RedpacketSendFormatted struct {
 }
 
 type RedpacketViewFormatted struct {
-	Redpacket   `bson:",inline"`
-	UserAvatar  string `json:"user_avatar" bson:"user_avatar"`
-	ClaimAmount string `json:"claim_amount" bson:"claim_amount"`
+	Redpacket    `bson:",inline"`
+	UserAvatar   string `json:"user_avatar" bson:"user_avatar"`
+	UserNickname string `json:"user_nickname" bson:"user_nickname"`
+	ClaimAmount  string `json:"claim_amount" bson:"claim_amount"`
 }
 
 func (a *Redpacket) Table() string {
