@@ -33,8 +33,9 @@ type Redpacket struct {
 }
 
 type RedpacketSendFormatted struct {
-	Redpacket  `bson:",inline"`
-	UserAvatar string `json:"user_avatar" bson:"user_avatar"`
+	Redpacket    `bson:",inline"`
+	UserAvatar   string `json:"user_avatar" bson:"user_avatar"`
+	UserNickname string `json:"user_nickname" bson:"user_nickname"`
 }
 
 type RedpacketViewFormatted struct {
@@ -75,7 +76,7 @@ func (a *Redpacket) FindList(ctx context.Context, db *mongo.Database, match inte
 			"let":  bson.M{"user": "$address"},
 			"pipeline": bson.A{
 				bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$address", "$$user"}}}},
-				bson.M{"$project": bson.M{"_id": 0, "avatar": 1}},
+				bson.M{"$project": bson.M{"_id": 0, "avatar": 1, "nickname": 1}},
 			},
 			"as": "ext",
 		}}},
@@ -93,7 +94,8 @@ func (a *Redpacket) FindList(ctx context.Context, db *mongo.Database, match inte
 	type tmp struct {
 		Redpacket `bson:",inline"`
 		Ext       struct {
-			Avatar string `bson:"avatar"`
+			Avatar   string `bson:"avatar"`
+			Nickname string `bson:"nickname"`
 		} `bson:"ext"`
 	}
 	for cursor.Next(context.TODO()) {
@@ -102,8 +104,9 @@ func (a *Redpacket) FindList(ctx context.Context, db *mongo.Database, match inte
 			return
 		}
 		list = append(list, &RedpacketSendFormatted{
-			Redpacket:  t.Redpacket,
-			UserAvatar: t.Ext.Avatar,
+			Redpacket:    t.Redpacket,
+			UserAvatar:   t.Ext.Avatar,
+			UserNickname: t.Ext.Nickname,
 		})
 	}
 	return
