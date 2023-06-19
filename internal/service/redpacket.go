@@ -317,6 +317,7 @@ func RedpacketInfo(ctx context.Context, redpacketID primitive.ObjectID, address 
 		return
 	}
 	info.UserAvatar = user.Avatar
+	info.UserNickname = user.Nickname
 	record := model.RedpacketClaim{}
 	_ = record.FindOne(ctx, conf.MustMongoDB(), bson.M{"address": address, "redpacket_id": redpacketID})
 	info.ClaimAmount = record.Amount
