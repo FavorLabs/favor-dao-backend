@@ -24,6 +24,7 @@ type RedpacketClaimFormatted struct {
 	RedpacketClaim `bson:",inline"`
 	Title          string `json:"title" bson:"title"`
 	UserAvatar     string `json:"user_avatar" bson:"user_avatar"`
+	UserNickname   string `json:"user_nickname" bson:"user_nickname"`
 }
 
 func (a *RedpacketClaim) Table() string {
@@ -79,7 +80,7 @@ func (a *RedpacketClaim) FindList(ctx context.Context, db *mongo.Database, match
 					"from": user.Table(),
 					"pipeline": bson.A{
 						bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$address", "$$user"}}}},
-						bson.M{"$project": bson.M{"_id": 0, "avatar": 1}},
+						bson.M{"$project": bson.M{"_id": 0, "avatar": 1, "nickname": 1}},
 					},
 					"as": "user",
 				}},
@@ -104,7 +105,8 @@ func (a *RedpacketClaim) FindList(ctx context.Context, db *mongo.Database, match
 		Ext            struct {
 			Title string `bson:"title"`
 			User  struct {
-				Avatar string `bson:"avatar"`
+				Avatar   string `bson:"avatar"`
+				NickName string `bson:"nickname"`
 			} `bson:"user"`
 		} `bson:"ext"`
 	}
@@ -117,6 +119,7 @@ func (a *RedpacketClaim) FindList(ctx context.Context, db *mongo.Database, match
 			RedpacketClaim: t.RedpacketClaim,
 			Title:          t.Ext.Title,
 			UserAvatar:     t.Ext.User.Avatar,
+			UserNickname:   t.Ext.User.NickName,
 		})
 	}
 	return

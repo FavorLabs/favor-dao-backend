@@ -82,5 +82,5 @@ Point:
   Gateway: ""
   WhiteList: ["127.0.0.1", "::1"]
   Callback: ""
-Firebase:
-  config: ""
+Notify:
+  Gateway: ""
