@@ -104,9 +104,10 @@ func NewRouter() *gin.Engine {
 		authApi.POST("/redpacket", api.CreateRedpacket)
 		authApi.POST("/redpacket/:redpacket_id", api.ClaimRedpacket)
 		authApi.GET("/redpacket/:redpacket_id", api.RedpacketInfo)
+		authApi.GET("/redpacket/claims/:redpacket_id", api.RedpacketClaimList)
 		authApi.GET("/redpacket/stats/claims", api.RedpacketStatsClaims)
 		authApi.GET("/redpacket/stats/sends", api.RedpacketStatsSends)
-		authApi.GET("/redpacket/claims", api.RedpacketClaimList)
+		authApi.GET("/redpacket/claims", api.RedpacketClaimListForMy)
 		authApi.GET("/redpacket/sends", api.RedpacketSendList)
 
 		// dao

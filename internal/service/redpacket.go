@@ -351,10 +351,9 @@ func RedpacketClaimStats(ctx context.Context, req RedpacketQueryParam) Redpacket
 }
 
 type RedpacketQueryParam struct {
-	StartTime   int64  `json:"start_time"`
-	EndTime     int64  `json:"end_time"`
-	RedpacketID string `json:"redpacket_id"`
-	Address     string `json:"address"`
+	StartTime int64  `json:"start_time"`
+	EndTime   int64  `json:"end_time"`
+	Address   string `json:"address"`
 }
 
 func RedpacketSendList(ctx context.Context, req RedpacketQueryParam, limit, offset int) (total int64, out []*model.RedpacketSendFormatted) {
@@ -369,19 +368,24 @@ func RedpacketSendList(ctx context.Context, req RedpacketQueryParam, limit, offs
 	return
 }
 
-func RedpacketClaimList(ctx context.Context, req RedpacketQueryParam, limit, offset int) (total int64, out []*model.RedpacketClaimFormatted) {
+func RedpacketClaimList(ctx context.Context, rid primitive.ObjectID, limit, offset int) (total int64, out []*model.RedpacketClaimFormatted) {
 	filter := bson.M{}
-	if req.RedpacketID != "" {
-		filter["redpacket_id"], _ = primitive.ObjectIDFromHex(req.RedpacketID)
-	} else {
-		filter["created_on"] = bson.M{
-			"$gte": req.StartTime,
-			"$lt":  req.EndTime,
-		}
-		filter["address"] = req.Address
-	}
+	filter["redpacket_id"] = rid
 	rrd := model.RedpacketClaim{}
 	total = rrd.Count(ctx, conf.MustMongoDB(), filter)
 	out = rrd.FindList(ctx, conf.MustMongoDB(), filter, limit, offset)
+	return
+}
+
+func RedpacketClaimListForMy(ctx context.Context, req RedpacketQueryParam, limit, offset int) (total int64, out []*model.RedpacketClaimFormatted) {
+	filter := bson.M{}
+	filter["created_on"] = bson.M{
+		"$gte": req.StartTime,
+		"$lt":  req.EndTime,
+	}
+	filter["address"] = req.Address
+	rrd := model.RedpacketClaim{}
+	total = rrd.Count(ctx, conf.MustMongoDB(), filter)
+	out = rrd.FindListForMy(ctx, conf.MustMongoDB(), filter, limit, offset)
 	return
 }
