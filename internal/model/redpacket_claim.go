@@ -25,6 +25,7 @@ type RedpacketClaimFormatted struct {
 	Title          string `json:"title" bson:"title"`
 	UserAvatar     string `json:"user_avatar" bson:"user_avatar"`
 	UserNickname   string `json:"user_nickname" bson:"user_nickname"`
+	UserAddress    string `json:"user_address,omitempty" bson:"user_address"`
 }
 
 func (a *RedpacketClaim) Table() string {
@@ -120,6 +121,67 @@ func (a *RedpacketClaim) FindList(ctx context.Context, db *mongo.Database, match
 			Title:          t.Ext.Title,
 			UserAvatar:     t.Ext.User.Avatar,
 			UserNickname:   t.Ext.User.NickName,
+		})
+	}
+	return
+}
+
+func (a *RedpacketClaim) FindListForMy(ctx context.Context, db *mongo.Database, match interface{}, limit, offset int) (list []*RedpacketClaimFormatted) {
+	red := Redpacket{}
+	user := User{}
+	pipeline := mongo.Pipeline{
+		{{"$lookup", bson.M{
+			"from": red.Table(),
+			"let":  bson.M{"rpd": "$redpacket_id", "user": "$address"},
+			"pipeline": bson.A{
+				bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$_id", "$$rpd"}}}},
+				bson.M{"$lookup": bson.M{
+					"from": user.Table(),
+					"let":  bson.M{"send_user": "$address"},
+					"pipeline": bson.A{
+						bson.M{"$match": bson.M{"$expr": bson.M{"$eq": bson.A{"$address", "$$send_user"}}}},
+						bson.M{"$project": bson.M{"_id": 0, "avatar": 1, "nickname": 1, "address": 1}},
+					},
+					"as": "user",
+				}},
+				bson.M{"$unwind": "$user"},
+				bson.M{"$project": bson.M{"_id": 0, "title": 1, "user": 1}},
+			},
+			"as": "ext",
+		}}},
+		{{"$match", match}},
+		{{"$sort", bson.M{"created_on": -1}}},
+		{{"$skip", offset}},
+		{{"$limit", limit}},
+		{{"$unwind", "$ext"}},
+	}
+	list = []*RedpacketClaimFormatted{}
+	cursor, err := db.Collection(a.Table()).Aggregate(ctx, pipeline)
+	if err != nil {
+		return
+	}
+	type tmp struct {
+		RedpacketClaim `bson:",inline"`
+		Ext            struct {
+			Title string `bson:"title"`
+			User  struct {
+				Avatar   string `bson:"avatar"`
+				NickName string `bson:"nickname"`
+				Address  string `bson:"address"`
+			} `bson:"user"`
+		} `bson:"ext"`
+	}
+	for cursor.Next(context.TODO()) {
+		var t tmp
+		if cursor.Decode(&t) != nil {
+			return
+		}
+		list = append(list, &RedpacketClaimFormatted{
+			RedpacketClaim: t.RedpacketClaim,
+			Title:          t.Ext.Title,
+			UserAvatar:     t.Ext.User.Avatar,
+			UserNickname:   t.Ext.User.NickName,
+			UserAddress:    t.Ext.User.Address,
 		})
 	}
 	return

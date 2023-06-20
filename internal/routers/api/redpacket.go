@@ -123,13 +123,26 @@ func RedpacketStatsClaims(c *gin.Context) {
 func RedpacketClaimList(c *gin.Context) {
 	response := app.NewResponse(c)
 	offset, limit := app.GetPageOffset(c)
+	rpd := c.Param("redpacket_id")
+	rpID, err := primitive.ObjectIDFromHex(rpd)
+	if err != nil {
+		response.ToResponseList(make([]interface{}, 0), 0)
+		return
+	}
+	total, list := service.RedpacketClaimList(c, rpID, limit, offset)
+
+	response.ToResponseList(list, total)
+}
+
+func RedpacketClaimListForMy(c *gin.Context) {
+	response := app.NewResponse(c)
+	offset, limit := app.GetPageOffset(c)
 	start, end := app.GetYear(c)
 	user, _ := userFrom(c)
-	total, list := service.RedpacketClaimList(c, service.RedpacketQueryParam{
-		StartTime:   start,
-		EndTime:     end,
-		RedpacketID: c.Query("redpacket_id"),
-		Address:     user.Address,
+	total, list := service.RedpacketClaimListForMy(c, service.RedpacketQueryParam{
+		StartTime: start,
+		EndTime:   end,
+		Address:   user.Address,
 	}, limit, offset)
 
 	response.ToResponseList(list, total)
