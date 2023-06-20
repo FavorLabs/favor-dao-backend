@@ -95,6 +95,31 @@ paths:
       security:
         - api_key: [ ]
 
+  /redpacket/claims/{readpacket-id}:
+    get:
+      tags:
+        - Redpacket
+      summary: Claim packets list for redpacket_id
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: number
+        - name: page_size
+          in: query
+          schema:
+            type: number
+        - name: redpacket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+      security:
+        - api_key: [ ]
+
   /redpacket/stats/claims:
     get:
       tags:
@@ -177,10 +202,6 @@ paths:
           schema:
             type: number
           example: 2023
-        - name: redpacket_id
-          in: query
-          schema:
-            type: string
       responses:
         '200':
           description: success

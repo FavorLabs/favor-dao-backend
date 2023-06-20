@@ -53,8 +53,8 @@ type ClaimChResponse struct {
 }
 
 func CreateRedpacket(address string, parm RedpacketRequest) (id string, err error) {
-	if parm.Total > 100 {
-		err = errors.New("exceed the maximum 100")
+	if parm.Total > 100 || parm.Total < 1 {
+		err = errcode.RedpacketNumberErr
 		return
 	}
 	amount, err := convert.StrTo(parm.Amount).BigInt()
