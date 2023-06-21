@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+var ErrKeyAlreadyExists = errors.New("key already exists")
+
 type Service struct {
 	subPub *sync.Map
 }
@@ -12,7 +14,7 @@ type Service struct {
 type Notify struct {
 	Key    string
 	subPub *sync.Map
-	Ch     <-chan interface{}
+	Ch     chan interface{}
 }
 
 func New() *Service {
@@ -26,30 +28,30 @@ func (p *Service) Notify(key string, notify interface{}) {
 	if !ok {
 		return
 	}
-	ch := c.(chan interface{})
+	obj := c.(*Notify)
 	select {
-	case ch <- notify:
+	case obj.Ch <- notify:
 	default:
 	}
 }
 
 func (p *Service) NewSubscribe(key string) (*Notify, error) {
-	notify, ok := p.subPub.Load(key)
+	v, ok := p.subPub.Load(key)
 	if ok {
-		return notify.(*Notify), errors.New("key already exists")
+		return v.(*Notify), ErrKeyAlreadyExists
 	}
-	ch := make(chan interface{}, 1)
-	p.subPub.Store(key, ch)
-	return &Notify{
+	notify := &Notify{
 		Key:    key,
 		subPub: p.subPub,
-		Ch:     ch,
-	}, nil
+		Ch:     make(chan interface{}, 1),
+	}
+	p.subPub.Store(key, notify)
+	return notify, nil
 }
 
 func (s *Notify) Cancel() {
 	val, ok := s.subPub.LoadAndDelete(s.Key)
 	if ok {
-		close(val.(chan interface{}))
+		close(val.(*Notify).Ch)
 	}
 }

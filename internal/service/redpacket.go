@@ -249,15 +249,24 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		return nil, errcode.RedpacketHasBeenCollectedCompletely
 	}
 
-	// sub claimKey
-	notify, err := pubsub.NewSubscribe(claimKey)
-	if err != nil {
-		return nil, errcode.RedpacketAlreadyClaim
-	}
+	var (
+		notify *psub.Notify
+	)
+	defer func() {
+		if notify != nil {
+			notify.Cancel()
+		}
+	}()
 
-	task := NewRedpacketClaimTask(redpacketID, address)
-	_, err = queue.Enqueue(task, asynq.Queue(QueueRedpacket), asynq.MaxRetry(0))
-	if err != nil {
+	// sub claimKey
+	notify, err = pubsub.NewSubscribe(claimKey)
+	if err == nil {
+		task := NewRedpacketClaimTask(redpacketID, address)
+		_, err = queue.Enqueue(task, asynq.Queue(QueueRedpacket), asynq.MaxRetry(0))
+		if err != nil {
+			return nil, errcode.ServerError.WithDetails(err.Error())
+		}
+	} else if !errors.Is(err, psub.ErrKeyAlreadyExists) {
 		return nil, errcode.ServerError.WithDetails(err.Error())
 	}
 
