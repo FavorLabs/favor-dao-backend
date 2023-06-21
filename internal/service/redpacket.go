@@ -266,6 +266,8 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		if err != nil {
 			return nil, errcode.ServerError.WithDetails(err.Error())
 		}
+	} else if !errors.Is(err, psub.ErrKeyAlreadyExists) {
+		return nil, errcode.ServerError.WithDetails(err.Error())
 	}
 
 	select {
