@@ -90,7 +90,10 @@ func setupJobServer() {
 		asynq.Config{
 			Logger: logrus.StandardLogger(),
 			ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
-				logrus.WithField("payload", task.Payload()).WithError(err).Errorf("task occur error")
+				logrus.WithField("payload", string(task.Payload())).
+					WithField("type", task.Type()).
+					WithError(err).
+					Errorf("task occur error")
 			}),
 			Concurrency:    1,
 			StrictPriority: true,

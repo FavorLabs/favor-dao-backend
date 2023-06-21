@@ -78,6 +78,7 @@ func setupSetting(suite []string, noDefault bool, configPath ...string) error {
 	SimpleCacheIndexSetting.CheckTickDuration *= time.Second
 	SimpleCacheIndexSetting.ExpireTickDuration *= time.Second
 	BigCacheIndexSetting.ExpireInSecond *= time.Second
+	ExternalAppSetting.RedPacketTimeout *= time.Second
 
 	return nil
 }

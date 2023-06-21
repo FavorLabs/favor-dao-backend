@@ -60,6 +60,10 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 	if err != nil {
 		return
 	}
+	if parm.Type == model.RedpacketTypeLucked && amount.Div(amount, big.NewInt(parm.Total)).Cmp(big.NewInt(0)) < 1 {
+		err = errcode.RedpacketAmountErr
+		return
+	}
 	var (
 		notify *psub.Notify
 	)
