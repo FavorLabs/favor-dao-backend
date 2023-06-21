@@ -73,6 +73,9 @@ func HandleRedpacketClaimTask(ctx context.Context, t *asynq.Task) (err error) {
 			logrus.Errorf("ClaimRedpacket redpacket.First err:%s", err)
 			return err
 		}
+		if redpacket.IsTimeout {
+			return errors.New("redpacket is timeout")
+		}
 		var price, balance string
 		// ---
 		if redpacket.Type == model.RedpacketTypeAverage {
