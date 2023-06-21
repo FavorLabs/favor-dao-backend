@@ -30,6 +30,7 @@ type Redpacket struct {
 	PayStatus    PayStatus     `json:"pay_status" bson:"pay_status"`
 	RefundTxID   string        `json:"refund_tx_id" bson:"refund_tx_id"`
 	RefundStatus PayStatus     `json:"refund_status" bson:"refund_status"`
+	IsTimeout    bool          `json:"is_timeout" bson:"is_timeout"`
 }
 
 type RedpacketSendFormatted struct {

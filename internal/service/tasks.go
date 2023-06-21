@@ -137,13 +137,17 @@ func HandleRedpacketDoneTask(ctx context.Context, t *asynq.Task) (err error) {
 	key := PrefixRedisKeyRedpacket + p.Id
 	conf.Redis.Del(ctx, key)
 
+	err = m.FindAndUpdate(ctx, conf.MustMongoDB(), bson.M{"is_timeout": true})
+	if err != nil {
+		return err
+	}
 	err = model.UseTransaction(ctx, conf.MustMongoDB(), func(ctx context.Context) error {
 		err = m.First(ctx, conf.MustMongoDB())
 		if err != nil {
 			return err
 		}
 		// check need refund
-		if m.Total-m.ClaimCount > 0 {
+		if m.Total-m.ClaimCount > 0 && m.RefundTxID == "" {
 			// pay
 			m.RefundTxID, err = point.Pay(ctx, pointSystem.PayRequest{
 				FromObject: conf.ExternalAppSetting.RedpacketAddress,

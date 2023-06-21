@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
@@ -53,8 +52,8 @@ type ClaimChResponse struct {
 }
 
 func CreateRedpacket(address string, parm RedpacketRequest) (id string, err error) {
-	if parm.Total > 100 {
-		err = errors.New("exceed the maximum 100")
+	if parm.Total > 100 || parm.Total < 1 {
+		err = errcode.RedpacketNumberErr
 		return
 	}
 	amount, err := convert.StrTo(parm.Amount).BigInt()
@@ -124,12 +123,6 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 	case val := <-notify.Ch:
 		if !val.(bool) {
 			err = errors.New("create redpacket failed")
-		} else {
-			task := NewRedpacketDoneTask(redpacket.ID.Hex())
-			_, er := queue.Enqueue(task, asynq.ProcessIn(time.Hour*24), asynq.Queue(QueueRedpacket))
-			if er != nil {
-				logrus.Errorf("enqueue RedpacketDoneTask %s", er)
-			}
 		}
 	}
 	return
@@ -166,6 +159,11 @@ func eventSendRedpacket(notify PayCallbackParam) error {
 		if err != nil {
 			logrus.Errorf("send_redpacket on notify: redis set redpacket_%s err:%s", notify.OrderId, err)
 			return err
+		}
+		task := NewRedpacketDoneTask(notify.OrderId)
+		_, er := queue.Enqueue(task, asynq.ProcessIn(conf.ExternalAppSetting.RedPacketTimeout), asynq.Queue(QueueRedpacket))
+		if er != nil {
+			logrus.Errorf("enqueue RedpacketDoneTask %s", er)
 		}
 		pubsub.Notify(notify.OrderId, true)
 	case TxRollback, TxCancelled:

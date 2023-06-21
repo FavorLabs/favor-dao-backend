@@ -26,6 +26,7 @@ var (
 
 	RedpacketHasBeenCollectedCompletely = NewError(50001, "It has been collected completely")
 	RedpacketAlreadyClaim               = NewError(50002, "Already claim")
+	RedpacketNumberErr                  = NewError(50003, "The number of red packets must be 1-100")
 
 	GetCollectionsFailed = NewError(60001, "Get Collections Failed")
 

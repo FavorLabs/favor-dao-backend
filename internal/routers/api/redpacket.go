@@ -31,6 +31,10 @@ func CreateRedpacket(c *gin.Context) {
 
 	RedpacketID, err := service.CreateRedpacket(user.Address, param.RedpacketRequest)
 	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.ToErrorResponse(e)
+			return
+		}
 		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
 	}
@@ -50,6 +54,10 @@ func CreateRedpacketTest(c *gin.Context) {
 	}
 	RedpacketID, err := service.CreateRedpacket(c.Query("user"), param)
 	if err != nil {
+		if e, ok := err.(*errcode.Error); ok {
+			response.ToErrorResponse(e)
+			return
+		}
 		response.ToErrorResponse(errcode.ServerError.WithDetails(err.Error()))
 		return
 	}
