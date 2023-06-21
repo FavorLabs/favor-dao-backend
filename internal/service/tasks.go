@@ -137,7 +137,7 @@ func HandleRedpacketDoneTask(ctx context.Context, t *asynq.Task) (err error) {
 	key := PrefixRedisKeyRedpacket + p.Id
 	conf.Redis.Del(ctx, key)
 
-	err = m.FindAndUpdate(ctx, conf.MustMongoDB(), bson.M{"is_timeout": true})
+	err = m.FindAndUpdate(ctx, conf.MustMongoDB(), bson.M{"$set": bson.M{"is_timeout": true}})
 	if err != nil {
 		return err
 	}
