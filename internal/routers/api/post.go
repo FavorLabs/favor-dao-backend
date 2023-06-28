@@ -78,9 +78,14 @@ func GetPostList(c *gin.Context) {
 
 	if user != nil {
 		q.BlockDaoIDs = service.GetBlockDaoIDs(user)
-		if !(len(q.Type) == 1 && q.Type[0] == model.DAO) {
+	}
+
+	if !(len(q.Type) == 1 && q.Type[0] == model.DAO) {
+		if user != nil {
 			q.BlockPostIDs = service.GetBlockPostIDs(user)
 		}
+		q.BlockDaoIDs = append(q.BlockDaoIDs, service.GetBlacklistDAOs()...)
+		q.BlockPostIDs = append(q.BlockPostIDs, service.GetBlacklistPosts()...)
 	}
 
 	// only public

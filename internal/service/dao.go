@@ -596,3 +596,10 @@ func GetBlockDaoIDs(user *model.User) []string {
 		"model":   model.BlockModelDAO,
 	}, ops)
 }
+
+func GetBlacklistDAOs() []string {
+	blacklist := model.Blacklist{}
+	return blacklist.FindIDs(context.TODO(), conf.MustMongoDB(), bson.M{
+		"model": model.BlockModelDAO,
+	})
+}
