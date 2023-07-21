@@ -249,14 +249,7 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		return nil, errcode.RedpacketHasBeenCollectedCompletely
 	}
 
-	var (
-		notify *psub.Notify
-	)
-	defer func() {
-		if notify != nil {
-			notify.Cancel()
-		}
-	}()
+	var notify *psub.Notify
 
 	// sub claimKey
 	notify, err = pubsub.NewSubscribe(claimKey)
@@ -266,6 +259,8 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 	if err != nil {
 		return nil, errcode.ServerError.WithDetails(err.Error())
 	}
+	defer notify.Cancel()
+
 	task := NewRedpacketClaimTask(redpacketID, address)
 	_, err = queue.Enqueue(task, asynq.Queue(QueueRedpacket), asynq.MaxRetry(0))
 	if err != nil {
