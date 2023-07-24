@@ -64,6 +64,7 @@ type ExternalAppSettingS struct {
 	NetworkID          int
 	RedpacketAddress   string
 	RedPacketTimeout   time.Duration
+	RedPacketMaxCount  int64
 	AlwaysTopAddresses []string
 }
 

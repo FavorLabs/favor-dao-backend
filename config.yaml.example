@@ -9,6 +9,8 @@ External:
   Region: regionname
   NetworkID: 19
   RedPacketAddress:
+  RedPacketTimeout: 300
+  RedPacketMaxCount: 200
 Server:
   RunMode: debug
   HttpIp: 0.0.0.0
