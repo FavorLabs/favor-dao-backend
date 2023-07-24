@@ -52,7 +52,7 @@ type ClaimChResponse struct {
 }
 
 func CreateRedpacket(address string, parm RedpacketRequest) (id string, err error) {
-	if parm.Total > 100 || parm.Total < 1 {
+	if parm.Total > conf.ExternalAppSetting.RedPacketMaxCount || parm.Total < 1 {
 		err = errcode.RedpacketNumberErr
 		return
 	}
