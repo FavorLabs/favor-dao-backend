@@ -33,7 +33,20 @@ func (a *RedpacketClaim) Table() string {
 }
 
 func (a *RedpacketClaim) Create(ctx context.Context, db *mongo.Database) error {
-	return create(ctx, db, a)
+	res, err := db.Collection(a.Table()).UpdateOne(
+		ctx,
+		bson.M{
+			"address":      a.Address,
+			"redpacket_id": a.RedpacketId,
+		},
+		bson.M{"$setOnInsert": a},
+		options.Update().SetUpsert(true),
+	)
+	if err != nil {
+		return err
+	}
+	a.ID = res.UpsertedID.(primitive.ObjectID)
+	return nil
 }
 
 func (a *RedpacketClaim) Update(ctx context.Context, db *mongo.Database) error {

@@ -91,24 +91,17 @@ func remove(ctx context.Context, db *mongo.Database, c interface{}, must bool) e
 	}
 }
 
-func UseTransaction(ctx context.Context, db *mongo.Database, fn func(ctx context.Context) error) error {
-	return db.Client().UseSession(ctx, func(sCtx mongo.SessionContext) error {
-		err := sCtx.StartTransaction()
-		if err != nil {
-			return fmt.Errorf("start transaction %v \n", err)
-		}
-		err = fn(sCtx)
-		if err != nil {
-			errs := sCtx.AbortTransaction(sCtx)
-			if errs != nil {
-				return fmt.Errorf("abort transaction %v \n", errs)
-			}
-			return fmt.Errorf("execute transaction %v \n", err)
-		}
-		err = sCtx.CommitTransaction(sCtx)
-		if err != nil {
-			return fmt.Errorf("commit transactions %v \n", err)
-		}
-		return nil
-	})
+func UseTransaction(ctx context.Context, db *mongo.Database, fn func(sessCtx mongo.SessionContext) (interface{}, error)) (interface{}, error) {
+	session, err := db.Client().StartSession()
+	if err != nil {
+		return nil, fmt.Errorf("start session: %v", err)
+	}
+	defer session.EndSession(ctx)
+
+	result, err := session.WithTransaction(ctx, fn)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, err
 }

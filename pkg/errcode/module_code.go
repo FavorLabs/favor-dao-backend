@@ -28,6 +28,7 @@ var (
 	RedpacketAlreadyClaim               = NewError(50002, "Already claim")
 	RedpacketNumberErr                  = NewError(50003, "The number of red packets must be 1-100")
 	RedpacketAmountErr                  = NewError(50004, "Mismatch between amount and quantity")
+	RedpacketTimeout                    = NewError(50005, "Redpacket expired")
 
 	GetCollectionsFailed = NewError(60001, "Get Collections Failed")
 

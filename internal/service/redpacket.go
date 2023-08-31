@@ -13,11 +13,13 @@ import (
 	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
+
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/hibiken/asynq"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -88,20 +90,20 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 		redpacket.Amount = amount.Mul(amount, new(big.Int).SetInt64(parm.Total)).String()
 		redpacket.Balance = redpacket.Amount
 	}
-	err = model.UseTransaction(ctx, conf.MustMongoDB(), func(ctx context.Context) error {
-		err = redpacket.Create(ctx, conf.MustMongoDB())
+	_, err = model.UseTransaction(ctx, conf.MustMongoDB(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		err = redpacket.Create(sessCtx, conf.MustMongoDB())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		id = redpacket.ID.Hex()
 
 		// sub order
 		notify, err = pubsub.NewSubscribe(id)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// pay
-		redpacket.TxID, err = point.Pay(ctx, pointSystem.PayRequest{
+		redpacket.TxID, err = point.Pay(sessCtx, pointSystem.PayRequest{
 			FromObject: address,
 			ToSubject:  conf.ExternalAppSetting.RedpacketAddress,
 			Amount:     redpacket.Amount,
@@ -110,7 +112,10 @@ func CreateRedpacket(address string, parm RedpacketRequest) (id string, err erro
 			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=send_redpacket&order_id=" + id,
 			BindOrder:  id,
 		})
-		return err
+		if err != nil {
+			return nil, err
+		}
+		return redpacket, nil
 	})
 	if err != nil {
 		return
@@ -142,20 +147,13 @@ func eventSendRedpacket(notify PayCallbackParam) error {
 		return err
 	}
 	m.TxID = notify.TxID
-	upFun := func() error {
-		err = m.Update(ctx, conf.MustMongoDB())
-		if err != nil {
-			logrus.Errorf("send_redpacket on notify: redpacket.Update tx_status:%s tx_id:%s _id:%s err:%s", notify.TxStatus, notify.TxID, notify.OrderId, err)
-			return err
-		}
-		return nil
-	}
 	switch notify.TxStatus {
 	case TxCompleted:
 		// success
 		m.PayStatus = model.PaySuccess
-		err = upFun()
+		err = m.Update(ctx, conf.MustMongoDB())
 		if err != nil {
+			logrus.Errorf("send_redpacket on notify: redpacket.Update tx_status:%s tx_id:%s _id:%s err:%s", notify.TxStatus, notify.TxID, notify.OrderId, err)
 			return err
 		}
 		key := PrefixRedisKeyRedpacket + notify.OrderId
@@ -173,13 +171,12 @@ func eventSendRedpacket(notify PayCallbackParam) error {
 	case TxRollback, TxCancelled:
 		// failed
 		m.PayStatus = model.PayFailed
-		err = upFun()
+		err = m.Update(ctx, conf.MustMongoDB())
 		if err != nil {
+			logrus.Errorf("send_redpacket on notify: redpacket.Update tx_status:%s tx_id:%s _id:%s err:%s", notify.TxStatus, notify.TxID, notify.OrderId, err)
 			return err
 		}
 		pubsub.Notify(notify.OrderId, false)
-	default:
-		return nil
 	}
 	return nil
 }
@@ -209,19 +206,45 @@ func redpacketLucked(totalAmount string, numbers int64) []string {
 }
 
 func redpacketRand(balance string, count int64) (amount, nowBalance string) {
-	if count <= 1 {
+	// if count <= 1 {
+	//	// 	return balance, "0"
+	//	// }
+	//	// restPrice := convert.StrTo(balance).MustBigInt()
+	//	// restNumbers := new(big.Int).SetInt64(count)
+	//	// max := new(big.Int)
+	//	// dub := new(big.Int).SetInt64(2)
+	//	//
+	//	// max.Div(restPrice, restNumbers).Mul(max, dub).Sub(max, new(big.Int).SetInt64(1))
+	//	//
+	//	// value, _ := rand.Int(rand.Reader, max)
+	//	// value.Add(value, new(big.Int).SetInt64(1))
+	//	//
+	//	// restPrice.Sub(restPrice, value)
+	//	//
+	//	// return value.String(), restPrice.String()
+
+	if count == 1 {
 		return balance, "0"
 	}
-	restPrice := convert.StrTo(balance).MustBigInt()
-	restNumbers := new(big.Int).SetInt64(count)
+
 	max := new(big.Int)
+	min := new(big.Int).SetInt64(1)
 	dub := new(big.Int).SetInt64(2)
 
-	max.Div(restPrice, restNumbers).Mul(max, dub).Sub(max, new(big.Int).SetInt64(1))
+	restPrice := convert.StrTo(balance).MustBigInt()
+	restNumbers := new(big.Int).SetInt64(count)
 
-	value, _ := rand.Int(rand.Reader, max)
-	value.Add(value, new(big.Int).SetInt64(1))
+	max.Div(restPrice, restNumbers).Mul(max, dub)
+	if max.Cmp(min) != 1 {
+		max.Set(min)
+	}
 
+	value, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return
+	}
+
+	restNumbers.Sub(restNumbers, min)
 	restPrice.Sub(restPrice, value)
 
 	return value.String(), restPrice.String()
@@ -243,40 +266,90 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 	}
 
 	key := PrefixRedisKeyRedpacket + redpacketID.Hex()
-
 	count, err := conf.Redis.Get(ctx, key).Int64()
 	if err != nil || count <= 0 {
 		return nil, errcode.RedpacketHasBeenCollectedCompletely
 	}
 
-	var notify *psub.Notify
-
-	// sub claimKey
-	notify, err = pubsub.NewSubscribe(claimKey)
-	if errors.Is(err, psub.ErrKeyAlreadyExists) {
+	err = rr.FindOne(ctx, conf.MustMongoDB(), bson.M{
+		"address":      address,
+		"redpacket_id": redpacketID,
+	})
+	if err == nil {
 		return nil, errcode.RedpacketAlreadyClaim
-	}
-	if err != nil {
-		return nil, errcode.ServerError.WithDetails(err.Error())
-	}
-	defer notify.Cancel()
-
-	task := NewRedpacketClaimTask(redpacketID, address)
-	_, err = queue.Enqueue(task, asynq.Queue(QueueRedpacket), asynq.MaxRetry(0))
-	if err != nil {
+	} else if !errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, errcode.ServerError.WithDetails(err.Error())
 	}
 
-	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-	case val := <-notify.Ch:
-		info := val.(*ClaimChResponse)
-		if info.err != nil {
-			return nil, info.err
+	_, err = model.UseTransaction(ctx, conf.MustMongoDB(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		// Calculation amount
+		redpacket := &model.Redpacket{}
+		redpacket.ID = redpacketID
+		err = redpacket.First(sessCtx, conf.MustMongoDB())
+		if err != nil {
+			return nil, err
 		}
-		rr = info.Info
+		if redpacket.IsTimeout {
+			return nil, errcode.RedpacketTimeout
+		}
+		if redpacket.ClaimCount == redpacket.Total {
+			return nil, errcode.RedpacketHasBeenCollectedCompletely
+		}
+		var price, balance string
+		// ---
+		if redpacket.Type == model.RedpacketTypeAverage {
+			price = redpacket.AvgAmount
+			b := convert.StrTo(redpacket.Balance).MustBigInt()
+			b.Sub(b, convert.StrTo(price).MustBigInt())
+			balance = b.String()
+		} else {
+			price, balance = redpacketRand(redpacket.Balance, redpacket.Total-redpacket.ClaimCount)
+		}
+		if price == "" {
+			return nil, errcode.ServerError
+		}
+		// records
+		rr = &model.RedpacketClaim{}
+		rr.RedpacketId = redpacketID
+		rr.Address = address
+		rr.Amount = price
+		err = rr.Create(sessCtx, conf.MustMongoDB())
+		if err != nil {
+			return nil, err
+		}
+		err = redpacket.FindAndUpdate(sessCtx, conf.MustMongoDB(), bson.M{
+			"$set": bson.M{"balance": balance, "claim_count": redpacket.ClaimCount + 1},
+		})
+		if err != nil {
+			return nil, err
+		}
+		// pay
+		redpacket.TxID, err = point.Pay(sessCtx, pointSystem.PayRequest{
+			FromObject: conf.ExternalAppSetting.RedpacketAddress,
+			ToSubject:  address,
+			Amount:     rr.Amount,
+			Comment:    "",
+			Channel:    "claim_redpacket",
+			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=claim_redpacket&order_id=" + rr.ID.Hex(),
+			BindOrder:  rr.ID.Hex(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return redpacket, nil
+	})
+	if err != nil {
+		var ee *errcode.Error
+		if errors.As(err, &ee) {
+			return nil, ee
+		}
+
+		logrus.Errorf("claim redpacket: %v", err)
+		return nil, errcode.ServerError.WithDetails(err.Error())
 	}
+
+	conf.Redis.Decr(ctx, key)
+
 	return rr, nil
 }
 
@@ -290,14 +363,6 @@ func eventClaimRedpacket(notify PayCallbackParam) error {
 		return err
 	}
 	m.TxID = notify.TxID
-	upFun := func() error {
-		err = m.Update(ctx, conf.MustMongoDB())
-		if err != nil {
-			logrus.Errorf("claim_redpacket on notify: RedpacketRecords.Update tx_status:%s tx_id:%s _id:%s err:%s", notify.TxStatus, notify.TxID, notify.OrderId, err)
-			return err
-		}
-		return nil
-	}
 	switch notify.TxStatus {
 	case TxCompleted:
 		// success
@@ -308,7 +373,12 @@ func eventClaimRedpacket(notify PayCallbackParam) error {
 	default:
 		return nil
 	}
-	return upFun()
+	err = m.Update(ctx, conf.MustMongoDB())
+	if err != nil {
+		logrus.Errorf("claim_redpacket on notify: RedpacketRecords.Update tx_status:%s tx_id:%s _id:%s err:%s", notify.TxStatus, notify.TxID, notify.OrderId, err)
+		return err
+	}
+	return nil
 }
 
 func RedpacketInfo(ctx context.Context, redpacketID primitive.ObjectID, address string) (info *model.RedpacketViewFormatted, err error) {
