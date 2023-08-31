@@ -45,6 +45,9 @@ func (a *RedpacketClaim) Create(ctx context.Context, db *mongo.Database) error {
 	if err != nil {
 		return err
 	}
+	if res.UpsertedID == nil {
+		return nil
+	}
 	a.ID = res.UpsertedID.(primitive.ObjectID)
 	return nil
 }
