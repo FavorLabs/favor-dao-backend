@@ -317,6 +317,9 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		if err != nil {
 			return nil, err
 		}
+		if rr.ID.IsZero() {
+			return nil, errcode.RedpacketAlreadyClaim
+		}
 		err = redpacket.FindAndUpdate(sessCtx, conf.MustMongoDB(), bson.M{
 			"$set": bson.M{"balance": balance, "claim_count": redpacket.ClaimCount + 1},
 		})
