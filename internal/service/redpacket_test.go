@@ -3,11 +3,13 @@ package service
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"math/big"
-	"math/rand"
+	mathrand "math/rand"
 	"net/http"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -59,18 +61,60 @@ func TestRedPacketLucked(t *testing.T) {
 }
 
 func TestRedpacket(t *testing.T) {
-	packets := redpacketLucked("10", 5)
+	packets := redpacketLucked("100", 5)
 	fmt.Printf("%s\n", packets)
 }
 
-func TestClaimRedpacket(t *testing.T) {
-	t.Skip("redpacket feat, need run server")
+func TestRedpacketRand(t *testing.T) {
+	balance := "10000"
+	count := 10
+	values := make([]int64, 0, count)
 
-	redpacketID := "64634f5c4497b9aee6f9c70a"
-	totalUser := 300
-	isRand := false
+	restPrice := convert.StrTo(balance).MustBigInt()
+	restNumbers := new(big.Int).SetInt64(int64(count))
+
+	for {
+		if restNumbers.Int64() == 1 {
+			values = append(values, restPrice.Int64())
+			break
+		}
+
+		max := new(big.Int)
+		min := new(big.Int).SetInt64(1)
+		dub := new(big.Int).SetInt64(2)
+
+		max.Div(restPrice, restNumbers).Mul(max, dub)
+		if max.Cmp(min) != 1 {
+			max.Set(min)
+		}
+
+		value, _ := rand.Int(rand.Reader, max)
+		values = append(values, value.Int64())
+
+		restNumbers.Sub(restNumbers, min)
+		restPrice.Sub(restPrice, value)
+	}
+
+	var total int64
+	for _, v := range values {
+		total += v
+	}
+	balanceValue, _ := strconv.ParseInt(balance, 10, 64)
+	if balanceValue != total {
+		t.Fatalf("expect balance is %d, but got %d", balanceValue, total)
+	}
+
+	t.Logf("got %d redpackets: %v", count, values)
+}
+
+func TestClaimRedpacket(t *testing.T) {
+	// t.Skip("redpacket feat, need run server")
+
+	redpacketID := "64f0459841ef4c88ee2e87f5"
+	totalUser := 1000
+	isRand := true
 	testUser := func() int {
-		return rand.Intn(1000)
+		return mathrand.Intn(10)
 	}
 	ctx := context.TODO()
 	var claimTotal int64 = 0

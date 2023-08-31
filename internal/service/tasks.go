@@ -7,8 +7,6 @@ import (
 
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/model"
-	"favor-dao-backend/pkg/convert"
-	"favor-dao-backend/pkg/errcode"
 	"favor-dao-backend/pkg/json"
 	"favor-dao-backend/pkg/pointSystem"
 	"github.com/hibiken/asynq"
@@ -20,102 +18,6 @@ import (
 
 type RedpacketDonePayload struct {
 	Id string
-}
-
-type RedpacketClaimPayload struct {
-	Id      primitive.ObjectID
-	Address string
-}
-
-func NewRedpacketClaimTask(redpacketID primitive.ObjectID, address string) *asynq.Task {
-	payload, _ := json.Marshal(RedpacketClaimPayload{Id: redpacketID, Address: address})
-
-	return asynq.NewTask(TypeRedpacketClaim, payload)
-}
-
-func HandleRedpacketClaimTask(ctx context.Context, t *asynq.Task) (err error) {
-	var info RedpacketClaimPayload
-	_ = json.Unmarshal(t.Payload(), &info)
-	logrus.Debugf("Redpacket Claim: user=%s id=%s\n", info.Address, info.Id)
-	key := PrefixRedisKeyRedpacket + info.Id.Hex()
-	rr := &model.RedpacketClaim{}
-	var e *errcode.Error
-	defer func() {
-		claimKey := fmt.Sprintf("%s%s:%s", PrefixRedisKeyRedpacketClaim, info.Id.Hex(), info.Address)
-		pubsub.Notify(claimKey, &ClaimChResponse{
-			Info: rr,
-			err:  e,
-		})
-		if e == nil {
-			if conf.Redis.Decr(ctx, key).Val() <= 0 {
-				conf.Redis.Del(ctx, key)
-			}
-		}
-	}()
-	err = rr.FindOne(ctx, conf.MustMongoDB(), bson.M{
-		"address":      info.Address,
-		"redpacket_id": info.Id,
-	})
-	if err == nil {
-		e = errcode.RedpacketAlreadyClaim
-		return
-	}
-	if !errors.Is(err, mongo.ErrNoDocuments) {
-		e = errcode.ServerError.WithDetails(err.Error())
-		return nil
-	}
-	err = model.UseTransaction(ctx, conf.MustMongoDB(), func(ctx context.Context) error {
-		// Calculation amount
-		redpacket := &model.Redpacket{}
-		redpacket.ID = info.Id
-		err = redpacket.First(ctx, conf.MustMongoDB())
-		if err != nil {
-			logrus.Errorf("ClaimRedpacket redpacket.First err:%s", err)
-			return err
-		}
-		if redpacket.IsTimeout {
-			return errors.New("redpacket is timeout")
-		}
-		var price, balance string
-		// ---
-		if redpacket.Type == model.RedpacketTypeAverage {
-			price = redpacket.AvgAmount
-			b := convert.StrTo(redpacket.Balance).MustBigInt()
-			b.Sub(b, convert.StrTo(price).MustBigInt())
-			balance = b.String()
-		} else {
-			price, balance = redpacketRand(redpacket.Balance, redpacket.Total-redpacket.ClaimCount)
-		}
-		// records
-		rr.RedpacketId = info.Id
-		rr.Address = info.Address
-		rr.Amount = price
-		err = rr.Create(ctx, conf.MustMongoDB())
-		if err != nil {
-			return err
-		}
-		err = redpacket.FindAndUpdate(ctx, conf.MustMongoDB(), bson.M{
-			"$set": bson.M{"balance": balance, "claim_count": redpacket.ClaimCount + 1},
-		})
-		if err != nil {
-			return err
-		}
-		// pay
-		redpacket.TxID, err = point.Pay(ctx, pointSystem.PayRequest{
-			FromObject: conf.ExternalAppSetting.RedpacketAddress,
-			ToSubject:  info.Address,
-			Amount:     rr.Amount,
-			Comment:    "",
-			Channel:    "claim_redpacket",
-			ReturnURI:  conf.PointSetting.Callback + "/pay/notify?method=claim_redpacket&order_id=" + rr.ID.Hex(),
-			BindOrder:  rr.ID.Hex(),
-		})
-		return err
-	})
-	if err != nil {
-		e = errcode.ServerError.WithDetails(err.Error())
-	}
-	return nil
 }
 
 func NewRedpacketDoneTask(redpacketID string) *asynq.Task {
@@ -144,15 +46,15 @@ func HandleRedpacketDoneTask(ctx context.Context, t *asynq.Task) (err error) {
 	if err != nil {
 		return err
 	}
-	err = model.UseTransaction(ctx, conf.MustMongoDB(), func(ctx context.Context) error {
-		err = m.First(ctx, conf.MustMongoDB())
+	_, err = model.UseTransaction(ctx, conf.MustMongoDB(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		err = m.First(sessCtx, conf.MustMongoDB())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// check need refund
 		if m.Total-m.ClaimCount > 0 && m.RefundTxID == "" {
 			// pay
-			m.RefundTxID, err = point.Pay(ctx, pointSystem.PayRequest{
+			m.RefundTxID, err = point.Pay(sessCtx, pointSystem.PayRequest{
 				FromObject: conf.ExternalAppSetting.RedpacketAddress,
 				ToSubject:  m.Address,
 				Amount:     m.Balance,
@@ -162,7 +64,10 @@ func HandleRedpacketDoneTask(ctx context.Context, t *asynq.Task) (err error) {
 				BindOrder:  p.Id,
 			})
 		}
-		return err
+		if err != nil {
+			return nil, err
+		}
+		return m, nil
 	})
 	return err
 }

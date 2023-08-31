@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"favor-dao-backend/pkg/notify"
-
 	"favor-dao-backend/internal/conf"
 	"favor-dao-backend/internal/core"
 	"favor-dao-backend/internal/dao"
 	"favor-dao-backend/internal/model"
 	"favor-dao-backend/pkg/comet"
+	"favor-dao-backend/pkg/notify"
 	"favor-dao-backend/pkg/pointSystem"
 	"favor-dao-backend/pkg/psub"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/hibiken/asynq"
@@ -106,7 +106,6 @@ func setupJobServer() {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(PostUnpin, HandlePostUnpinTask)
 	mux.HandleFunc(TypeRedpacketDone, HandleRedpacketDoneTask)
-	mux.HandleFunc(TypeRedpacketClaim, HandleRedpacketClaimTask)
 
 	go func() {
 		if err := server.Run(mux); err != nil {
