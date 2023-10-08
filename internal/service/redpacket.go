@@ -320,7 +320,7 @@ func ClaimRedpacket(ctx context.Context, address string, redpacketID primitive.O
 		if rr.ID.IsZero() {
 			return nil, errcode.RedpacketAlreadyClaim
 		}
-		err = redpacket.FindAndUpdate(sessCtx, conf.MustMongoDB(), bson.M{
+		err = redpacket.FindAndUpdate(sessCtx, conf.MustMongoDB(), bson.M{model.ID: redpacket.ID, "balance": redpacket.Balance, "claim_count": redpacket.ClaimCount}, bson.M{
 			"$set": bson.M{"balance": balance, "claim_count": redpacket.ClaimCount + 1},
 		})
 		if err != nil {

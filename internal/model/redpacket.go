@@ -64,8 +64,10 @@ func (a *Redpacket) First(ctx context.Context, db *mongo.Database) error {
 	return findOne(ctx, db, a, filter)
 }
 
-func (a *Redpacket) FindAndUpdate(ctx context.Context, db *mongo.Database, update interface{}) error {
-	filter := bson.M{ID: a.GetID(), "balance": a.Balance, "claim_count": a.ClaimCount}
+func (a *Redpacket) FindAndUpdate(ctx context.Context, db *mongo.Database, filter, update interface{}) error {
+	if filter == nil {
+		filter = bson.M{ID: a.GetID()}
+	}
 
 	return findAndUpdate(ctx, db, a, filter, update)
 }
